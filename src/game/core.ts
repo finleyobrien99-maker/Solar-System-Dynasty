@@ -371,6 +371,11 @@ export function setCooldown(s: GameState, key: string, years = 1): void {
   s.cooldowns[key] = s.year + years;
 }
 
+/** VIP mode (the sandbox) is switched on for this run. */
+export function isVip(s: GameState): boolean {
+  return !!s.vip?.on;
+}
+
 export function canAct(s: GameState): boolean {
   return !s.gameOver && ageOf(s, ruler(s)) >= ADULT_AGE;
 }

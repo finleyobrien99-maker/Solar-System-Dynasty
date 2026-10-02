@@ -2,13 +2,15 @@
 // and the player's starting house.
 
 import { createCharacter, eduTrait, inheritLooks, randomGenetic, randomLooks, randomPersonality } from './character';
-import { clanRegions, clanRank, log, newId, SAVE_VERSION, setOwner, vassalsOf } from './core';
+import { ageOf, capitalOf, clanRank, clanRegions, clanTitle, log, newId, planetRegions, planetSovereign, rankName, SAVE_VERSION, setOwner, vassalsOf } from './core';
+import { inheritGenetics, inheritPersonality } from './genetics';
 import { makeItem } from './items';
+import { remember } from './memory';
 import { refreshShop } from './realm';
 import { makeName, PLANETS, PLANET_BY_ID } from './planets';
-import { chance, int, pick, rand, range, shuffle, type Seeded } from './rng';
+import { chance, clamp, int, pick, rand, range, shuffle, type Seeded } from './rng';
 import { addTrait } from './traits';
-import { STAT_KEYS, type Appearance, type Clan, type GameState, type Gender, type SigilSpec, type StatKey } from './types';
+import { STAT_KEYS, type Appearance, type Character, type Clan, type GameState, type Gender, type ScenarioId, type SigilSpec, type StatKey } from './types';
 
 export const START_YEAR = 2500;
 
@@ -183,6 +185,106 @@ export function createWorld(seed: number): GameState {
   return s;
 }
 
+// ── Starting scenarios ────────────────────────────────────────────────────
+// Like picking Count, Duke, King or Emperor: how high up the ladder you start.
+
+export interface ScenarioDef {
+  id: ScenarioId;
+  name: string;
+  tagline: string;
+  blurb: string;
+  credits: number;
+  prestige: number;
+  faith: number;
+}
+
+export const SCENARIOS: ScenarioDef[] = [
+  {
+    id: 'governor',
+    name: 'Governor',
+    tagline: 'Start at the bottom',
+    blurb: 'A minor house with a region or two, sworn to the planet\'s monarch. The classic climb.',
+    credits: 350,
+    prestige: 120,
+    faith: 60,
+  },
+  {
+    id: 'viceroy',
+    name: 'Viceroy',
+    tagline: 'A great house',
+    blurb: 'Three regions, the viceroy\'s title and two lesser houses sworn to you. Still kneels to the monarch.',
+    credits: 900,
+    prestige: 400,
+    faith: 150,
+  },
+  {
+    id: 'monarch',
+    name: 'Monarch',
+    tagline: 'Rule a whole world',
+    blurb: 'You are the royal house. The capital is yours and every house on the planet is your vassal.',
+    credits: 1800,
+    prestige: 900,
+    faith: 250,
+  },
+  {
+    id: 'emperor',
+    name: 'Solar Emperor',
+    tagline: 'Sit the Solar Throne',
+    blurb: 'Three throne-worlds already kneel. The deposed royal houses of your new worlds hold a grudge.',
+    credits: 3500,
+    prestige: 1800,
+    faith: 400,
+  },
+];
+
+export const SCENARIO_BY_ID = Object.fromEntries(SCENARIOS.map((x) => [x.id, x])) as Record<ScenarioId, ScenarioDef>;
+
+/** The two worlds an emperor rules besides home: the nearest neighbours in orbit. */
+export function emperorWorlds(planetId: string): string[] {
+  const idx = PLANETS.findIndex((p) => p.id === planetId);
+  return PLANETS.map((p, i) => ({ id: p.id, d: Math.abs(i - idx), i }))
+    .filter((x) => x.id !== planetId)
+    .sort((a, b) => a.d - b.d || a.i - b.i)
+    .slice(0, 2)
+    .map((x) => x.id);
+}
+
+/** Houses the player can lead on a planet for a scenario. Royal starts lead the ruling house. */
+export function scenarioHouses(s: GameState, planetId: string, scenario: ScenarioId): Clan[] {
+  const royal = planetSovereign(s, planetId);
+  if (scenario === 'monarch' || scenario === 'emperor') return royal ? [s.clans[royal]] : [];
+  return Object.values(s.clans).filter((c) => c.planetId === planetId && c.id !== royal && clanRegions(s, c.id).length > 0);
+}
+
+function applyScenario(s: GameState, clan: Clan, scenario: ScenarioId): void {
+  if (scenario === 'viceroy') {
+    const royal = planetSovereign(s, clan.planetId);
+    // Take land from whoever can best spare it until the house holds three regions.
+    for (let guard = 0; clanRegions(s, clan.id).length < 3 && guard < 10; guard++) {
+      const pool = planetRegions(s, clan.planetId).filter((r) => !r.capital && r.owner !== clan.id);
+      if (!pool.length) break;
+      pool.sort((a, b) => clanRegions(s, b.owner).length - clanRegions(s, a.owner).length);
+      const r = pool[0];
+      const loser = r.owner;
+      setOwner(s, r, clan.id);
+      remember(s, loser, `Lost ${r.name} when House ${clan.name} was raised to the viceroyalty`, -20, 0.03);
+    }
+    clan.titles.viceroy = true;
+    const lesser = Object.values(s.clans).filter((k) => k.planetId === clan.planetId && k.id !== clan.id && k.id !== royal && clanRegions(s, k.id).length > 0);
+    for (const k of lesser.slice(0, 2)) k.liege = clan.id;
+  }
+  if (scenario === 'emperor') {
+    for (const pid of emperorWorlds(clan.planetId)) {
+      const cap = capitalOf(s, pid);
+      if (!cap || cap.owner === clan.id) continue;
+      const old = cap.owner;
+      setOwner(s, cap, clan.id);
+      remember(s, old, 'Lost their throne to the Solar Throne', -30, 0.02);
+    }
+    clan.titles.emperor = true;
+  }
+}
+
 /** A rolled ruler shown on the new-game screen. */
 export interface RulerPreview {
   seed: number;
@@ -211,6 +313,8 @@ export function rollRuler(seed: number, planetId: string, gender: Gender, name?:
   };
 }
 
+export type StartFamily = 'single' | 'married' | 'kids';
+
 export interface StartOpts {
   clanId: string;
   clanName?: string;
@@ -218,6 +322,61 @@ export interface StartOpts {
   ruler: RulerPreview;
   focus: StatKey;
   growth?: 'capped' | 'uncapped';
+  scenario?: ScenarioId;
+  /** Starting age of the ruler, 16 to 70. */
+  age?: number;
+  family?: StartFamily;
+  vip?: boolean;
+  /** VIP only: acquired and cyber traits, and the education tier (1 to 4). */
+  extraTraits?: string[];
+  eduTier?: number;
+}
+
+export const MIN_START_AGE = 16;
+export const MAX_START_AGE = 70;
+
+/** Spouse and children for a ruler who starts with a family. */
+function startingFamily(s: GameState, ruler: Character, clan: Clan, kids: boolean): void {
+  const y = s.year;
+  const age = ageOf(s, ruler);
+  if (age < 18) return;
+  const others = Object.values(s.clans).filter((c) => c.planetId === clan.planetId && c.id !== clan.id);
+  const from = others.length ? pick(s, others) : clan;
+  const spouse = createCharacter(s, {
+    gender: ruler.gender === 'M' ? 'F' : 'M',
+    born: y - clamp(age + int(s, -5, 3), 18, 80),
+    clanId: from.id,
+    planetId: clan.planetId,
+    faithId: clan.faithId,
+    adultExtras: true,
+  });
+  ruler.spouseId = spouse.id;
+  spouse.spouseId = ruler.id;
+  spouse.marriedIn = true;
+  if (!kids) return;
+  const father = ruler.gender === 'M' ? ruler : spouse;
+  const mother = ruler.gender === 'F' ? ruler : spouse;
+  const oldest = Math.min(age, ageOf(s, spouse)) - 18;
+  if (oldest < 0) return;
+  const n = int(s, 1, 3);
+  for (let i = 0; i < n; i++) {
+    const kidAge = int(s, 0, Math.min(oldest, 24));
+    const traits = [...inheritGenetics(s, father, mother), ...(kidAge < 16 ? inheritPersonality(s, father, mother) : [])];
+    const kid = createCharacter(s, {
+      born: y - kidAge,
+      clanId: clan.id,
+      planetId: clan.planetId,
+      faithId: clan.faithId,
+      fatherId: father.id,
+      motherId: mother.id,
+      looks: inheritLooks(s, father.looks, mother.looks, clan.planetId),
+      traits,
+      adultExtras: true,
+    });
+    for (const k of STAT_KEYS) kid.base[k] = clamp(Math.round((father.base[k] + mother.base[k]) / 2 + int(s, -2, 2)), 0, 10);
+    father.childrenIds.push(kid.id);
+    mother.childrenIds.push(kid.id);
+  }
 }
 
 export function startGame(s: GameState, o: StartOpts): GameState {
@@ -229,8 +388,14 @@ export function startGame(s: GameState, o: StartOpts): GameState {
     clan.color = o.sigil.c1;
   }
   clan.opinion = 100;
+  clan.liege = 'auto';
   s.playerClanId = clan.id;
   s.dynasty.growth = o.growth ?? 'uncapped';
+  const scenario = o.scenario ?? 'governor';
+  const sc = SCENARIO_BY_ID[scenario];
+  s.scenario = scenario;
+  if (o.vip) s.vip = { on: true };
+  applyScenario(s, clan, scenario);
 
   // Clear the AI household this clan started with.
   for (const c of Object.values(s.characters)) {
@@ -243,24 +408,31 @@ export function startGame(s: GameState, o: StartOpts): GameState {
 
   const y = s.year;
   const p = clan.planetId;
+  const age = clamp(Math.round(o.age ?? 20), MIN_START_AGE, MAX_START_AGE);
   const otherClan = pick(
     s,
     Object.values(s.clans).filter((c) => c.planetId === p && c.id !== clan.id),
   );
-  const father = createCharacter(s, { gender: 'M', born: y - 58, clanId: clan.id, planetId: p, adultExtras: true });
+  const father = createCharacter(s, { gender: 'M', born: y - age - int(s, 24, 34), clanId: clan.id, planetId: p, adultExtras: true });
   father.died = y - 1;
   father.deathCause = 'a long illness';
-  const mother = createCharacter(s, { gender: 'F', born: y - 49, clanId: otherClan?.id ?? clan.id, planetId: p, adultExtras: true });
+  const mother = createCharacter(s, { gender: 'F', born: y - age - int(s, 20, 30), clanId: otherClan?.id ?? clan.id, planetId: p, adultExtras: true });
   father.spouseId = mother.id;
   mother.spouseId = father.id;
   mother.marriedIn = true;
+  if (ageOf(s, mother) > 85) {
+    mother.died = y - int(s, 2, 10);
+    mother.deathCause = 'old age';
+  }
 
   const pr = o.ruler;
   let traits = [...pr.genetic, ...pr.personality];
-  traits = addTrait(traits, eduTrait(o.focus, 2));
+  if (o.vip) for (const t of o.extraTraits ?? []) traits = addTrait(traits, t);
+  const eduTier = o.vip && o.eduTier ? o.eduTier : age >= 35 ? 3 : 2;
+  traits = addTrait(traits, eduTrait(o.focus, eduTier));
   const ruler = createCharacter(s, {
     gender: pr.gender,
-    born: y - 20,
+    born: y - age,
     clanId: clan.id,
     planetId: p,
     fatherId: father.id,
@@ -276,35 +448,47 @@ export function startGame(s: GameState, o: StartOpts): GameState {
 
   const sibs = int(s, 0, 2);
   for (let i = 0; i < sibs; i++) {
+    const sibAge = age - int(s, 2, 12);
+    // Younger siblings only, and only while their mother could still bear them.
+    if (sibAge < 1 || ageOf(s, mother) - sibAge > 45) continue;
     const sib = createCharacter(s, {
-      born: y - int(s, 9, 18),
+      born: y - sibAge,
       clanId: clan.id,
       planetId: p,
       fatherId: father.id,
       motherId: mother.id,
       looks: inheritLooks(s, father.looks, mother.looks, p),
     });
-    sib.traits = randomPersonality(s, 2, sib.traits);
+    sib.traits = sibAge >= 16 ? randomPersonality(s, 3, sib.traits) : randomPersonality(s, 2, sib.traits);
     father.childrenIds.push(sib.id);
     mother.childrenIds.push(sib.id);
   }
+
+  if (o.family && o.family !== 'single') startingFamily(s, ruler, clan, o.family === 'kids');
 
   clan.headId = ruler.id;
   s.rulerId = ruler.id;
   s.dynasty.founderId = father.id;
   s.dynasty.rulers = [
-    { id: father.id, name: father.name, from: y - 30, to: y - 1, title: 'Governor' },
-    { id: ruler.id, name: ruler.name, from: y, title: 'Governor' },
+    { id: father.id, name: father.name, from: y - 30, to: y - 1, title: rankName(s, clan.id, 'M') },
+    { id: ruler.id, name: ruler.name, from: y, title: rankName(s, clan.id, ruler.gender) },
   ];
-  s.credits = 350;
+  s.credits = sc.credits;
   s.fleet = Math.max(35, Math.round(fleetTarget(s, clan.id) * 0.8));
-  s.prestige = 120;
-  s.faith = 60;
+  s.prestige = sc.prestige;
+  s.faith = sc.faith;
+  s.stats.peakRank = clanRank(s, clan.id);
   s.items = [makeItem(s, newId(s, 'i'), { slot: 'head', rarity: 'common', origin: 'Family heirloom' })];
   s.equipped = { head: s.items[0].id };
   s.started = true;
   refreshShop(s);
-  log(s, `${ruler.name} of House ${clan.name} takes the seat of their late father, aged 20.`, 'info');
-  log(s, `The ${PLANET_BY_ID[p].faction} watches the young ${ruler.gender === 'M' ? 'lord' : 'lady'} closely.`, 'info');
+  if (scenario === 'governor') {
+    log(s, `${ruler.name} of House ${clan.name} takes the seat of their late father, aged ${age}.`, 'info');
+    log(s, `The ${PLANET_BY_ID[p].faction} watches the ${age < 30 ? 'young ' : ''}${ruler.gender === 'M' ? 'lord' : 'lady'} closely.`, 'info');
+  } else {
+    log(s, `${ruler.name} of House ${clan.name} inherits their late father's titles, aged ${age}: ${clanTitle(s, clan.id, ruler.gender)}.`, 'info');
+    if (scenario === 'emperor') log(s, `The deposed royal houses of ${emperorWorlds(p).map((id) => PLANET_BY_ID[id].name).join(' and ')} swear fealty through gritted teeth.`, 'war');
+  }
+  if (o.vip) log(s, 'VIP mode is on: edit anyone, any time, and the Gene-Forge is yours without limit.', 'info');
   return s;
 }

@@ -1,10 +1,12 @@
+import { isVip } from '../../game/core';
 import { writeSave } from '../../game/save';
+import { enableVip } from '../../game/vip';
 import { Btn, Modal } from '../components';
 import { useGame } from '../store';
 import { downloadSave } from './SavesModal';
 
 export function MenuModal() {
-  const { s, setUi, quit, toast } = useGame();
+  const { s, act, setUi, quit, toast } = useGame();
   return (
     <Modal title="Menu" onClose={() => setUi({ panel: null })} icon="menu">
       <div className="stack">
@@ -20,6 +22,24 @@ export function MenuModal() {
         <Btn block icon="family" onClick={() => setUi({ panel: 'tree' })}>
           Dynasty tree
         </Btn>
+        {isVip(s) ? (
+          <Btn block kind="primary" icon="relic" onClick={() => setUi({ panel: 'vip' })}>
+            VIP console
+          </Btn>
+        ) : (
+          <Btn
+            block
+            icon="relic"
+            confirm="Tap again: cheats on"
+            title="Edit anyone's traits on the fly, unlimited free Gene-Forge, and a console for resources."
+            onClick={() => {
+              act((d) => enableVip(d));
+              setUi({ panel: 'vip' });
+            }}
+          >
+            Turn on VIP mode
+          </Btn>
+        )}
         <Btn
           block
           kind="ghost"

@@ -7,7 +7,7 @@ import { writeSave } from '../game/save';
 import type { GameState } from '../game/types';
 
 export type Tab = 'life' | 'family' | 'bloodline' | 'realm' | 'system' | 'actions' | 'treasury';
-export type Panel = null | 'saves' | 'codex' | 'tree' | 'suitors' | 'menu';
+export type Panel = null | 'saves' | 'codex' | 'tree' | 'suitors' | 'menu' | 'vip';
 
 export interface UiState {
   tab: Tab;

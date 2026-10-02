@@ -6,7 +6,7 @@
 //   • Locked traits are ALWAYS given to every child born into the dynasty.
 //   • Purged traits are NEVER given to a dynasty child.
 
-import { alive, bloodlineMembers, ageOf, log } from './core';
+import { alive, bloodlineMembers, ageOf, isVip, log } from './core';
 import { chance, pick, rand, weighted, type Seeded } from './rng';
 import { addTrait, conflicts, GENETIC, isHeritable, TRAIT_LIST, TRAITS } from './traits';
 import type { Character, GameState } from './types';
@@ -120,6 +120,20 @@ export function purgeCost(id: string): Cost {
   return { credits: 250, prestige: 75 };
 }
 
+/** What the player actually pays: everything in the vault is free in VIP mode. */
+export function lockPrice(s: GameState, id: string): Cost {
+  return isVip(s) ? {} : lockCost(id);
+}
+
+export function purgePrice(s: GameState, id: string): Cost {
+  return isVip(s) ? {} : purgeCost(id);
+}
+
+/** Vault capacity. VIP mode has no limit. */
+export function vaultSlots(s: GameState): number {
+  return isVip(s) ? Infinity : s.dynasty.slots;
+}
+
 export function slotCost(s: GameState): Cost {
   const n = s.dynasty.slots;
   return { credits: 250 * n, prestige: 50 * n };
@@ -157,10 +171,10 @@ export function lockBlocker(s: GameState, id: string): string | null {
   if (!t || !isHeritable(id)) return 'Only genetic and personality traits can be locked.';
   if (s.dynasty.locked.includes(id)) return 'Already locked.';
   const freed = displacedBy(s, id).length + (s.dynasty.purged.includes(id) ? 1 : 0);
-  if (vaultUsed(s) - freed >= s.dynasty.slots) return 'No free vault slots. Release a trait or buy another slot.';
-  if (!carriers(s, id).length && !s.forge.researched.includes(id))
+  if (vaultUsed(s) - freed >= vaultSlots(s)) return 'No free vault slots. Release a trait or buy another slot.';
+  if (!isVip(s) && !carriers(s, id).length && !s.forge.researched.includes(id))
     return 'No living member of your bloodline carries this trait. Breed for it, or research it in the Gene-Forge.';
-  if (!canAfford(s, lockCost(id))) return `Need ${costText(lockCost(id))}.`;
+  if (!canAfford(s, lockPrice(s, id))) return `Need ${costText(lockPrice(s, id))}.`;
   return null;
 }
 
@@ -168,14 +182,14 @@ export function purgeBlocker(s: GameState, id: string): string | null {
   if (!isHeritable(id)) return 'Only genetic and personality traits can be purged.';
   if (s.dynasty.purged.includes(id)) return 'Already purged.';
   const freed = s.dynasty.locked.includes(id) ? 1 : 0;
-  if (vaultUsed(s) - freed >= s.dynasty.slots) return 'No free vault slots. Release a trait or buy another slot.';
-  if (!canAfford(s, purgeCost(id))) return `Need ${costText(purgeCost(id))}.`;
+  if (vaultUsed(s) - freed >= vaultSlots(s)) return 'No free vault slots. Release a trait or buy another slot.';
+  if (!canAfford(s, purgePrice(s, id))) return `Need ${costText(purgePrice(s, id))}.`;
   return null;
 }
 
 export function lockTrait(s: GameState, id: string): boolean {
   if (lockBlocker(s, id)) return false;
-  pay(s, lockCost(id));
+  pay(s, lockPrice(s, id));
   const displaced = displacedBy(s, id);
   s.dynasty.locked = s.dynasty.locked.filter((t) => !displaced.includes(t));
   s.dynasty.purged = s.dynasty.purged.filter((t) => t !== id);
@@ -193,7 +207,7 @@ export function lockTrait(s: GameState, id: string): boolean {
 
 export function purgeTrait(s: GameState, id: string): boolean {
   if (purgeBlocker(s, id)) return false;
-  pay(s, purgeCost(id));
+  pay(s, purgePrice(s, id));
   s.dynasty.locked = s.dynasty.locked.filter((t) => t !== id);
   s.dynasty.purged.push(id);
   const t = TRAITS[id];
@@ -213,7 +227,7 @@ export function releaseTrait(s: GameState, id: string): void {
 
 export function buySlot(s: GameState): boolean {
   const c = slotCost(s);
-  if (s.dynasty.slots >= MAX_SLOTS || !canAfford(s, c)) return false;
+  if (isVip(s) || s.dynasty.slots >= MAX_SLOTS || !canAfford(s, c)) return false;
   pay(s, c);
   s.dynasty.slots += 1;
   return true;

@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { dynastyMembers } from '../../game/core';
+import { dynastyMembers, isVip } from '../../game/core';
 import {
   bloodlineScore,
   buySlot,
   canAfford,
   carriers,
   lockBlocker,
-  lockCost,
+  lockPrice,
   lockTrait,
   MAX_SLOTS,
   purgeBlocker,
-  purgeCost,
+  purgePrice,
   purgeTrait,
   releaseTrait,
   slotCost,
@@ -104,13 +104,13 @@ function TraitRow({ t }: { t: TraitDef }) {
             <Btn small kind="good" icon="lock" reason={lb} onClick={() => act((d) => lockTrait(d, t.id)) && toast(`${t.name} locked into the bloodline.`)}>
               Lock in
             </Btn>
-            <CostTag cost={lockCost(t.id)} />
+            <CostTag cost={lockPrice(s, t.id)} />
           </div>
           <div className="spread">
             <Btn small kind="danger" icon="purge" reason={pb} onClick={() => act((d) => purgeTrait(d, t.id)) && toast(`${t.name} purged from the bloodline.`)}>
               Purge
             </Btn>
-            <CostTag cost={purgeCost(t.id)} />
+            <CostTag cost={purgePrice(s, t.id)} />
           </div>
           {lb && who.length > 0 && <span className="reason">Lock: {lb}</span>}
           {lb && !who.length && <span className="reason">Lock: needs a living carrier in your dynasty.</span>}
@@ -157,21 +157,32 @@ export function BloodlineTab() {
               ever inherit it. Genetic locks are sequenced from a living carrier, so breed for a gene first, then lock it. Personality locks are drilled in through
               conditioning, which also reshapes your kids under 16 right away.
             </div>
-            <div className="spread">
-              <span>
-                Vault slots: <b className="gold">{used}</b> / {s.dynasty.slots}
-                <span className="muted"> (each lock or purge uses one)</span>
-              </span>
-              <span className="row" style={{ gap: 6 }}>
-                <Btn small icon="plus" reason={s.dynasty.slots >= MAX_SLOTS ? 'Vault is at maximum size' : canAfford(s, sc) ? null : 'Not enough resources'} onClick={() => act((d) => buySlot(d))}>
-                  Add slot
-                </Btn>
-                <CostTag cost={sc} />
-              </span>
-            </div>
-            <div className="bar">
-              <span style={{ width: `${(used / Math.max(1, s.dynasty.slots)) * 100}%`, background: 'linear-gradient(90deg, #b388ff, #4cc9f0)' }} />
-            </div>
+            {isVip(s) ? (
+              <div className="spread">
+                <span>
+                  Vault slots: <b className="gold">{used}</b> / ∞
+                </span>
+                <span className="pill gold">VIP: unlimited, free, no carrier needed</span>
+              </div>
+            ) : (
+              <>
+                <div className="spread">
+                  <span>
+                    Vault slots: <b className="gold">{used}</b> / {s.dynasty.slots}
+                    <span className="muted"> (each lock or purge uses one)</span>
+                  </span>
+                  <span className="row" style={{ gap: 6 }}>
+                    <Btn small icon="plus" reason={s.dynasty.slots >= MAX_SLOTS ? 'Vault is at maximum size' : canAfford(s, sc) ? null : 'Not enough resources'} onClick={() => act((d) => buySlot(d))}>
+                      Add slot
+                    </Btn>
+                    <CostTag cost={sc} />
+                  </span>
+                </div>
+                <div className="bar">
+                  <span style={{ width: `${(used / Math.max(1, s.dynasty.slots)) * 100}%`, background: 'linear-gradient(90deg, #b388ff, #4cc9f0)' }} />
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

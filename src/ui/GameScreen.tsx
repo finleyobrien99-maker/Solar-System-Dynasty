@@ -1,4 +1,4 @@
-import { ageOf, clanTitle, fmt, ruler } from '../game/core';
+import { ageOf, clanTitle, fmt, isVip, ruler } from '../game/core';
 import { creditLines, faithLines, fleetCap, prestigeLines, sum, type Line } from '../game/economy';
 import { ageUp, canAgeUp } from '../game/tick';
 import { Icon } from '../svg/Icons';
@@ -12,6 +12,7 @@ import { PendingModal } from './modals/PendingModal';
 import { SavesModal } from './modals/SavesModal';
 import { SuitorModal } from './modals/SuitorModal';
 import { TreeModal } from './modals/TreeModal';
+import { VipModal } from './vip/VipModal';
 import { useGame, type Tab } from './store';
 import { ActionsTab } from './tabs/ActionsTab';
 import { BloodlineTab } from './tabs/BloodlineTab';
@@ -103,6 +104,11 @@ function TopBar() {
             </span>
           </Tip>
         </div>
+        {isVip(s) && (
+          <button className="btn small vip-badge" onClick={() => setUi({ panel: 'vip' })} aria-label="VIP console">
+            <Icon name="relic" size={14} /> VIP
+          </button>
+        )}
         <button className="btn ghost small menu-btn" onClick={() => setUi({ panel: 'menu' })} aria-label="Menu">
           <Icon name="menu" size={18} />
         </button>
@@ -158,6 +164,7 @@ export function GameScreen() {
       {ui.panel === 'tree' && <TreeModal />}
       {ui.panel === 'suitors' && <SuitorModal />}
       {ui.panel === 'menu' && <MenuModal />}
+      {ui.panel === 'vip' && <VipModal />}
       {s.pending.length > 0 && <PendingModal />}
       {s.gameOver && s.pending.length === 0 && !ui.panel && !ui.charId && !ui.clanId && <GameOverModal />}
     </div>
