@@ -149,7 +149,7 @@ export function RealmTab() {
                   <Btn icon="peace" reason={s.cooldowns[`peace:${w.id}`] === s.year ? 'Envoy already sent this cycle' : null} onClick={() => act((d) => offerPeace(d, w.id))}>
                     Offer peace ({Math.round(pc * 100)}%)
                   </Btn>
-                  <Btn kind="danger" small onClick={() => confirm('Surrender this war?') && act((d) => surrender(d, w.id))}>
+                  <Btn kind="danger" small confirm="Tap again to surrender" onClick={() => act((d) => surrender(d, w.id))}>
                     Surrender
                   </Btn>
                 </div>
@@ -273,7 +273,7 @@ export function RealmTab() {
                 c={p}
                 extra={
                   <div className="btn-row" style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
-                    <Btn small kind="danger" onClick={() => confirm(`Execute ${p.name}? Everyone will hear of it.`) && act((d) => executePrisoner(d, p.id))}>
+                    <Btn small kind="danger" confirm="Everyone will hear. Sure?" onClick={() => act((d) => executePrisoner(d, p.id))}>
                       Execute
                     </Btn>
                     <Btn small onClick={() => act((d) => ransomPrisoner(d, p.id))}>Ransom ({ransomValue(s, p.id)})</Btn>
@@ -308,7 +308,7 @@ export function RealmTab() {
                   <div key={f.id} className="card flat" style={{ padding: 10 }}>
                     <b style={{ color: f.color }}>{f.name}</b>
                     <div className="muted" style={{ fontSize: '0.78rem' }}>{f.blurb}</div>
-                    <Btn small reason={canAfford(s, { faith: 200, prestige: 100 }) ? null : 'Need 200 faith + 100 prestige'} onClick={() => confirm(`Convert House ${clan.name} to ${f.name}?`) && act((d) => convertFaith(d, f.id))}>
+                    <Btn small reason={canAfford(s, { faith: 200, prestige: 100 }) ? null : 'Need 200 faith + 100 prestige'} confirm="Tap again to convert" onClick={() => act((d) => convertFaith(d, f.id))}>
                       Convert
                     </Btn>
                   </div>

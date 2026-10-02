@@ -60,10 +60,9 @@ function RegionPanel({ regionId }: { regionId: string }) {
                       kind="danger"
                       icon="war"
                       reason={o.ok ? null : o.reason}
+                      confirm="Tap again: war!"
                       onClick={() => {
-                        if (confirm(`Declare war on House ${owner.name} for ${reg.name}?`)) {
-                          if (act((d) => declareWar(d, reg.id, o.cb))) toast(`War declared on House ${owner.name}! Fight from the Realm tab.`);
-                        }
+                        if (act((d) => declareWar(d, reg.id, o.cb))) toast(`War declared on House ${owner.name}! Fight from the Realm tab.`);
                       }}
                     >
                       War

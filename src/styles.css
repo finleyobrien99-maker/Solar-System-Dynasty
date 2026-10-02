@@ -151,7 +151,7 @@ select {
 /* ── Top bar */
 .topbar {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   z-index: 20;
   background: #070b18e8;
   backdrop-filter: blur(10px);

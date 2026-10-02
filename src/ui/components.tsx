@@ -1,7 +1,7 @@
 // Shared building blocks. Tooltips are everywhere on purpose: every number,
 // trait and button explains itself.
 
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { ageOf, alive, charTitle, clanRank, effStats, fullName, maxHealth, relationTo } from '../game/core';
 import { costText, type Cost } from '../game/genetics';
@@ -79,6 +79,7 @@ export function Btn({
   icon,
   showReason,
   title,
+  confirm,
 }: {
   children: ReactNode;
   onClick?: () => void;
@@ -90,19 +91,36 @@ export function Btn({
   icon?: string;
   showReason?: boolean;
   title?: string;
+  /** Ask for a second tap before running onClick (browser confirm dialogs are unreliable). */
+  confirm?: string;
 }) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = window.setTimeout(() => setArmed(false), 4000);
+    return () => window.clearTimeout(t);
+  }, [armed]);
   const isDisabled = disabled || !!reason;
+  const handle = () => {
+    if (confirm && !armed) {
+      setArmed(true);
+      return;
+    }
+    setArmed(false);
+    onClick?.();
+  };
   return (
     <span style={block ? { display: 'block', width: '100%' } : { display: 'inline-block' }}>
       <button
         type="button"
         className={`btn ${kind ?? ''} ${small ? 'small' : ''} ${block ? 'block' : ''}`}
         disabled={isDisabled}
-        onClick={onClick}
+        onClick={handle}
         title={reason ?? title}
+        aria-live={confirm ? 'polite' : undefined}
       >
         {icon && <Icon name={icon} size={small ? 14 : 16} />}
-        {children}
+        {armed ? confirm : children}
       </button>
       {showReason && reason && <span className="reason">{reason}</span>}
     </span>

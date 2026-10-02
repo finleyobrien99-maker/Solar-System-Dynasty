@@ -74,7 +74,7 @@ export function TreasuryTab() {
                   Equip
                 </Btn>
               )}
-              <Btn small kind="ghost" onClick={() => confirm(`Sell ${item.name} for ${Math.round(item.price * 0.45)} credits?`) && act((d) => sellItem(d, item.id))}>
+              <Btn small kind="ghost" confirm="Tap again to sell" onClick={() => act((d) => sellItem(d, item.id))}>
                 Sell ({Math.round(item.price * 0.45)})
               </Btn>
             </ItemTile>

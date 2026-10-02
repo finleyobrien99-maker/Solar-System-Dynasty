@@ -172,7 +172,11 @@ export function CharacterModal({ id }: { id: string }) {
               kind="danger"
               icon="scheme"
               reason={schemeBlocker(s, 'assassinate', c.id)}
-              onClick={() => confirm(`Send an assassin drone after ${c.name}?`) && act((d) => runScheme(d, 'assassinate', c.id)) !== undefined && toast('The drone is away.')}
+              confirm="Tap again to send it"
+              onClick={() => {
+                act((d) => runScheme(d, 'assassinate', c.id));
+                toast('The drone is away.');
+              }}
             >
               Assassin drone ({Math.round(schemeChance(s, 'assassinate', c.id) * 100)}%)
             </Btn>

@@ -78,7 +78,7 @@ export function ClanModal({ id }: { id: string }) {
               Send gift (100)
             </Btn>
             {clan.allied ? (
-              <Btn small kind="ghost" onClick={() => confirm('Break the alliance? -30 prestige.') && act((d) => breakAlliance(d, id))}>
+              <Btn small kind="ghost" confirm="Sure? -30 prestige" onClick={() => act((d) => breakAlliance(d, id))}>
                 Break alliance
               </Btn>
             ) : (
@@ -89,7 +89,7 @@ export function ClanModal({ id }: { id: string }) {
             <Btn small icon="crown" reason={vassalizeBlocker(s, id)} onClick={() => act((d) => demandVassalage(d, id))}>
               Demand fealty ({Math.round(vassalizeChance(s, id) * 100)}%)
             </Btn>
-            <Btn small kind="danger" reason={s.feuds.includes(id) ? 'Already feuding' : null} onClick={() => confirm(`Publicly insult House ${clan.name}?`) && act((d) => insult(d, id))}>
+            <Btn small kind="danger" reason={s.feuds.includes(id) ? 'Already feuding' : null} confirm="Tap again to insult" onClick={() => act((d) => insult(d, id))}>
               Insult
             </Btn>
           </div>

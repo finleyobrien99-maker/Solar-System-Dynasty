@@ -83,11 +83,10 @@ export function SavesPanel({ current, onLoad, onClose }: { current?: GameState; 
                   <Btn
                     small
                     kind="ghost"
+                    confirm="Tap again to delete"
                     onClick={() => {
-                      if (confirm(`Delete ${LABEL[slot]}?`)) {
-                        deleteSave(slot);
-                        refresh();
-                      }
+                      deleteSave(slot);
+                      refresh();
                     }}
                   >
                     Delete
