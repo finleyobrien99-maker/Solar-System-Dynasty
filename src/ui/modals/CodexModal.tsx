@@ -1,0 +1,218 @@
+// The in-game guide. The original game's biggest complaint was that nobody
+// explains what anything does, so this spells it all out.
+
+import { useState } from 'react';
+import { ACTIVITIES } from '../../game/activities';
+import { SCHEMES } from '../../game/intrigue';
+import { FAITHS, PLANETS } from '../../game/planets';
+import { STAT_HELP, STAT_NAMES, TRAIT_LIST, traitEffectText, type TraitCat } from '../../game/traits';
+import { STAT_KEYS } from '../../game/types';
+import { PlanetArt } from '../../svg/PlanetArt';
+import { Modal, TraitChip } from '../components';
+
+type Page = 'basics' | 'resources' | 'family' | 'bloodline' | 'realm' | 'war' | 'intrigue' | 'traits' | 'worlds';
+
+const PAGES: [Page, string][] = [
+  ['basics', 'Basics'],
+  ['resources', 'Resources & stats'],
+  ['family', 'Family & succession'],
+  ['bloodline', 'Bloodline & Gene Vault'],
+  ['realm', 'Ranks & realm'],
+  ['war', 'War'],
+  ['intrigue', 'Schemes & activities'],
+  ['traits', 'All traits'],
+  ['worlds', 'Worlds & faiths'],
+];
+
+const CATS: [TraitCat, string][] = [
+  ['genetic', 'Genetic (heritable, lockable)'],
+  ['personality', 'Personality (heritable, lockable)'],
+  ['education', 'Education'],
+  ['acquired', 'Acquired'],
+  ['cyber', 'Cybernetic'],
+];
+
+export function CodexModal({ onClose }: { onClose: () => void }) {
+  const [page, setPage] = useState<Page>('basics');
+  return (
+    <Modal title="Codex" onClose={onClose} wide icon="codex">
+      <div className="tabs">
+        {PAGES.map(([id, label]) => (
+          <button key={id} className={page === id ? 'on' : ''} onClick={() => setPage(id)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="codex">
+        {page === 'basics' && (
+          <>
+            <h3>The idea</h3>
+            <p>
+              You are the head of a minor house on one of the ten worlds of the Sol system. Every press of <b>Age Up</b> is one cycle (a year). Events pop up, children are
+              born, rivals scheme, wars rage. When your ruler dies you carry on as their heir. Your goal is whatever you want: rule a planet, unite the system on the Solar
+              Throne, or breed the most perfect bloodline the stars have ever seen.
+            </p>
+            <h3>The tabs</h3>
+            <ul>
+              <li><b>Life</b>: your ruler, your heir and the chronicle of everything that has happened.</li>
+              <li><b>Family</b>: marriages, children, schooling, succession laws and the wider dynasty.</li>
+              <li><b>Bloodline</b>: the Gene Vault. Lock traits into your bloodline forever, or purge bad ones.</li>
+              <li><b>Realm</b>: titles, wars and battles, your fleet, regions, vassals, prisoners, faith.</li>
+              <li><b>System</b>: the map. Inspect every planet and house, declare war, forge claims.</li>
+              <li><b>Actions</b>: galas, hunts, pilgrimages and schemes.</li>
+              <li><b>Treasury</b>: relics, weapons, crowns and flagships, plus the bazaar.</li>
+            </ul>
+            <h3>Saves</h3>
+            <p>The game saves itself after every action, with a verified backup of the previous save in each slot. Use the menu to keep extra slots or export a file.</p>
+          </>
+        )}
+        {page === 'resources' && (
+          <>
+            <h3>Credits</h3>
+            <p>Money. Earned from your regions (boosted by Economy) and vassals' tribute. Spent on ships, development, activities, implants, bribes, relics and the Gene Vault. Fall into debt and 10% of your fleet deserts every cycle.</p>
+            <h3>Fleet</h3>
+            <p>Your warships. Battle strength = ships × (1 + 4% per Command point) × bonuses (Mars, traits, flagship, leading personally). Each ship costs 0.8 credits a cycle to keep. Capacity grows with regions and rank.</p>
+            <h3>Prestige</h3>
+            <p>Your fame. Earned from rank, traits, crowns, children and locked genes. Spent on titles, Gene Vault locks, law changes, legitimising bastards, fealty demands and naked conquest. Above 100 it starts making every clan like you more.</p>
+            <h3>Faith</h3>
+            <p>Your standing with the church. Earned slowly from devotion, Zealous and Pilgrim traits, relics and pilgrimages. Spent on holy wars, divorce, prayers in events, converting, and conditioning personality traits in the Gene Vault.</p>
+            <h3>Health</h3>
+            <p>Drifts toward a maximum that falls with age (and rises with Robust genes, armour and implants). Below 30 death becomes likely. Illness drains it every cycle until cured.</p>
+            <h3>The five stats</h3>
+            <ul>
+              {STAT_KEYS.map((k) => (
+                <li key={k}>
+                  <b>{STAT_NAMES[k]}</b>: {STAT_HELP[k].split(': ')[1]}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {page === 'family' && (
+          <>
+            <h3>Marriage</h3>
+            <p>Use the matchmaker to pick a spouse. They join your house, so the children are your dynasty. Highborn candidates (a clan head's child) cost prestige but bring an alliance. Always check their genes.</p>
+            <h3>Children</h3>
+            <p>Each cycle a married couple may have a child (better odds with Fecund or Lustful parents, worse after 35). From 6, children study under a tutor in a focus of your choice; at 16 they earn an education trait (tier 1 to 4) and their personality settles.</p>
+            <h3>Affairs</h3>
+            <p>Lovers can give you unsanctioned children. They cannot inherit unless legitimised for 150 prestige.</p>
+            <h3>Succession</h3>
+            <p>When your ruler dies, the next in line inherits everything. Laws decide the order: Primogeniture (eldest), Ultimogeniture (youngest), Meritocracy (best total stats) or Designated (you choose). A gender law can favour sons or daughters. If no legitimate dynasty member is alive, the game ends.</p>
+            <h3>Sprawling dynasties</h3>
+            <p>At the start of a run you pick <b>Sprawling</b> (no limit on dynasty size) or <b>Tight family</b> (distant kin have fewer children once the dynasty passes 30 people). With auto-matchmaking on, adult kin you haven't married off find their own spouses across the system. Depending on your gender law, some bring the spouse home and some marry into other houses, scattering your blood across every world.</p>
+          </>
+        )}
+        {page === 'bloodline' && (
+          <>
+            <h3>Genes</h3>
+            <p>Genetic traits sit on ladders (Dim, Slow, Quick, Brilliant, Genius). A child gets a parent's gene 40% of the time, 75% if both parents share it, and has a 12% chance to climb a rung when both parents share the same tier. Every birth has a 5% chance of a random mutation, which is where rare genes like Psionic Ascendant and Ageless come from.</p>
+            <h3>The Gene Vault</h3>
+            <ul>
+              <li><b>Lock</b> a trait and every child born into your dynasty gets it, guaranteed, forever. You need a living dynasty member who carries it.</li>
+              <li><b>Purge</b> a trait and no dynasty child will ever inherit it. You can purge something nobody has yet, as insurance.</li>
+              <li>Locking a gene replaces any other lock on the same ladder (lock Genius and your Quick lock is swapped out).</li>
+              <li>Personality locks (Brave, Just, Ambitious…) work by conditioning: they also reshape your kids under 16 straight away.</li>
+              <li>Each lock or purge takes a vault slot. Buy more slots in the Bloodline tab (up to 12).</li>
+              <li>Spouses from other houses are not affected, so marry for good genes.</li>
+              <li>Children of kin who marry into other houses belong to those houses, so your locks do not reach them.</li>
+            </ul>
+            <h3>Bloodline grade</h3>
+            <p>The average genetic tier across your living dynasty, plus a bonus for each good gene locked. Every good genetic lock also gives +2 prestige a cycle.</p>
+          </>
+        )}
+        {page === 'realm' && (
+          <>
+            <h3>Ranks</h3>
+            <ul>
+              <li><b>Governor</b>: you hold one or two regions. You answer to the ruler of your home planet and pay them 15% of your income.</li>
+              <li><b>Viceroy</b>: hold 3 regions, then create the title (500 credits, 300 prestige). Lets you demand fealty from weaker houses.</li>
+              <li><b>Sovereign</b>: take a planet's throne-region (marked with a crown) and you rule that planet. Every other house there becomes your vassal.</li>
+              <li><b>Solar Emperor</b>: rule the thrones of 3 planets and forge the Solar Throne (3000 credits, 1500 prestige).</li>
+            </ul>
+            <h3>Vassals</h3>
+            <p>Vassals pay tribute and send ships to your wars if they like you. If their opinion drops below -40 they may revolt. You can arrest a vassal's leader (if it fails, they revolt), then execute, ransom or release them.</p>
+            <h3>Independence</h3>
+            <p>Tired of your liege? Declare independence from the Realm tab. Win the war and you answer to no one.</p>
+            <h3>Regions</h3>
+            <p>Each pays 20 + 12 × development credits a cycle. Develop them (up to 10) to grow your economy.</p>
+          </>
+        )}
+        {page === 'war' && (
+          <>
+            <h3>Declaring war</h3>
+            <p>Pick a region on the System map. You need a justification: a <b>claim</b> (forge one with a scheme), a <b>blood feud</b> (from insults or caught assassins), a <b>holy war</b> against another faith (150 faith), or <b>naked conquest</b> (120 prestige, everyone likes you less).</p>
+            <h3>Battles</h3>
+            <p>Launch one battle per war per cycle; the enemy also attacks once a cycle. Each win pushes the war score toward +100 and kills more of their ships. At +100 you win the region (or independence). At -100 you lose. Allies send 30% of their fleets; loyal vassals 20%. If a vassal is attacked by an outsider, their liege helps them.</p>
+            <h3>Leading in person</h3>
+            <p>+15% strength and extra prestige, with a chance of glory (War Hero), wounds, scars or death.</p>
+            <h3>Peace</h3>
+            <p>Offer peace once a cycle. With a big lead the enemy may hand over the prize; around zero they may accept a white peace. Wars end on their own after 7 cycles.</p>
+          </>
+        )}
+        {page === 'intrigue' && (
+          <>
+            <h3>Schemes</h3>
+            <p>Up to 3 per cycle. Your Intrigue against the target's decides the odds; Deceitful, psionics, Venusian birth and relics help, while Paranoid and Plutonian targets resist. Getting caught makes enemies.</p>
+            <ul>
+              {Object.values(SCHEMES).map((x) => (
+                <li key={x.name}>
+                  <b>{x.name}</b>: {x.desc}
+                </li>
+              ))}
+            </ul>
+            <h3>Activities</h3>
+            <ul>
+              {Object.values(ACTIVITIES).map((a) => (
+                <li key={a.name}>
+                  <b>{a.name}</b>: {a.desc}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {page === 'traits' &&
+          CATS.map(([cat, label]) => (
+            <div key={cat}>
+              <h3>{label}</h3>
+              <table className="plain">
+                <tbody>
+                  {TRAIT_LIST.filter((t) => t.cat === cat).map((t) => (
+                    <tr key={t.id}>
+                      <td style={{ width: 160 }}>
+                        <TraitChip id={t.id} />
+                      </td>
+                      <td>
+                        {t.desc} <span className="good">{traitEffectText(t)}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        {page === 'worlds' && (
+          <>
+            {PLANETS.map((p) => (
+              <div key={p.id} className="row top" style={{ marginBottom: 10 }}>
+                <PlanetArt planetId={p.id} size={56} />
+                <div>
+                  <b>
+                    {p.name}: {p.faction}
+                  </b>
+                  <p style={{ margin: 0 }}>{p.blurb}</p>
+                  <p className="good" style={{ margin: 0 }}>{p.bonus}</p>
+                </div>
+              </div>
+            ))}
+            <h3>Faiths</h3>
+            {Object.values(FAITHS).map((f) => (
+              <p key={f.id}>
+                <b style={{ color: f.color }}>{f.name}</b>: {f.blurb} <span className="muted">Virtues: {f.virtues.join(', ')}.</span>
+              </p>
+            ))}
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}
