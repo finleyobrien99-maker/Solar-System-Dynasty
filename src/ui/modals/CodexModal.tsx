@@ -10,14 +10,16 @@ import { STAT_KEYS } from '../../game/types';
 import { PlanetArt } from '../../svg/PlanetArt';
 import { Modal, TraitChip } from '../components';
 
-type Page = 'basics' | 'resources' | 'family' | 'bloodline' | 'realm' | 'war' | 'intrigue' | 'traits' | 'worlds';
+type Page = 'basics' | 'resources' | 'family' | 'bloodline' | 'forge' | 'realm' | 'court' | 'war' | 'intrigue' | 'traits' | 'worlds';
 
 const PAGES: [Page, string][] = [
   ['basics', 'Basics'],
   ['resources', 'Resources & stats'],
   ['family', 'Family & succession'],
   ['bloodline', 'Bloodline & Gene Vault'],
+  ['forge', 'Gene-Forge'],
   ['realm', 'Ranks & realm'],
+  ['court', 'Council, cadets & trade'],
   ['war', 'War'],
   ['intrigue', 'Schemes & activities'],
   ['traits', 'All traits'],
@@ -118,6 +120,38 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
             </ul>
             <h3>Bloodline grade</h3>
             <p>The average genetic tier across your living dynasty, plus a bonus for each good gene locked. Every good genetic lock also gives +2 prestige a cycle.</p>
+          </>
+        )}
+        {page === 'forge' && (
+          <>
+            <h3>The Gene-Forge</h3>
+            <p>Build it from the Bloodline tab (600 credits, 150 prestige). It lets you go beyond what breeding gives you.</p>
+            <ul>
+              <li><b>Research</b>: sequence any good gene, even one nobody in your family has ever carried. Each project takes a few cycles (faster with high Science and a Chief Scientist) and costs 40 credits a cycle. Once synthesised, a gene can be locked in the Gene Vault without a living carrier.</li>
+              <li><b>Gene therapy</b>: splice a researched gene into a living relative. Babies take it best (80%), adults worst (45%). A rejected splice can leave them Sickly or with Gene-Rot.</li>
+              <li><b>Vat Complex</b> (1,200 credits, 300 prestige): grow a designer heir from one parent's genome with up to three researched genes built in, or clone any member of your bloodline, living or long dead. Clones are raised as your own children. It also lets mothers have children into their late fifties.</li>
+            </ul>
+            <h3>Faith and heresy</h3>
+            <p>The Machine Synod embraces gene-forging: procedures are 25% cheaper and earn faith. The Solar Orthodoxy and the Abyssal Choir condemn it: every procedure costs you faith, and every house of those faiths remembers it.</p>
+          </>
+        )}
+        {page === 'court' && (
+          <>
+            <h3>The council</h3>
+            <p>Five seats in the Realm tab, filled from your bloodline (cadets included) and their spouses. Councillors slowly improve their stat while they serve.</p>
+            <ul>
+              <li><b>Envoy</b> (Diplomacy): every house likes you more; better alliance and peace odds.</li>
+              <li><b>Admiral</b> (Command): extra fleet strength, and commands any battle you don't lead in person.</li>
+              <li><b>Treasurer</b> (Economy): extra region income and more trade route slots.</li>
+              <li><b>Spymaster</b> (Intrigue): better scheme odds, fewer exposures, and protection against rival plots.</li>
+              <li><b>Chief Scientist</b> (Science): faster schooling, faster gene research, safer implants and splices.</li>
+            </ul>
+            <h3>Cadet branches</h3>
+            <p>Open an adult relative's card (not your heir) and grant them one of your regions. They found a new house of your bloodline: sworn to you, paying tribute, sending 35% of their fleet to your wars, and sharing your Gene Vault's locks. Treat them badly and they can still revolt. If your main line ever dies out, the strongest cadet branch rejoins the main house and takes the crown.</p>
+            <h3>Grudges and rivals</h3>
+            <p>Every house keeps a record of what you did to it: murders, executions, stolen regions, insults, broken alliances, but also gifts, marriages and freed prisoners. Memories fade every cycle, favours fastest and killings slowest, and they pass to the next head of the house. When a house's grudges reach -40 it becomes a <b>Sworn Rival</b>: rivals plot assassinations, sabotage your docks, rob your treasury and declare war on you from anywhere in the system. Check the System tab to see who hates you.</p>
+            <h3>Trade routes</h3>
+            <p>Run convoys from one of your regions to a partner house on another world (Realm tab). Value grows with distance and with both ports' development; allies pay 15% more and Belters 20% more. Every world has its export, from Mercurian alloys to Plutonian cryo-crystals. You get 1 route plus 1 per rank, plus more with a good Treasurer. Partners must like you (opinion 0+), war closes the route, and pirates raid convoys unless your fleet is big enough to scare them off.</p>
           </>
         )}
         {page === 'realm' && (

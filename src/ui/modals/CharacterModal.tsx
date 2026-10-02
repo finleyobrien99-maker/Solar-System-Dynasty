@@ -8,6 +8,8 @@ import type { Character } from '../../game/types';
 import { Btn, CharCard, ClanBadge, Face, HealthBar, InfoDot, Modal, StatBlock, TraitList } from '../components';
 import { EduControls } from '../tabs/FamilyTab';
 import { useGame } from '../store';
+import { FoundCadetPanel } from '../sections/CadetSection';
+import { roleOf, ROLES } from '../../game/council';
 
 function Links({ label, people }: { label: string; people: Character[] }) {
   const { openChar } = useGame();
@@ -62,6 +64,8 @@ export function CharacterModal({ id }: { id: string }) {
               {c.bastard && <span className="pill red">Unsanctioned birth</span>}
               {c.prisonerOf && <span className="pill red">Prisoner of House {s.clans[c.prisonerOf]?.name}</span>}
               {s.dynasty.designatedHeir === c.id && <span className="pill gold">Designated heir</span>}
+              {roleOf(s, c.id) && <span className="pill cyan">{ROLES[roleOf(s, c.id)!].name}</span>}
+              {c.cloneOf && <span className="pill">Clone of {s.characters[c.cloneOf]?.name ?? 'an ancestor'}</span>}
             </div>
           </div>
           {living && <HealthBar s={s} c={c} />}
@@ -129,6 +133,8 @@ export function CharacterModal({ id }: { id: string }) {
           </Btn>
         </div>
       )}
+
+      {living && c.clanId === s.playerClanId && !isRuler && ageOf(s, c) >= 18 && !c.marriedIn && <FoundCadetPanel c={c} />}
 
       {cyberOpen && (
         <details style={{ marginTop: 12 }}>

@@ -23,6 +23,8 @@ import { chance, clamp, int } from './rng';
 import { addTrait } from './traits';
 import type { Character, GameState } from './types';
 import { aiDeclareWar } from './war';
+import { councilStat } from './council';
+import { remember } from './memory';
 
 export type SchemeKind = 'assassinate' | 'sabotage' | 'blackmail' | 'fabricate' | 'sway' | 'seduce';
 
@@ -62,7 +64,7 @@ export function schemeChance(s: GameState, kind: SchemeKind, targetId: string): 
   else target = ch(s, s.clans[s.regions[targetId]?.owner]?.headId);
   const theirs = target ? effStats(s, target).int : 5;
   const diff = (me - theirs) * 0.03;
-  const bonus = schemeBonus(s) - defenseOf(s, target);
+  const bonus = schemeBonus(s) - defenseOf(s, target) + councilStat(s, 'spymaster') * 0.01;
   let base = 0.4;
   switch (kind) {
     case 'assassinate':
@@ -125,7 +127,7 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
   s.stats.schemes += 1;
   const success = chance(s, schemeChance(s, kind, targetId));
   const caughtChance = success ? 0.2 : 0.55;
-  const caught = chance(s, caughtChance - effStats(s, ruler(s)).int * 0.015);
+  const caught = chance(s, caughtChance - effStats(s, ruler(s)).int * 0.015 - councilStat(s, 'spymaster') * 0.01);
   const r = ruler(s);
 
   const victimClanId =
@@ -142,14 +144,18 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
   switch (kind) {
     case 'assassinate': {
       const t = s.characters[targetId];
+      const wasHead = s.clans[t.clanId]?.headId === t.id;
       if (success) {
         title = 'Target Eliminated';
         text = `The drone found ${fullName(s, t)}. They will not wake up.`;
         if (t.clanId === s.playerClanId) r.traits = addTrait(r.traits, 'kinslayer');
         killCharacter(s, t.id, 'assassinated');
+        if (caught) remember(s, t.clanId, `Murdered ${wasHead ? 'our lord ' : ''}${t.name}`, wasHead ? -70 : -55, 0.015);
+        else if (chance(s, 0.3)) remember(s, t.clanId, `Suspected of murdering ${t.name}`, -25, 0.03);
       } else {
         title = 'Assassination Failed';
         text = `${t.name} survived your drone strike.`;
+        if (caught) remember(s, t.clanId, `Sent an assassin after ${t.name}`, -40, 0.03);
       }
       if (caught && victimClan && !victimClan.isPlayer) {
         victimClan.opinion = -100;
@@ -173,7 +179,10 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
         title = 'Sabotage Foiled';
         text = `House ${clan.name}'s dock security caught your saboteurs.`;
       }
-      if (caught) clan.opinion -= 40;
+      if (caught) {
+        clan.opinion -= 40;
+        remember(s, clan.id, 'Burned our shipyards', -25);
+      }
       break;
     }
     case 'blackmail': {
@@ -181,7 +190,7 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
       if (success) {
         const amount = int(s, 80, 160) + clanRank(s, clan.id) * 50;
         s.credits += amount;
-        clan.opinion -= 15;
+        remember(s, clan.id, 'Blackmailed us', -15);
         title = 'They Paid Up';
         text = `${fullName(s, ch(s, clan.headId)!)} pays ${amount} credits to keep their secrets buried.`;
       } else {
@@ -189,7 +198,7 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
         text = `House ${clan.name} is cleaner than you thought.`;
       }
       if (caught) {
-        clan.opinion -= 30;
+        remember(s, clan.id, 'Tried to blackmail us', -25);
         s.prestige -= 20;
       }
       break;
@@ -204,13 +213,13 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
         title = 'Forgery Spotted';
         text = `The archivists laughed at your forged deeds to ${reg.name}.`;
       }
-      if (caught && victimClan) victimClan.opinion -= 25;
+      if (caught && victimClan) remember(s, victimClan.id, `Forged claims on ${reg.name}`, -15);
       break;
     }
     case 'sway': {
       const clan = s.clans[targetId];
       if (success) {
-        clan.opinion = Math.min(100, clan.opinion + int(s, 15, 30));
+        remember(s, clan.id, 'Charmed us', int(s, 12, 24), 0.15);
         title = 'Swayed';
         text = `House ${clan.name} warms to you.`;
       } else {
@@ -230,7 +239,7 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
         title = 'Rejected';
         text = `${t.name} turns you down flat.`;
       }
-      if (caught && victimClan && !victimClan.isPlayer) victimClan.opinion -= 20;
+      if (caught && victimClan && !victimClan.isPlayer) remember(s, victimClan.id, `Seduced ${t.name}`, -15);
       break;
     }
   }
@@ -250,7 +259,8 @@ export function sendGift(s: GameState, clanId: string): boolean {
   s.credits -= GIFT_COST;
   s.cooldowns[key] = s.year + 1;
   const clan = s.clans[clanId];
-  clan.opinion = Math.min(100, clan.opinion + 15 + Math.round(effStats(s, ruler(s)).dip / 2));
+  remember(s, clan.id, 'Sent us gifts', 10 + Math.round(effStats(s, ruler(s)).dip / 3), 0.15);
+  clan.opinion = Math.min(100, clan.opinion + 5);
   log(s, `You sent a gift to House ${clan.name}.`, 'info');
   return true;
 }
@@ -258,7 +268,7 @@ export function sendGift(s: GameState, clanId: string): boolean {
 export function allianceChance(s: GameState, clanId: string): number {
   const clan = s.clans[clanId];
   const dip = effStats(s, ruler(s)).dip;
-  return clamp((clan.opinion - 20) / 80 + dip * 0.03, 0, 0.95);
+  return clamp((clan.opinion - 20) / 80 + dip * 0.03 + councilStat(s, 'envoy') * 0.01, 0, 0.95);
 }
 
 export function proposeAlliance(s: GameState, clanId: string): boolean {
@@ -268,7 +278,7 @@ export function proposeAlliance(s: GameState, clanId: string): boolean {
   const clan = s.clans[clanId];
   if (chance(s, allianceChance(s, clanId))) {
     clan.allied = true;
-    clan.opinion = Math.min(100, clan.opinion + 10);
+    remember(s, clan.id, 'Stood with us as allies', 15, 0.04);
     notice(s, 'Alliance Formed', `House ${clan.name} agrees to stand with you in war.`, { icon: 'peace', tone: 'good', portraitId: clan.headId });
     log(s, `Alliance formed with House ${clan.name}.`, 'good');
     return true;
@@ -280,14 +290,14 @@ export function proposeAlliance(s: GameState, clanId: string): boolean {
 export function breakAlliance(s: GameState, clanId: string): void {
   const clan = s.clans[clanId];
   clan.allied = false;
-  clan.opinion -= 30;
+  remember(s, clan.id, 'Broke our alliance', -30, 0.04);
   s.prestige -= 30;
   log(s, `You broke off the alliance with House ${clan.name}.`, 'bad');
 }
 
 export function insult(s: GameState, clanId: string): void {
   const clan = s.clans[clanId];
-  clan.opinion -= 35;
+  remember(s, clanId, 'Publicly insulted our house', -35, 0.04);
   if (!s.feuds.includes(clanId)) s.feuds.push(clanId);
   s.prestige += 10;
   log(s, `You publicly insulted House ${clan.name}. A blood feud begins.`, 'war');
@@ -324,7 +334,7 @@ export function demandVassalage(s: GameState, clanId: string): boolean {
     log(s, `House ${clan.name} is now your vassal.`, 'good');
     return true;
   }
-  clan.opinion -= 20;
+  remember(s, clanId, 'Demanded we kneel', -12);
   notice(s, 'Refused', `House ${clan.name} refuses to kneel. You could always make them...`, { icon: 'war', tone: 'bad', portraitId: clan.headId });
   return false;
 }
@@ -351,7 +361,7 @@ export function arrestVassal(s: GameState, clanId: string): boolean {
   if (!alive(head) || head.prisonerOf) return false;
   if (chance(s, arrestChance(s, clanId))) {
     head.prisonerOf = s.playerClanId;
-    clan.opinion = -60;
+    remember(s, clanId, `Imprisoned our lord ${head.name}`, -35, 0.03);
     for (const v of vassalsOf(s, s.playerClanId)) if (v.id !== clanId) v.opinion -= 8;
     notice(s, 'Arrested', `${fullName(s, head)} is dragged to your cells.`, { icon: 'scheme', tone: 'good', portraitId: head.id });
     log(s, `You imprisoned ${fullName(s, head)}.`, 'info');
@@ -374,6 +384,7 @@ export function executePrisoner(s: GameState, id: string): void {
   const clan = s.clans[c.clanId];
   c.prisonerOf = undefined;
   killCharacter(s, id, 'executed');
+  remember(s, c.clanId, `Executed ${c.name}`, -75, 0.012);
   s.prestige -= 30;
   for (const k of Object.values(s.clans)) if (!k.isPlayer) k.opinion -= 6;
   if (clan) clan.opinion = -100;
@@ -394,8 +405,7 @@ export function ransomPrisoner(s: GameState, id: string): void {
   const v = ransomValue(s, id);
   s.credits += v;
   c.prisonerOf = undefined;
-  const clan = s.clans[c.clanId];
-  if (clan) clan.opinion -= 10;
+  remember(s, c.clanId, `Ransomed ${c.name}`, -8);
   log(s, `${fullName(s, c)} was ransomed for ${v} credits.`, 'info');
 }
 
@@ -404,7 +414,7 @@ export function releasePrisoner(s: GameState, id: string): void {
   if (!alive(c) || c.prisonerOf !== s.playerClanId) return;
   c.prisonerOf = undefined;
   const clan = s.clans[c.clanId];
-  if (clan) clan.opinion += 25;
+  if (clan) remember(s, clan.id, `Freed ${c.name}`, 25, 0.05);
   s.prestige += 10;
   log(s, `${fullName(s, c)} was released.`, 'info');
 }

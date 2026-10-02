@@ -29,6 +29,7 @@ import { EDU_NAMES, STAT_NAMES } from '../../game/traits';
 import { STAT_KEYS, type Character, type GenderLaw, type StatKey, type SuccessionLaw, type TutorKey } from '../../game/types';
 import { Btn, CharCard, CostTag, InfoDot, Section } from '../components';
 import { useGame } from '../store';
+import { CadetSection } from '../sections/CadetSection';
 
 export function EduControls({ c }: { c: Character }) {
   const { s, act } = useGame();
@@ -245,6 +246,8 @@ export function FamilyTab() {
           ))}
         </div>
       </Section>
+
+      <CadetSection />
 
       <Section
         title={`Wider dynasty (${kin.length} living)`}

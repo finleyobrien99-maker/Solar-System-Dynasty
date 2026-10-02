@@ -25,6 +25,8 @@ import { chance, clamp, range } from './rng';
 import { addTrait } from './traits';
 import type { BattleReport, CasusBelli, GameState, Region, War } from './types';
 import { killCharacter } from './life';
+import { councilStat } from './council';
+import { remember } from './memory';
 
 export const CB_INFO: Record<CasusBelli, { name: string; desc: string }> = {
   claim: { name: 'Press Claim', desc: 'You hold a claim on this region. No prestige penalty.' },
@@ -89,6 +91,7 @@ export function declareWar(s: GameState, regionId: string, cb: CasusBelli): bool
     log(s, `You broke your alliance with House ${enemy.name}. Oath-breaker!`, 'bad');
   }
   enemy.opinion = Math.min(enemy.opinion, -40) - 20;
+  remember(s, enemy.id, cb === 'conquest' ? 'Attacked us without any cause' : `Made war on us over ${region.name}`, cb === 'conquest' ? -30 : -15);
   s.feuds = s.feuds.filter((f) => f !== enemy.id || cb !== 'feud');
   s.wars.push({ id: newId(s, 'w'), enemy: enemy.id, playerAttacker: true, target: regionId, cb, score: 0, started: s.year });
   log(s, `War! You declared a ${CB_INFO[cb].name} on House ${enemy.name} for ${region.name}.`, 'war');
@@ -142,14 +145,15 @@ export function playerSide(s: GameState, war: War, personal: boolean): Side {
   }
   for (const v of vassalsOf(s, s.playerClanId)) {
     if (v.id === war.enemy || v.opinion <= 0) continue;
-    const add = Math.round(v.fleet * 0.2);
+    const add = Math.round(v.fleet * (v.cadetOf === s.playerClanId ? 0.35 : 0.2));
     if (add > 0) {
       ships += add;
-      helpers.push(`House ${v.name} (vassal, ${add})`);
+      helpers.push(`House ${v.name} (${v.cadetOf === s.playerClanId ? 'cadet' : 'vassal'}, ${add})`);
     }
   }
-  const cmd = effStats(s, r).cmd;
-  let mod = 1 + traitSum(r, 'fleetPct') + itemSum(s, 'fleetPct');
+  // An admiral commands any battle you don't lead yourself, if they're better at it.
+  const cmd = personal ? effStats(s, r).cmd : Math.max(effStats(s, r).cmd, councilStat(s, 'admiral'));
+  let mod = 1 + traitSum(r, 'fleetPct') + itemSum(s, 'fleetPct') + councilStat(s, 'admiral') * 0.01;
   if (homePlanet(s) === 'mars') mod += 0.15;
   if (personal) mod += 0.15;
   if ((s.year - r.born) < 16) mod -= 0.2; // regency
@@ -286,6 +290,7 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
     }
     if (war.playerAttacker && region) {
       const wasCapital = region.capital;
+      remember(s, enemy.id, wasCapital ? `Stole our throne, ${region.name}` : `Took ${region.name} from us`, wasCapital ? -55 : -35, 0.025);
       setOwner(s, region, clan.id);
       s.claims = s.claims.filter((c) => c !== region.id);
       log(s, `${region.name} is yours!`, 'good');
@@ -338,7 +343,7 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
 }
 
 export function peaceChance(s: GameState, war: War): number {
-  const dip = effStats(s, ruler(s)).dip;
+  const dip = effStats(s, ruler(s)).dip + councilStat(s, 'envoy') / 2;
   if (war.score >= 50) return clamp(0.5 + dip * 0.02, 0, 0.95);
   if (war.score >= -20) return clamp(0.3 + dip * 0.02 + (war.score + 20) / 200, 0.05, 0.9);
   return 0.05;

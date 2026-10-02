@@ -97,6 +97,14 @@ function SolarMapImpl({ s, selected, onSelect }: Props) {
       ))}
       <circle r={70} fill="url(#sunGlow)" />
       <circle r={26} fill="#ffe38a" />
+      {s.routes.map((r) => {
+        const from = PLANETS.find((p) => p.id === s.regions[r.from]?.planetId);
+        const to = PLANETS.find((p) => p.id === r.planetId);
+        if (!from || !to) return null;
+        const a = planetPos(from, s.year);
+        const b = planetPos(to, s.year);
+        return <line key={`trade${r.id}`} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="#ffd166" strokeWidth={1.6} strokeDasharray="2 6" strokeLinecap="round" opacity={0.75} />;
+      })}
       {ordered
         .filter(({ p }) => warPlanets.has(p.id))
         .map(({ p, pos }) => (

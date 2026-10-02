@@ -4,6 +4,7 @@
 import {
   ageOf,
   alive,
+  bloodlineMembers,
   ch,
   childrenOf,
   clanRank,
@@ -20,6 +21,9 @@ import {
   vassalsOf,
 } from './core';
 import { isCloseFamily } from './life';
+import { councilStat } from './council';
+import { RESEARCH_UPKEEP } from './forge';
+import { routeIncome } from './trade';
 import { TRAITS } from './traits';
 import type { GameState } from './types';
 
@@ -51,6 +55,8 @@ export function creditLines(s: GameState): Line[] {
   if (homePlanet(s) === 'mercury') mult += 0.15;
   if (homePlanet(s) === 'ceres') mult += 0.1;
   lines.push({ label: 'Regions (boosted by Economy)', value: Math.round(gross * mult) });
+  const treasurer = councilStat(s, 'treasurer');
+  if (treasurer) lines.push({ label: `Treasurer (+${treasurer}%)`, value: Math.round(gross * treasurer * 0.01) });
 
   const vassals = vassalsOf(s, s.playerClanId);
   if (vassals.length) {
@@ -74,6 +80,8 @@ export function creditLines(s: GameState): Line[] {
 
   const items = itemSum(s, 'creditsYr');
   if (items) lines.push({ label: 'Relics', value: items });
+  if (s.forge.project) lines.push({ label: 'Gene-Forge research', value: -RESEARCH_UPKEEP });
+  if (s.routes.length) lines.push({ label: `Trade routes (${s.routes.length})`, value: routeIncome(s) });
   return lines;
 }
 
@@ -90,7 +98,7 @@ export function prestigeLines(s: GameState): Line[] {
   if (bloodline) lines.push({ label: 'Exalted bloodline (locked genes)', value: bloodline * 2 });
   const kids = childrenOf(s, r).filter(alive).length;
   if (kids) lines.push({ label: 'Children & heirs', value: Math.min(5, kids) });
-  const sprawl = Math.floor(dynastyMembers(s).length / 10);
+  const sprawl = Math.floor(bloodlineMembers(s).length / 10);
   if (sprawl) lines.push({ label: 'Renown of a great bloodline (1 per 10 kin)', value: sprawl });
   if (s.credits < 0) lines.push({ label: 'In debt!', value: -10 });
   return lines;

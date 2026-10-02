@@ -11,18 +11,23 @@ import {
   dynastyMembers,
   effStats,
   hasTrait,
+  fullName,
   homePlanet,
   liegeOf,
   log,
+  notice,
   newId,
   planetSovereign,
   playerClan,
   ruler,
   setOwner,
+  traitSum,
   vassalsOf,
 } from './core';
 import { grossRegionIncome } from './economy';
-import { aiSucceed } from './life';
+import { aiSucceed, isCloseFamily, killCharacter, currentHeir } from './life';
+import { councilStat } from './council';
+import { grudgeOpinion, isRival } from './memory';
 import { PLANET_BY_ID } from './planets';
 import { chance, clamp, int, pick, range, weighted } from './rng';
 import type { AiWar, Clan, GameState } from './types';
@@ -69,6 +74,9 @@ export function baselineOpinion(s: GameState, clan: Clan, ties: Set<string> = fa
   for (const t of ['just', 'kind', 'generous', 'honest']) if (hasTrait(r, t)) o += 4;
   for (const t of ['cruel', 'arbitrary', 'tyrant', 'kinslayer', 'deceitful']) if (hasTrait(r, t)) o -= 6;
   o += clamp(Math.round(s.prestige / 100), -10, 15);
+  o += grudgeOpinion(clan);
+  o += Math.floor(councilStat(s, 'envoy') / 3);
+  if (clan.cadetOf === pc.id) o += 30; // blood is thicker than vacuum
   if (homePlanet(s) === 'earth') o += 10;
   if (atWarWith(s, clan.id)) o -= 60;
   // Family ties: anyone in their house married into yours.
@@ -208,15 +216,63 @@ function aggressionOnPlayer(s: GameState): void {
     if (c.allied || atWarWith(s, c.id) || s.aiWars.some((w) => w.attacker === c.id)) return false;
     if (liegeOf(s, c.id) === s.playerClanId) return false;
     const near = myPlanets.has(c.planetId) || neighbours(c.planetId).some((p) => myPlanets.has(p));
+    // Sworn rivals come for you from anywhere, and with less of an edge.
+    if (isRival(c)) return c.fleet > s.fleet * 0.7;
     return near && c.opinion < -25 && c.fleet > s.fleet * 0.9;
   });
   if (!pool.length) return;
   const attacker = pick(s, pool);
-  if (!chance(s, 0.1 * aggression(s, attacker))) return;
+  if (!chance(s, 0.1 * aggression(s, attacker) * (isRival(attacker) ? 1.8 : 1))) return;
   const onPlanet = mine.filter((r) => r.planetId === attacker.planetId && !(r.capital && clanRank(s, attacker.id) < 2));
   const target = onPlanet.length ? pick(s, onPlanet) : pick(s, mine);
   const cb = s.claims.length && chance(s, 0.3) ? 'feud' : 'conquest';
   aiDeclareWar(s, attacker.id, cb, target.id);
+}
+
+/** Sworn rivals scheme against you: assassins, sabotage and theft. */
+function rivalPlots(s: GameState): void {
+  if (s.year - s.startYear < GRACE_YEARS) return;
+  const rivals = landed(s).filter((c) => isRival(c) && alive(ch(s, c.headId)) && !ch(s, c.headId)?.prisonerOf);
+  if (!rivals.length || !chance(s, Math.min(0.35, 0.12 * rivals.length))) return;
+  const rival = pick(s, rivals);
+  const head = ch(s, rival.headId)!;
+  const myDefence = Math.max(effStats(s, ruler(s)).int, councilStat(s, 'spymaster'));
+  const odds = clamp(0.35 + (effStats(s, head).int - myDefence) * 0.03 - traitSum(ruler(s), 'defense'), 0.08, 0.7);
+  const success = chance(s, odds);
+  const kind = weighted(s, [
+    ['assassinate', 0.35],
+    ['sabotage', 0.35],
+    ['theft', 0.3],
+  ] as const);
+  const caught = !success || chance(s, 0.4);
+  if (caught && !s.feuds.includes(rival.id)) s.feuds.push(rival.id);
+  const blame = caught ? ` Agents of House ${rival.name} were caught. You have a Blood Feud against them.` : ' Nobody can prove who did it.';
+  if (kind === 'assassinate') {
+    const heir = currentHeir(s);
+    const family = Object.values(s.characters).filter((c) => alive(c) && c.clanId === s.playerClanId && isCloseFamily(s, c) && c.id !== s.rulerId);
+    const target = chance(s, 0.25) ? ruler(s) : heir && chance(s, 0.6) ? heir : family.length ? pick(s, family) : ruler(s);
+    if (success) {
+      notice(s, 'Assassination!', `${fullName(s, target)} was found dead this morning.${blame}`, { icon: 'death', tone: 'bad', portraitId: target.id });
+      killCharacter(s, target.id, `assassinated by agents of House ${rival.name}`);
+    } else {
+      notice(s, 'Assassin Foiled', `An assassin from House ${rival.name} was caught creeping toward ${target.name}'s chambers. You have a Blood Feud against them.`, {
+        icon: 'scheme',
+        tone: 'good',
+        portraitId: target.id,
+      });
+    }
+  } else if (kind === 'sabotage' && success) {
+    const lost = Math.round(s.fleet * range(s, 0.08, 0.18));
+    s.fleet -= lost;
+    notice(s, 'Sabotage!', `Explosions rip through your docks. ${lost} ships are lost.${blame}`, { icon: 'war', tone: 'bad' });
+  } else if (kind === 'theft' && success) {
+    const stolen = Math.round(Math.min(Math.max(0, s.credits) * 0.15, 300));
+    s.credits -= stolen;
+    notice(s, 'Treasury Robbed', `${stolen} credits have vanished from your vaults.${blame}`, { icon: 'credits', tone: 'bad' });
+  } else {
+    notice(s, 'Plot Foiled', `Your guards stopped agents of House ${rival.name} before they could strike. You have a Blood Feud against them.`, { icon: 'scheme', tone: 'good' });
+  }
+  log(s, `House ${rival.name} plotted against you (${kind}${success ? ', succeeded' : ', failed'}).`, success ? 'bad' : 'war');
 }
 
 function revolts(s: GameState): void {
@@ -240,6 +296,7 @@ export function aiTick(s: GameState): void {
   tickAiWars(s);
   if (chance(s, 0.3)) startAiWar(s);
   aggressionOnPlayer(s);
+  rivalPlots(s);
   revolts(s);
 }
 

@@ -22,8 +22,12 @@ import {
   siblingsOf,
   statTotal,
   vassalsOf,
+  isBloodlineClan,
 } from './core';
 import { inheritGenetics, inheritPersonality } from './genetics';
+import { councilStat } from './council';
+import { isRival } from './memory';
+import { cadetRescue } from './cadets';
 import { chance, clamp, int, pick, rand } from './rng';
 import { addTrait, TRAITS } from './traits';
 import type { Character, GameState, StatKey } from './types';
@@ -91,7 +95,8 @@ export function healthTick(s: GameState): void {
 // ── Births ────────────────────────────────────────────────────────────────
 
 export function makeChild(s: GameState, mother: Character, father: Character, clanId: string, bastard = false): Character {
-  const dynastic = clanId === s.playerClanId;
+  // Locks reach every child of the blood, cadet branches included.
+  const dynastic = isBloodlineClan(s, clanId);
   const opts = dynastic ? { locked: s.dynasty.locked, purged: s.dynasty.purged } : {};
   const genetic = inheritGenetics(s, father, mother, opts);
   const personality = inheritPersonality(s, father, mother, opts);
@@ -183,7 +188,8 @@ export function birthsTick(s: GameState): void {
     if (!isPlayerCourt) {
       const aiClan = s.clans[clanId];
       const touchesDynasty = c.clanId === playerClanId || husband.clanId === playerClanId;
-      if (!touchesDynasty && (kids >= 4 || (clanSize.get(clanId) ?? 0) >= 12 || !aiClan)) continue;
+      const cap = isBloodlineClan(s, clanId) && !capped ? 30 : 12;
+      if (!touchesDynasty && (kids >= 4 || (clanSize.get(clanId) ?? 0) >= cap || !aiClan)) continue;
     }
     if (!chance(s, birthChance(s, c, husband) * mult)) continue;
     const born = [makeChild(s, c, husband, clanId)];
@@ -232,7 +238,8 @@ export function growthTick(s: GameState): void {
       }
       const intellect = c.traits.map((t) => TRAITS[t]).find((t) => t?.group === 'intellect')?.level ?? 0;
       const sat = s.clans[c.clanId]?.planetId === 'saturn' ? 2 : 0;
-      c.edu.progress += TUTOR_RATE[c.edu.tutor] + intellect * 1.5 + sat + rand(s) * 3;
+      const scientist = dynastic ? councilStat(s, 'scientist') * 0.15 : 0;
+      c.edu.progress += TUTOR_RATE[c.edu.tutor] + intellect * 1.5 + sat + scientist + rand(s) * 3;
       if (chance(s, 0.4)) c.base[c.edu.focus] = Math.min(12, c.base[c.edu.focus] + 1);
     }
     if (age === 16) comeOfAge(s, c);
@@ -242,9 +249,10 @@ export function growthTick(s: GameState): void {
 export function comeOfAge(s: GameState, c: Character): void {
   const dynastic = c.clanId === s.playerClanId;
   const focus = c.edu?.focus ?? bestFocus(c);
+  const ofBlood = isBloodlineClan(s, c.clanId);
   const tier = c.edu ? eduTier(c.edu.progress) : int(s, 1, 3);
   if (!c.traits.some((t) => TRAITS[t]?.cat === 'education')) c.traits = addTrait(c.traits, eduTrait(focus, tier));
-  const banned = dynastic ? s.dynasty.purged : [];
+  const banned = ofBlood ? s.dynasty.purged : [];
   c.traits = randomPersonality(s, 3, c.traits, focus, banned);
   c.edu = undefined;
   if (dynastic && isCloseFamily(s, c)) {
@@ -368,7 +376,7 @@ export function currentHeir(s: GameState): Character | undefined {
 }
 
 export function succeed(s: GameState, deadId: string): void {
-  const heir = lineOfSuccession(s)[0];
+  const heir = lineOfSuccession(s)[0] ?? cadetRescue(s);
   const clan = playerClan(s);
   const dead = s.characters[deadId];
   const last = s.dynasty.rulers[s.dynasty.rulers.length - 1];
@@ -408,7 +416,10 @@ export function aiSucceed(s: GameState, clanId: string): void {
   }
   clan.headId = heir.id;
   clan.opinion = Math.round(clan.opinion * 0.5);
-  if (clanRegions(s, clanId).length) log(s, `${fullName(s, heir)} now leads House ${clan.name}.`, 'news');
+  if (!clanRegions(s, clanId).length) return;
+  // Grudges are inherited along with the house.
+  if (isRival(clan)) log(s, `${fullName(s, heir)} now leads House ${clan.name}, and has sworn to settle the house's old scores with you.`, 'war');
+  else log(s, `${fullName(s, heir)} now leads House ${clan.name}.`, 'news');
 }
 
 export function regencyActive(s: GameState): boolean {

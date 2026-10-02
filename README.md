@@ -10,6 +10,11 @@ You lead a minor house on one planet. Every **Age Up** is a cycle (a year): even
 - **Ranks**: Governor → Viceroy → Sovereign (seize a planet's throne-region) → Solar Emperor (rule three throne-worlds and forge the Solar Throne).
 - **Deep trait system**: around 90 traits across genetic ladders (Dim → Genius, Feeble → Herculean, Homely → Radiant, psionics…), personality, education, acquired traits and cybernetics. Every trait explains itself on hover or tap.
 - **Gene Vault**: lock genetic or personality traits so every child born into your dynasty inherits them, forever, or purge bad genes so they never pass on. Breed for a gene, lock it, build the perfect bloodline.
+- **Gene-Forge**: research genes nobody in your family carries, splice them into living kin, grow designer heirs in vats, and clone your ancestors (even dead ones). The Machine Synod loves it; the Solar Orthodoxy calls it heresy.
+- **Cadet branches**: grant a kinsman a region and they found an offshoot house of your bloodline: sworn to you, sharing your gene locks, fighting in your wars. If the main line dies out, a cadet branch takes the crown.
+- **Court council**: Envoy, Admiral, Treasurer, Spymaster and Chief Scientist seats filled from your family, each boosting a different part of the realm.
+- **Grudges and rivals**: houses remember murders, executions, stolen land, insults and kindnesses, and pass those memories down the generations. Sworn rivals send assassins, sabotage your docks, rob you and come for you in war.
+- **Trade routes**: convoys between worlds, each with its own exports (Martian munitions, Jovian helium-3, Plutonian cryo-crystals…), with pirate raids if your fleet is too small to scare them off.
 - **Dynasty growth choice** at the start of each run: *Sprawling* (uncapped) or *Tight family* (capped). With auto-matchmaking, kin find spouses across the system and spread your blood into other houses.
 - **Family**: matchmaking with visible genes, betrothals, tutors and schooling, affairs and unsanctioned heirs, succession laws (primogeniture, ultimogeniture, meritocracy, designated) and gender laws, full family tree.
 - **War**: casus belli (claims, holy war, blood feud, naked conquest, independence), fleet battles, allies and vassals joining in, leading in person.

@@ -17,6 +17,8 @@ import { FAITHS, PLANET_BY_ID } from '../../game/planets';
 import { Sigil } from '../../svg/Sigil';
 import { Btn, CharCard, InfoDot, Modal, Opinion } from '../components';
 import { useGame } from '../store';
+import { MemoryList } from '../sections/GrudgeSection';
+import { isRival } from '../../game/memory';
 
 export function ClanModal({ id }: { id: string }) {
   const { s, act, openClan, setUi } = useGame();
@@ -49,6 +51,8 @@ export function ClanModal({ id }: { id: string }) {
             {clan.allied && <span className="pill green">Allied</span>}
             {liege && <span className="pill cyan">Vassal of {s.clans[liege].name}</span>}
             {atWar && <span className="pill red">At war with you</span>}
+            {clan.cadetOf === s.playerClanId && <span className="pill gold">Cadet branch of your bloodline</span>}
+            {isRival(clan) && <span className="pill red">Sworn rival</span>}
           </div>
           <div className="row wrap" style={{ marginTop: 4 }}>
             {regions.map((r) => (
@@ -105,6 +109,13 @@ export function ClanModal({ id }: { id: string }) {
               Sabotage ({Math.round(schemeChance(s, 'sabotage', id) * 100)}%)
             </Btn>
           </div>
+        </div>
+      )}
+
+      {!mine && (
+        <div className="card flat" style={{ marginTop: 12 }}>
+          <h4>What they remember</h4>
+          <MemoryList clan={clan} />
         </div>
       )}
 

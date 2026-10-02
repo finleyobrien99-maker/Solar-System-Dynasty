@@ -6,7 +6,7 @@
 //   • Locked traits are ALWAYS given to every child born into the dynasty.
 //   • Purged traits are NEVER given to a dynasty child.
 
-import { alive, dynastyMembers, ageOf, log } from './core';
+import { alive, bloodlineMembers, ageOf, log } from './core';
 import { chance, pick, rand, weighted, type Seeded } from './rng';
 import { addTrait, conflicts, GENETIC, isHeritable, TRAIT_LIST, TRAITS } from './traits';
 import type { Character, GameState } from './types';
@@ -149,7 +149,7 @@ function displacedBy(s: GameState, id: string): string[] {
 }
 
 export function carriers(s: GameState, id: string): Character[] {
-  return dynastyMembers(s).filter((c) => c.traits.includes(id));
+  return bloodlineMembers(s).filter((c) => c.traits.includes(id));
 }
 
 export function lockBlocker(s: GameState, id: string): string | null {
@@ -158,7 +158,8 @@ export function lockBlocker(s: GameState, id: string): string | null {
   if (s.dynasty.locked.includes(id)) return 'Already locked.';
   const freed = displacedBy(s, id).length + (s.dynasty.purged.includes(id) ? 1 : 0);
   if (vaultUsed(s) - freed >= s.dynasty.slots) return 'No free vault slots. Release a trait or buy another slot.';
-  if (!carriers(s, id).length) return 'No living member of your dynasty carries this trait to sequence it from.';
+  if (!carriers(s, id).length && !s.forge.researched.includes(id))
+    return 'No living member of your bloodline carries this trait. Breed for it, or research it in the Gene-Forge.';
   if (!canAfford(s, lockCost(id))) return `Need ${costText(lockCost(id))}.`;
   return null;
 }
@@ -182,7 +183,7 @@ export function lockTrait(s: GameState, id: string): boolean {
   const t = TRAITS[id];
   if (t.cat === 'personality') {
     // Conditioning reaches every dynasty child still growing up.
-    for (const c of dynastyMembers(s)) {
+    for (const c of bloodlineMembers(s)) {
       if (ageOf(s, c) < 16) c.traits = addTrait(c.traits, id);
     }
   }
@@ -197,7 +198,7 @@ export function purgeTrait(s: GameState, id: string): boolean {
   s.dynasty.purged.push(id);
   const t = TRAITS[id];
   if (t.cat === 'personality') {
-    for (const c of dynastyMembers(s)) {
+    for (const c of bloodlineMembers(s)) {
       if (ageOf(s, c) < 16) c.traits = c.traits.filter((x) => x !== id);
     }
   }
@@ -220,7 +221,7 @@ export function buySlot(s: GameState): boolean {
 
 /** Sum of genetic tiers across living dynasty members, as a letter grade. */
 export function bloodlineScore(s: GameState): { score: number; grade: string } {
-  const members = dynastyMembers(s).filter(alive);
+  const members = bloodlineMembers(s).filter(alive);
   if (!members.length) return { score: 0, grade: '-' };
   let total = 0;
   for (const m of members) {
@@ -237,7 +238,7 @@ export function bloodlineScore(s: GameState): { score: number; grade: string } {
 /** Traits the vault could act on: everything heritable, carriers first. */
 export function vaultCandidates(s: GameState): string[] {
   const present = new Set<string>();
-  for (const m of dynastyMembers(s)) for (const t of m.traits) if (isHeritable(t)) present.add(t);
+  for (const m of bloodlineMembers(s)) for (const t of m.traits) if (isHeritable(t)) present.add(t);
   return TRAIT_LIST.filter((t) => isHeritable(t.id))
     .map((t) => t.id)
     .sort((a, b) => Number(present.has(b)) - Number(present.has(a)));

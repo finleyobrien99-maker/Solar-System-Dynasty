@@ -12,6 +12,10 @@ import type { Character, GameState } from './types';
 import { cbOptions, declareWar, fightBattle, warBlocker } from './war';
 import { createWorld, rollRuler, startGame } from './world';
 import { exportSave, importSave } from './save';
+import { foundCadet } from './cadets';
+import { appoint, candidates, ROLE_KEYS } from './council';
+import { buildForge, buildVats, cloneCharacter, growVatHeir, researchable, splice, startResearch } from './forge';
+import { openRoute } from './trade';
 
 function newGame(seed: number, growth: 'capped' | 'uncapped' = 'uncapped'): GameState {
   const s = createWorld(seed);
@@ -39,6 +43,12 @@ function drain(s: GameState, bot: Seeded): void {
 function checkInvariants(s: GameState): void {
   for (const r of Object.values(s.regions)) expect(s.clans[r.owner], `region ${r.id} owner`).toBeTruthy();
   for (const c of Object.values(s.clans)) expect(s.characters[c.headId], `clan ${c.id} head`).toBeTruthy();
+  for (const role of ROLE_KEYS) if (s.council[role]) expect(s.characters[s.council[role]!]).toBeTruthy();
+  for (const t of s.routes) {
+    expect(s.regions[t.from].owner).toBe(s.playerClanId);
+    expect(s.clans[t.partner]).toBeTruthy();
+  }
+  for (const k of Object.values(s.clans)) if (k.cadetOf) expect(s.clans[k.cadetOf]).toBeTruthy();
   if (!s.gameOver) {
     const r = ruler(s);
     expect(alive(r)).toBe(true);
@@ -98,6 +108,27 @@ function botTurn(s: GameState, bot: Seeded): void {
   if (chance(bot, 0.1)) purgeTrait(s, 'gene_rot');
   if (chance(bot, 0.05)) buySlot(s);
   if (chance(bot, 0.05)) augment(s, r.id, 'neural_lace');
+  // New systems: council, cadets, gene-forge, trade.
+  for (const role of ROLE_KEYS) if (!s.council[role] && chance(bot, 0.3)) {
+    const c = candidates(s, role)[0];
+    if (c) appoint(s, role, c.id);
+  }
+  if (chance(bot, 0.05)) {
+    const kin = dynastyMembers(s).find((c) => c.id !== r.id && s.year - c.born >= 20);
+    const reg = clanRegions(s, s.playerClanId).find((x) => !x.capital);
+    if (kin && reg) foundCadet(s, kin.id, reg.id);
+  }
+  if (chance(bot, 0.1)) buildForge(s);
+  if (chance(bot, 0.05)) buildVats(s);
+  if (!s.forge.project && researchable(s).length && chance(bot, 0.3)) startResearch(s, pick(bot, researchable(s)));
+  if (s.forge.researched.length && chance(bot, 0.1)) splice(s, pick(bot, dynastyMembers(s)).id, pick(bot, s.forge.researched));
+  if (s.forge.level >= 2 && chance(bot, 0.05)) growVatHeir(s, r.id, s.forge.researched.slice(0, 2));
+  if (s.forge.level >= 2 && chance(bot, 0.02)) cloneCharacter(s, s.dynasty.rulers[0].id);
+  if (chance(bot, 0.2) && others.length) {
+    const partner = pick(bot, others);
+    const from = clanRegions(s, s.playerClanId)[0];
+    if (from) openRoute(s, from.id, partner.id);
+  }
 }
 
 describe('long simulation', () => {

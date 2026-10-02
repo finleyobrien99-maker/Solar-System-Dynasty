@@ -49,6 +49,7 @@ export interface Character {
   bastard?: boolean;
   marriedIn?: boolean; // joined their spouse's household; children go to the spouse's house
   prisonerOf?: string; // clan id holding them
+  cloneOf?: string; // id of the character this one was cloned from
 }
 
 export interface SigilSpec {
@@ -61,6 +62,14 @@ export interface SigilSpec {
 }
 
 export type LiegeSetting = 'auto' | 'none' | string;
+
+/** Something a house remembers about you. Negative = grudge, positive = favour. */
+export interface Memory {
+  text: string;
+  year: number;
+  value: number;
+  decay: number; // fraction lost per cycle
+}
 
 export interface Clan {
   id: string;
@@ -79,6 +88,8 @@ export interface Clan {
   titles: { viceroy?: boolean; emperor?: boolean };
   founded: number;
   isPlayer?: boolean;
+  cadetOf?: string; // a cadet branch of this clan (the player's bloodline)
+  memories?: Memory[];
 }
 
 export interface Region {
@@ -216,6 +227,22 @@ export interface SuitorList {
   list: Suitor[];
 }
 
+export type CouncilRole = 'envoy' | 'admiral' | 'treasurer' | 'spymaster' | 'scientist';
+
+export interface ForgeState {
+  level: 0 | 1 | 2; // 0 none, 1 Gene-Forge, 2 Vat Complex
+  researched: string[];
+  project?: { trait: string; progress: number; needed: number };
+}
+
+export interface TradeRoute {
+  id: string;
+  from: string; // player's region id
+  partner: string; // partner clan id
+  planetId: string; // destination world
+  since: number;
+}
+
 export interface GameState {
   version: number;
   seed: number;
@@ -245,6 +272,9 @@ export interface GameState {
   pending: Pending[];
   suitors?: SuitorList;
   leadPersonally: boolean;
+  council: Partial<Record<CouncilRole, string>>;
+  forge: ForgeState;
+  routes: TradeRoute[];
   stats: { battlesWon: number; battlesLost: number; schemes: number; children: number; peakRank: number };
   gameOver?: { reason: string; year: number };
   started: boolean;

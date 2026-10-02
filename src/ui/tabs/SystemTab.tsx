@@ -10,6 +10,8 @@ import { Sigil } from '../../svg/Sigil';
 import { SolarMap } from '../../svg/SolarMap';
 import { Btn, CostTag, Face, InfoDot, Opinion, Section } from '../components';
 import { useGame } from '../store';
+import { GrudgeSection } from '../sections/GrudgeSection';
+import { isRival } from '../../game/memory';
 
 function RegionPanel({ regionId }: { regionId: string }) {
   const { s, act, toast, openClan } = useGame();
@@ -103,7 +105,8 @@ function ClanRow({ clanId }: { clanId: string }) {
         <div className="nm">
           House {clan.name} {clan.isPlayer && <span className="pill gold">You</span>}
           {clan.allied && <span className="pill green" style={{ marginLeft: 4 }}>Ally</span>}
-          {liege === s.playerClanId && <span className="pill cyan" style={{ marginLeft: 4 }}>Vassal</span>}
+          {liege === s.playerClanId && <span className="pill cyan" style={{ marginLeft: 4 }}>{clan.cadetOf === s.playerClanId ? 'Cadet' : 'Vassal'}</span>}
+          {isRival(clan) && <span className="pill red" style={{ marginLeft: 4 }}>Sworn rival</span>}
           {s.wars.some((w) => w.enemy === clanId) && <span className="pill red" style={{ marginLeft: 4 }}>At war</span>}
         </div>
         <div className="sub">
@@ -133,7 +136,7 @@ export function SystemTab() {
 
   return (
     <div>
-      <Section title="The Sol System" icon="map" info="Tap a world to inspect it. The coloured ring around each planet is its ruling house. Gold stars mark worlds where you hold land; red dashes are your wars. Planets move along their orbits each cycle.">
+      <Section title="The Sol System" icon="map" info="Tap a world to inspect it. The coloured ring around each planet is its ruling house. Gold stars mark worlds where you hold land, gold dots are your trade lanes and red dashes are your wars. Planets move along their orbits each cycle.">
         <SolarMap s={s} selected={planetId} onSelect={(id) => setUi({ planetId: id, regionId: undefined })} />
       </Section>
       <div className="cols section">
@@ -168,6 +171,7 @@ export function SystemTab() {
           ))}
         </div>
       </div>
+      <GrudgeSection />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { alive, ch, childrenOf, dynastyMembers } from '../../game/core';
+import { alive, ch, childrenOf, dynastyMembers, isBloodlineClan } from '../../game/core';
 import type { Character } from '../../game/types';
 import { Face, Modal } from '../components';
 import { useGame } from '../store';
@@ -17,8 +17,9 @@ function onRulerPath(s: ReturnType<typeof useGame>['s'], c: Character): boolean 
 function Node({ c, depth }: { c: Character; depth: number }) {
   const { s, openChar, setUi } = useGame();
   const kids = childrenOf(s, c)
-    .filter((k) => k.clanId === s.playerClanId)
+    .filter((k) => isBloodlineClan(s, k.clanId))
     .sort((a, b) => a.born - b.born);
+  const cadet = c.clanId !== s.playerClanId ? s.clans[c.clanId] : undefined;
   const [open, setOpen] = useState(depth < 2 || onRulerPath(s, c));
   const spouse = ch(s, c.spouseId);
   const wasRuler = s.dynasty.rulers.some((r) => r.id === c.id);
@@ -42,6 +43,7 @@ function Node({ c, depth }: { c: Character; depth: number }) {
             {c.born}–{c.died ?? ''}
             {spouse ? ` · m. ${spouse.name}` : ''}
             {c.marriedIn ? ' (wed out)' : ''}
+            {cadet ? ` · House ${cadet.name}` : ''}
           </span>
         </span>
       </span>

@@ -221,7 +221,7 @@ export function liegeOf(s: GameState, clanId: string): string | null {
   if (clan.liege === 'none') return null;
   if (clan.liege !== 'auto') {
     const l = s.clans[clan.liege];
-    if (l && l.id !== clanId && clanRank(s, l.id) >= 2) return l.id;
+    if (l && l.id !== clanId && (clanRank(s, l.id) >= 2 || clan.cadetOf === l.id) && clanRegions(s, l.id).length) return l.id;
   }
   const sov = planetSovereign(s, clan.planetId);
   return sov && sov !== clanId ? sov : null;
@@ -285,6 +285,20 @@ export function charTitle(s: GameState, c: Character): string {
 
 export function dynastyMembers(s: GameState, includeDead = false): Character[] {
   return Object.values(s.characters).filter((c) => c.clanId === s.playerClanId && (includeDead || alive(c)));
+}
+
+/** The player's house or one of its cadet branches. */
+export function isBloodlineClan(s: GameState, clanId: string | undefined): boolean {
+  return !!clanId && (clanId === s.playerClanId || s.clans[clanId]?.cadetOf === s.playerClanId);
+}
+
+/** Everyone of the blood: the main house plus every cadet branch. */
+export function bloodlineMembers(s: GameState, includeDead = false): Character[] {
+  return Object.values(s.characters).filter((c) => isBloodlineClan(s, c.clanId) && (includeDead || alive(c)));
+}
+
+export function cadetClans(s: GameState): Clan[] {
+  return Object.values(s.clans).filter((k) => k.cadetOf === s.playerClanId);
 }
 
 /** Everyone the player's court is responsible for: dynasty + their spouses. */

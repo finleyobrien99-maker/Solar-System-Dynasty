@@ -20,6 +20,8 @@ import { chance, int, pick } from './rng';
 import { addTrait, TRAITS } from './traits';
 import type { Character, GameState, GenderLaw, StatKey, SuccessionLaw, Suitor, TutorKey } from './types';
 import { atWarWith } from './war';
+import { remember } from './memory';
+import { councilStat } from './council';
 
 // ── Marriage market ───────────────────────────────────────────────────────
 
@@ -102,8 +104,8 @@ export function acceptSuitor(s: GameState, index: number): boolean {
       head.childrenIds.push(c.id);
     }
     clan.allied = true;
-    clan.opinion = Math.min(100, clan.opinion + 30);
-  } else if (clan) clan.opinion = Math.min(100, clan.opinion + 10);
+    remember(s, clan.id, `Married ${c.name} into their house`, 30, 0.02);
+  } else if (clan) remember(s, clan.id, `Married ${c.name} into their house`, 12, 0.03);
   if (sl.mode === 'marry') {
     target.spouseId = c.id;
     c.spouseId = target.id;
@@ -130,7 +132,7 @@ export function divorce(s: GameState, id: string): boolean {
   b.spouseId = undefined;
   const clan = s.clans[b.clanId];
   if (clan && !clan.isPlayer) {
-    clan.opinion -= 35;
+    remember(s, clan.id, `Cast aside ${b.name}`, -35, 0.03);
     clan.allied = false;
   }
   log(s, `${a.name} has divorced ${b.name}.`, 'family');
@@ -184,7 +186,7 @@ export function augmentCost(s: GameState, id: string): number {
 }
 
 export function augmentRisk(s: GameState, c: Character): number {
-  return Math.max(0.02, 0.12 - effStats(s, ruler(s)).sci * 0.006 - effStats(s, c).sci * 0.004);
+  return Math.max(0.02, 0.12 - effStats(s, ruler(s)).sci * 0.006 - effStats(s, c).sci * 0.002 - councilStat(s, 'scientist') * 0.004);
 }
 
 export function augmentBlocker(s: GameState, c: Character, id: string): string | null {

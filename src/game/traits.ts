@@ -121,6 +121,8 @@ const T: TraitDef[] = [
   { id: 'tyrant', name: 'Tyrant', cat: 'acquired', stats: { int: 2, dip: -3 }, good: false, desc: 'Executions have made them feared and hated.' },
   { id: 'kinslayer', name: 'Kinslayer', cat: 'acquired', stats: { dip: -3 }, faithYr: -3, good: false, desc: 'Spilled family blood. Nobody forgets.' },
   { id: 'blessed', name: 'Blessed', cat: 'acquired', faithYr: 3, health: 5, good: true, desc: 'Touched by the divine, or so the priests say.' },
+  { id: 'vatborn', name: 'Vat-Born', cat: 'acquired', stats: { sci: 1, dip: -1 }, good: null, desc: 'Grown in a Gene-Forge vat, not born. Some find it unsettling.' },
+  { id: 'clone', name: 'Clone', cat: 'acquired', stats: { dip: -2 }, good: null, desc: 'A genetic copy of someone else. People stare.' },
   { id: 'duelist', name: 'Duelist', cat: 'acquired', stats: { cmd: 2 }, prestigeYr: 1, good: true, desc: 'Undefeated with a plasma saber.' },
 
   // ── Cybernetics (bought, never inherited)

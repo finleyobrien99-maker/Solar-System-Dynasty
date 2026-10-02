@@ -195,6 +195,9 @@ export function migrate(s: GameState): GameState {
   s.log ??= [];
   s.pending ??= [];
   s.stats ??= { battlesWon: 0, battlesLost: 0, schemes: 0, children: 0, peakRank: 1 };
+  s.council ??= {};
+  s.forge ??= { level: 0, researched: [] };
+  s.routes ??= [];
   s.dynasty.locked ??= [];
   s.dynasty.purged ??= [];
   s.dynasty.slots ??= 2;

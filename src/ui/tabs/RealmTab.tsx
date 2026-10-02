@@ -25,6 +25,8 @@ import { Icon } from '../../svg/Icons';
 import { Sigil } from '../../svg/Sigil';
 import { Btn, CharCard, ClanBadge, CostTag, InfoDot, Opinion, Section, WarBar } from '../components';
 import { useGame } from '../store';
+import { CouncilSection } from '../sections/CouncilSection';
+import { TradeSection } from '../sections/TradeSection';
 
 const RANKS = ['Exile', 'Governor', 'Viceroy', 'Sovereign', 'Solar Emperor'];
 
@@ -106,6 +108,8 @@ export function RealmTab() {
           </div>
         </div>
       </Section>
+
+      <CouncilSection />
 
       <Section title={`Wars (${s.wars.length})`} icon="war" info="Win battles to push the war score to +100 and take your prize. At -100 you lose. The enemy also attacks once every cycle. Wars that drag on 7 cycles end in a white peace.">
         {s.wars.length === 0 && <div className="empty">At peace. Declare war from the System tab by picking a region.</div>}
@@ -196,6 +200,8 @@ export function RealmTab() {
           </label>
         </div>
       </Section>
+
+      <TradeSection />
 
       <Section title={`Regions (${regions.length})`} icon="planet" info="Each region pays 20 + 12 × development credits per cycle, boosted by Economy. Developing costs 70 × current level, once per region per cycle.">
         <div className="grid tight">

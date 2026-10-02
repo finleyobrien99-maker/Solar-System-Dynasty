@@ -20,6 +20,7 @@ import { GENETIC, PERSONALITY, traitEffectText, type TraitDef } from '../../game
 import { Icon } from '../../svg/Icons';
 import { Btn, CostTag, InfoDot, Section, TraitChip } from '../components';
 import { useGame } from '../store';
+import { ForgeSection } from '../sections/ForgeSection';
 
 type Filter = 'carried' | 'genetic' | 'personality' | 'vault';
 
@@ -190,6 +191,8 @@ export function BloodlineTab() {
       <Section title="Gene ladders" icon="dna" info="Each ladder is one gene group. Only one tier from a group can be carried at a time. Numbers show how many living dynasty members carry it.">
         <GeneLadders />
       </Section>
+
+      <ForgeSection />
 
       <Section title="Traits" icon="lock">
         <div className="tabs">
