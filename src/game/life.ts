@@ -38,6 +38,12 @@ import { STAT_KEYS } from './types';
 export function killCharacter(s: GameState, id: string, cause: string): void {
   const c = s.characters[id];
   if (!c || c.died !== undefined) return;
+  if (id === s.rulerId && s.vip?.on && s.vip.immortal) {
+    // VIP immortality: death simply doesn't take.
+    c.health = Math.max(c.health, maxHealth(s, c));
+    c.traits = c.traits.filter((t) => t !== 'ill' && t !== 'wounded');
+    return;
+  }
   c.died = s.year;
   c.deathCause = cause;
   c.loverId = undefined;
@@ -124,7 +130,7 @@ export function makeChild(s: GameState, mother: Character, father: Character, cl
 
 function birthChance(s: GameState, mother: Character, father: Character): number {
   const age = ageOf(s, mother);
-  const maxAge = s.dynasty.gestationVats && (mother.clanId === s.playerClanId || father.clanId === s.playerClanId) ? 58 : 45;
+  const maxAge = (s.dynasty.gestationVats || s.vip?.on) && (mother.clanId === s.playerClanId || father.clanId === s.playerClanId) ? 58 : 45;
   if (age < 16 || age > maxAge) return 0;
   const ageFactor = age <= 32 ? 1 : Math.max(0.15, 1 - (age - 32) / (maxAge - 30));
   return 0.3 * fertility(s, mother) * fertility(s, father) * ageFactor;

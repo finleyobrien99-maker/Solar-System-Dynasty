@@ -3,7 +3,7 @@
 // your ancestors. Some faiths call this progress. Most call it heresy.
 
 import { createCharacter, randomPersonality } from './character';
-import { ageOf, alive, bloodlineMembers, effStats, isBloodlineClan, log, notice, playerClan, ruler } from './core';
+import { ageOf, alive, bloodlineMembers, effStats, isBloodlineClan, isVip, log, notice, playerClan, ruler } from './core';
 import { councilStat } from './council';
 import { canAfford, inheritGenetics, pay, type Cost } from './genetics';
 import { remember } from './memory';
@@ -38,13 +38,33 @@ export function stance(s: GameState): Stance {
   return FORGE_STANCE[playerClan(s).faithId] ?? 'tolerate';
 }
 
+// VIP mode gives the player (never the AI) an unlimited forge: fully built,
+// every good gene already sequenced, every procedure free and certain.
+export function forgeLevel(s: GameState): 0 | 1 | 2 {
+  return isVip(s) ? 2 : s.forge.level;
+}
+
+export function researchedGenes(s: GameState): string[] {
+  return isVip(s) ? GENETIC.filter((t) => t.good).map((t) => t.id) : s.forge.researched;
+}
+
+export function isResearched(s: GameState, id: string): boolean {
+  return researchedGenes(s).includes(id);
+}
+
+export function maxVatGenes(s: GameState): number {
+  return isVip(s) ? Infinity : MAX_VAT_GENES;
+}
+
 function discount(s: GameState, c: Cost): Cost {
+  if (isVip(s)) return {};
   if (stance(s) !== 'embrace') return c;
   return { credits: c.credits ? Math.round(c.credits * 0.75) : undefined, prestige: c.prestige, faith: c.faith };
 }
 
 /** Every gene-forging act shocks the houses whose faith condemns it. */
 function heresy(s: GameState, weight: number, what: string): void {
+  if (isVip(s)) return;
   const st = stance(s);
   if (st === 'condemn') s.faith = Math.max(0, s.faith - weight * 2);
   if (st === 'embrace') s.faith += Math.round(weight / 2);
@@ -57,7 +77,7 @@ function heresy(s: GameState, weight: number, what: string): void {
 // ── Building ──────────────────────────────────────────────────────────────
 
 export function buildBlocker(s: GameState): string | null {
-  if (s.forge.level >= 1) return 'Already built.';
+  if (forgeLevel(s) >= 1) return 'Already built.';
   if (!canAfford(s, FORGE_COST)) return 'Need 600 credits and 150 prestige.';
   return null;
 }
@@ -72,8 +92,8 @@ export function buildForge(s: GameState): boolean {
 }
 
 export function vatBlocker(s: GameState): string | null {
-  if (s.forge.level < 1) return 'Build the Gene-Forge first.';
-  if (s.forge.level >= 2) return 'Already built.';
+  if (forgeLevel(s) < 1) return 'Build the Gene-Forge first.';
+  if (forgeLevel(s) >= 2) return 'Already built.';
   if (!canAfford(s, VAT_COST)) return 'Need 1,200 credits and 300 prestige.';
   return null;
 }
@@ -99,11 +119,11 @@ export function researchRate(s: GameState): number {
 }
 
 export function researchable(s: GameState): string[] {
-  return GENETIC.filter((t) => t.good && !s.forge.researched.includes(t.id)).map((t) => t.id);
+  return GENETIC.filter((t) => t.good && !isResearched(s, t.id)).map((t) => t.id);
 }
 
 export function startResearch(s: GameState, id: string): boolean {
-  if (s.forge.level < 1 || !researchable(s).includes(id)) return false;
+  if (forgeLevel(s) < 1 || !researchable(s).includes(id)) return false;
   s.forge.project = { trait: id, progress: 0, needed: researchNeeded(id) };
   return true;
 }
@@ -113,8 +133,9 @@ export function cancelResearch(s: GameState): void {
 }
 
 export function forgeTick(s: GameState): void {
+  if (isVip(s)) s.forge.project = undefined;
   const p = s.forge.project;
-  if (!p || s.forge.level < 1) return;
+  if (!p || forgeLevel(s) < 1) return;
   p.progress += researchRate(s);
   if (p.progress >= p.needed) {
     s.forge.researched.push(p.trait);
@@ -136,14 +157,15 @@ export function spliceCost(s: GameState, id: string): Cost {
 }
 
 export function spliceChance(s: GameState, c: Character): number {
+  if (isVip(s)) return 1;
   const age = ageOf(s, c);
   const base = age < 6 ? 0.8 : age < 16 ? 0.65 : 0.45;
   return clamp(base + councilStat(s, 'scientist') * 0.01, 0.1, 0.95);
 }
 
 export function spliceBlocker(s: GameState, c: Character, id: string): string | null {
-  if (s.forge.level < 1) return 'Build the Gene-Forge first.';
-  if (!s.forge.researched.includes(id)) return 'Research this gene first.';
+  if (forgeLevel(s) < 1) return 'Build the Gene-Forge first.';
+  if (!isResearched(s, id)) return 'Research this gene first.';
   if (!alive(c) || !isBloodlineClan(s, c.clanId)) return 'Only living members of your bloodline.';
   if (c.traits.includes(id)) return 'They already carry it.';
   const t = TRAITS[id];
@@ -184,10 +206,10 @@ export function vatHeirCost(s: GameState, genes: number): Cost {
 
 export function vatHeirBlocker(s: GameState, parentId: string, genes: string[]): string | null {
   const p = s.characters[parentId];
-  if (s.forge.level < 2) return 'Build the Vat Complex first.';
+  if (forgeLevel(s) < 2) return 'Build the Vat Complex first.';
   if (!alive(p) || !isBloodlineClan(s, p.clanId) || ageOf(s, p) < 16) return 'Pick a living adult of your bloodline.';
-  if (genes.length > MAX_VAT_GENES) return `At most ${MAX_VAT_GENES} designer genes.`;
-  if (genes.some((g) => !s.forge.researched.includes(g))) return 'Only researched genes can be designed in.';
+  if (genes.length > maxVatGenes(s)) return `At most ${MAX_VAT_GENES} designer genes.`;
+  if (genes.some((g) => !isResearched(s, g))) return 'Only researched genes can be designed in.';
   for (let i = 0; i < genes.length; i++) for (let j = i + 1; j < genes.length; j++) if (conflicts(genes[i], genes[j])) return 'Two of those genes are on the same ladder.';
   if (!canAfford(s, vatHeirCost(s, genes.length))) return 'Not enough credits or prestige.';
   return null;
@@ -226,7 +248,7 @@ export function cloneCost(s: GameState): Cost {
 
 export function cloneBlocker(s: GameState, sourceId: string): string | null {
   const src = s.characters[sourceId];
-  if (s.forge.level < 2) return 'Build the Vat Complex first.';
+  if (forgeLevel(s) < 2) return 'Build the Vat Complex first.';
   if (!src || !isBloodlineClan(s, src.clanId)) return 'Only members of your bloodline (living or dead) can be cloned.';
   if (src.cloneOf) return 'Copies of copies degrade. Clone the original.';
   if (!canAfford(s, cloneCost(s))) return 'Need 900 credits and 200 prestige.';

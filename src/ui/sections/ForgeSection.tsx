@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ageOf, alive, bloodlineMembers, isBloodlineClan } from '../../game/core';
+import { ageOf, alive, bloodlineMembers, isBloodlineClan, isVip } from '../../game/core';
 import {
   buildBlocker,
   buildForge,
@@ -10,8 +10,10 @@ import {
   cloneCost,
   cloneSources,
   FORGE_COST,
+  forgeLevel,
   growVatHeir,
-  MAX_VAT_GENES,
+  maxVatGenes,
+  researchedGenes,
   RESEARCH_UPKEEP,
   researchable,
   researchNeeded,
@@ -30,7 +32,7 @@ import {
   faithName,
 } from '../../game/forge';
 import { isCloseFamily } from '../../game/life';
-import { TRAITS } from '../../game/traits';
+import { conflicts, TRAITS } from '../../game/traits';
 import { Icon } from '../../svg/Icons';
 import { Btn, CostTag, Section, TraitChip } from '../components';
 import { useGame } from '../store';
@@ -95,7 +97,8 @@ function Therapy() {
   const { s, act } = useGame();
   const members = bloodlineMembers(s).sort((a, b) => Number(isCloseFamily(s, b)) - Number(isCloseFamily(s, a)) || b.born - a.born);
   const [who, setWho] = useState(members[0]?.id ?? '');
-  const [gene, setGene] = useState(s.forge.researched[0] ?? '');
+  const genes = researchedGenes(s);
+  const [gene, setGene] = useState(genes[0] ?? '');
   const target = s.characters[who];
   const block = !target ? 'Pick someone.' : !gene ? 'Research a gene first.' : spliceBlocker(s, target, gene);
   return (
@@ -111,8 +114,8 @@ function Therapy() {
           ))}
         </select>
         <select id="splice-gene" value={gene} onChange={(e) => setGene(e.target.value)} style={{ flex: '1 1 140px', minWidth: 0 }} aria-label="Gene">
-          {!s.forge.researched.length && <option value="">No genes researched</option>}
-          {s.forge.researched.map((id) => (
+          {!genes.length && <option value="">No genes researched</option>}
+          {genes.map((id) => (
             <option key={id} value={id}>
               {TRAITS[id].name}
             </option>
@@ -141,12 +144,21 @@ function Vats() {
   const [src, setSrc] = useState(sources[0]?.id ?? '');
   const vb = vatHeirBlocker(s, parent, genes);
   const cb = src ? cloneBlocker(s, src) : 'Pick someone to clone.';
-  const toggle = (id: string) => setGenes((g) => (g.includes(id) ? g.filter((x) => x !== id) : g.length >= MAX_VAT_GENES ? g : [...g, id]));
+  const max = maxVatGenes(s);
+  const toggle = (id: string) =>
+    setGenes((g) => {
+      if (g.includes(id)) return g.filter((x) => x !== id);
+      const next = g.filter((x) => !conflicts(x, id));
+      return next.length >= max ? g : [...next, id];
+    });
+  const options = researchedGenes(s);
   return (
     <div className="grid">
       <div className="card stack" style={{ gap: 8 }}>
         <b>Grow a designer heir</b>
-        <div className="muted" style={{ fontSize: '0.84rem' }}>A child grown from one parent's genome, with up to {MAX_VAT_GENES} researched genes designed in, plus everything locked in your vault.</div>
+        <div className="muted" style={{ fontSize: '0.84rem' }}>
+          A child grown from one parent's genome, with {max === Infinity ? 'any number of' : `up to ${max}`} researched genes designed in (one per ladder), plus everything locked in your vault.
+        </div>
         <select id="vat-parent" value={parent} onChange={(e) => setParent(e.target.value)} aria-label="Genome donor">
           {adults.map((c) => (
             <option key={c.id} value={c.id}>
@@ -155,12 +167,12 @@ function Vats() {
           ))}
         </select>
         <div className="traits">
-          {s.forge.researched.map((id) => (
+          {options.map((id) => (
             <button key={id} onClick={() => toggle(id)} aria-pressed={genes.includes(id)} style={{ background: 'none', border: 0, padding: 0, opacity: genes.includes(id) ? 1 : 0.4 }}>
               <span className="trait genetic good-t">{TRAITS[id].name}</span>
             </button>
           ))}
-          {!s.forge.researched.length && <span className="dim">Research genes to design them in.</span>}
+          {!options.length && <span className="dim">Research genes to design them in.</span>}
         </div>
         <div className="spread">
           <CostTag cost={vatHeirCost(s, genes.length)} />
@@ -220,11 +232,18 @@ export function ForgeSection() {
       icon="dna"
       info="Research genes nobody in your family carries, splice them into living kin, and with the Vat Complex grow designer heirs or clone your ancestors. Every procedure shocks houses whose faith condemns it, and they will remember."
     >
-      <div className="card flat" style={{ marginBottom: 10, fontSize: '0.86rem' }}>
-        <Icon name="faith" size={14} /> Your faith, {faithName(s)}, <b className={st === 'condemn' ? 'bad' : st === 'embrace' ? 'good' : ''}>{STANCE_TEXT[st]}</b>.
-        <span className="muted"> Houses of the Solar Orthodoxy and the Abyssal Choir resent every procedure.</span>
-      </div>
-      {s.forge.level === 0 ? (
+      {isVip(s) ? (
+        <div className="card flat vip-banner" style={{ marginBottom: 10, fontSize: '0.86rem' }}>
+          <Icon name="relic" size={14} /> <b className="gold">VIP: unlimited Gene-Forge.</b> Fully built, every good gene already sequenced, every procedure free and certain to work,
+          and no faith will ever hear about it.
+        </div>
+      ) : (
+        <div className="card flat" style={{ marginBottom: 10, fontSize: '0.86rem' }}>
+          <Icon name="faith" size={14} /> Your faith, {faithName(s)}, <b className={st === 'condemn' ? 'bad' : st === 'embrace' ? 'good' : ''}>{STANCE_TEXT[st]}</b>.
+          <span className="muted"> Houses of the Solar Orthodoxy and the Abyssal Choir resent every procedure.</span>
+        </div>
+      )}
+      {forgeLevel(s) === 0 ? (
         <div className="card spread">
           <span className="muted">Build the forge to start sequencing genes.</span>
           <span className="row" style={{ gap: 6 }}>
@@ -236,9 +255,9 @@ export function ForgeSection() {
         </div>
       ) : (
         <div className="stack">
-          <Research />
+          {!isVip(s) && <Research />}
           <Therapy />
-          {s.forge.level < 2 ? (
+          {forgeLevel(s) < 2 ? (
             <div className="card spread">
               <span className="muted">The Vat Complex lets you grow designer heirs, clone the dead, and lets mothers bear children into their late fifties.</span>
               <span className="row" style={{ gap: 6 }}>

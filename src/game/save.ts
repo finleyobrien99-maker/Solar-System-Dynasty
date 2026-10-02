@@ -20,6 +20,7 @@ export interface SaveSummary {
   title: string;
   year: number;
   gameOver: boolean;
+  vip?: boolean;
 }
 
 interface Envelope {
@@ -59,6 +60,7 @@ export function summarise(s: GameState): SaveSummary {
     title: r && clan ? clanTitle(s, clan.id, r.gender) : '',
     year: s.year,
     gameOver: !!s.gameOver,
+    vip: !!s.vip?.on,
   };
 }
 

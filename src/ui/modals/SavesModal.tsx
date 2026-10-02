@@ -44,6 +44,7 @@ export function SavesPanel({ current, onLoad, onClose }: { current?: GameState; 
                   <div className="muted" style={{ fontSize: '0.82rem' }}>
                     {info.summary.ruler} of House {info.summary.house} · {info.summary.title} · year {info.summary.year}
                     {info.summary.gameOver ? ' · ended' : ''}
+                    {info.summary.vip ? ' · VIP' : ''}
                     <br />
                     saved {new Date(info.savedAt).toLocaleString()}
                     {info.fromBackup && <span className="bad"> (restored from backup)</span>}

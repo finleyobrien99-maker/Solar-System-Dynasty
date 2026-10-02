@@ -235,6 +235,14 @@ export interface ForgeState {
   project?: { trait: string; progress: number; needed: number };
 }
 
+/** VIP mode: the sandbox. Only ever helps the player, never AI houses. */
+export interface VipState {
+  on: boolean;
+  immortal?: boolean; // the ruler cannot die
+}
+
+export type ScenarioId = 'governor' | 'viceroy' | 'monarch' | 'emperor';
+
 export interface TradeRoute {
   id: string;
   from: string; // player's region id
@@ -275,6 +283,8 @@ export interface GameState {
   council: Partial<Record<CouncilRole, string>>;
   forge: ForgeState;
   routes: TradeRoute[];
+  vip?: VipState;
+  scenario?: ScenarioId;
   stats: { battlesWon: number; battlesLost: number; schemes: number; children: number; peakRank: number };
   gameOver?: { reason: string; year: number };
   started: boolean;

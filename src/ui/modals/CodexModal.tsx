@@ -10,10 +10,11 @@ import { STAT_KEYS } from '../../game/types';
 import { PlanetArt } from '../../svg/PlanetArt';
 import { Modal, TraitChip } from '../components';
 
-type Page = 'basics' | 'resources' | 'family' | 'bloodline' | 'forge' | 'realm' | 'court' | 'war' | 'intrigue' | 'traits' | 'worlds';
+type Page = 'basics' | 'starts' | 'resources' | 'family' | 'bloodline' | 'forge' | 'realm' | 'court' | 'war' | 'intrigue' | 'traits' | 'worlds';
 
 const PAGES: [Page, string][] = [
   ['basics', 'Basics'],
+  ['starts', 'Starts & VIP mode'],
   ['resources', 'Resources & stats'],
   ['family', 'Family & succession'],
   ['bloodline', 'Bloodline & Gene Vault'],
@@ -120,6 +121,29 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
             </ul>
             <h3>Bloodline grade</h3>
             <p>The average genetic tier across your living dynasty, plus a bonus for each good gene locked. Every good genetic lock also gives +2 prestige a cycle.</p>
+          </>
+        )}
+        {page === 'starts' && (
+          <>
+            <h3>Starting rank</h3>
+            <p>When you found a dynasty you choose how high up the ladder you begin:</p>
+            <ul>
+              <li><b>Governor</b>: a minor house with a region or two, sworn to the planet's monarch. The classic climb from the bottom.</li>
+              <li><b>Viceroy</b>: a great house with three regions, the viceroy's title and two lesser houses already sworn to you.</li>
+              <li><b>Monarch</b>: the planet's royal house. You hold the capital and every house on the world is your vassal.</li>
+              <li><b>Solar Emperor</b>: you rule your homeworld and its two nearest neighbours from the Solar Throne. The royal houses you deposed hold a grudge.</li>
+            </ul>
+            <p>You also set your ruler's age (16 to 70), their looks, and whether they start single, married, or married with children. Older rulers start better schooled but have fewer years left.</p>
+            <h3>VIP mode</h3>
+            <p>A sandbox for building a super dynasty. Pick it when you start, or switch it on or off any time from the menu.</p>
+            <ul>
+              <li><b>VIP builder</b>: when founding a dynasty, pick any genes, personality, honours and implants, set talents up to 30, choose top-tier schooling, or hit <b>Make god-tier</b> for all of it at once.</li>
+              <li><b>VIP editor</b>: every character's profile gets an editor. Add or remove any trait, change stats, age and name, heal them, or make them god-tier. Works on anyone, rivals included.</li>
+              <li><b>Unlimited Gene-Forge</b>: fully built from the start, every good gene already sequenced, splices always work, vat heirs take any number of genes, and nothing costs a credit or upsets a faith.</li>
+              <li><b>Unlimited Gene Vault</b>: no slot limit, everything free, and no living carrier needed to lock a gene.</li>
+              <li><b>VIP console</b> (the gold VIP button up top): add credits, prestige and faith, fill your fleet, rejuvenate or immortalise your ruler, lock every top gene, or cleanse and god-tier the whole bloodline.</li>
+            </ul>
+            <p>None of it ever helps an AI house. Saves made in VIP mode are marked VIP.</p>
           </>
         )}
         {page === 'forge' && (

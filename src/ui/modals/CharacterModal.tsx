@@ -1,4 +1,4 @@
-import { ageOf, alive, ch, charTitle, childrenOf, fullName, lifespan, relationTo, ruler, siblingsOf } from '../../game/core';
+import { ageOf, alive, ch, charTitle, childrenOf, fullName, isVip, lifespan, relationTo, ruler, siblingsOf } from '../../game/core';
 import { augment, augmentBlocker, augmentCost, augmentRisk, AUGMENTS, canSeekSpouse, designateHeir, generateSuitors, legitimize, LEGITIMIZE_COST, suitorMode } from '../../game/family';
 import { canAfford } from '../../game/genetics';
 import { runScheme, schemeBlocker, schemeChance } from '../../game/intrigue';
@@ -10,6 +10,7 @@ import { EduControls } from '../tabs/FamilyTab';
 import { useGame } from '../store';
 import { FoundCadetPanel } from '../sections/CadetSection';
 import { roleOf, ROLES } from '../../game/council';
+import { VipEditor } from '../vip/VipEditor';
 
 function Links({ label, people }: { label: string; people: Character[] }) {
   const { openChar } = useGame();
@@ -78,6 +79,7 @@ export function CharacterModal({ id }: { id: string }) {
           )}
         </div>
       </div>
+      {isVip(s) && <VipEditor key={c.id} c={c} />}
       <hr className="divider" />
       <Links label="Parents" people={parents} />
       <Links label="Spouse" people={spouse ? [spouse] : []} />
