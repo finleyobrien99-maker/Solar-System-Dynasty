@@ -1,0 +1,23 @@
+import { useCallback, useState } from 'react';
+import type { GameState } from './game/types';
+import { GameScreen } from './ui/GameScreen';
+import { NewGame } from './ui/NewGame';
+import { GameProvider } from './ui/store';
+import { TitleScreen } from './ui/TitleScreen';
+
+type Screen = { kind: 'title' } | { kind: 'new' } | { kind: 'game'; state: GameState; key: number };
+
+export default function App() {
+  const [screen, setScreen] = useState<Screen>({ kind: 'title' });
+  const quit = useCallback(() => setScreen({ kind: 'title' }), []);
+  const play = useCallback((state: GameState) => setScreen({ kind: 'game', state, key: Date.now() }), []);
+
+  if (screen.kind === 'new') return <NewGame onStart={play} onBack={quit} />;
+  if (screen.kind === 'game')
+    return (
+      <GameProvider key={screen.key} initial={screen.state} onQuit={quit}>
+        <GameScreen />
+      </GameProvider>
+    );
+  return <TitleScreen onNew={() => setScreen({ kind: 'new' })} onLoad={play} />;
+}
