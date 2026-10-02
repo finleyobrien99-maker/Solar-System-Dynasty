@@ -34,6 +34,13 @@ npm test          # long headless simulations of both growth modes + genetics te
 npm run typecheck
 ```
 
+## Playing online
+
+Every push to `main` builds the game and publishes it to GitHub Pages at
+https://finleyobrien99-maker.github.io/Solar-System-Dynasty/ (see `.github/workflows/deploy.yml`).
+One-time setup: in the repo's **Settings → Pages**, set **Source** to **GitHub Actions**.
+CI (`.github/workflows/ci.yml`) typechecks, tests and builds every branch.
+
 ## Layout
 
 ```
