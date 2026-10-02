@@ -161,11 +161,11 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
     const x = cx + side * eyeDX;
     const cyber = side === 1 && (has(c, 'optic_implant') || has(c, 'full_conversion'));
     if (baby) {
-      return <path key={side} d={`M ${x - 2.5} ${eyeY} Q ${x} ${eyeY + 1.6} ${x + 2.5} ${eyeY}`} stroke={skinDeep} strokeWidth={0.9} fill="none" strokeLinecap="round" />;
+      return <path key={`eye${side}`} d={`M ${x - 2.5} ${eyeY} Q ${x} ${eyeY + 1.6} ${x + 2.5} ${eyeY}`} stroke={skinDeep} strokeWidth={0.9} fill="none" strokeLinecap="round" />;
     }
     if (cyber) {
       return (
-        <g key={side}>
+        <g key={`eye${side}`}>
           <circle cx={x} cy={eyeY} r={eyeRX + 0.8} fill="#5c6670" stroke="#2b3138" strokeWidth={0.6} />
           <circle cx={x} cy={eyeY} r={1.9} fill={has(c, 'full_conversion') ? '#4cf2ff' : '#ff3b3b'} filter={`url(#glow${uid})`} />
         </g>
@@ -173,7 +173,7 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
     }
     const pupil = has(c, 'lunatic') ? 0.45 : 0.75;
     return (
-      <g key={side}>
+      <g key={`eye${side}`}>
         <ellipse cx={x} cy={eyeY} rx={eyeRX} ry={eyeRY} fill="#f8f4ef" />
         <circle cx={x} cy={eyeY} r={child ? 2 : 1.55} fill={iris} filter={psionic ? `url(#glow${uid})` : undefined} />
         <circle cx={x} cy={eyeY} r={pupil} fill="#111" />
@@ -194,7 +194,7 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
     const lift = has(c, 'lunatic') && side === 1 ? -1.6 : 0;
     return (
       <path
-        key={side}
+        key={`brow${side}`}
         d={`M ${inner} ${y + browAngle + lift} Q ${x} ${y - 1.4 + lift} ${outer} ${y + 0.4 + lift}`}
         stroke={baby ? 'transparent' : hairDark}
         strokeWidth={(male ? 1.35 : 0.85) + L.brow * 0.25}

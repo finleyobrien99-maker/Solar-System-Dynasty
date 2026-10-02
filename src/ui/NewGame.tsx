@@ -208,7 +208,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
     <div className="main" style={{ paddingBottom: 40 }}>
       <div className="spread" style={{ marginBottom: 10 }}>
         <h1 className="gold" style={{ margin: 0 }}>Found your dynasty</h1>
-        <button className="btn ghost small" onClick={onBack}>
+        <button className="btn ghost small" onClick={onBack} data-back>
           <Icon name="back" size={14} /> Back
         </button>
       </div>
@@ -348,7 +348,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
           </div>
 
           <div className="btn-row" style={{ marginTop: 12, justifyContent: 'space-between' }}>
-            <button className="btn ghost" onClick={() => setStep(0)}>
+            <button className="btn ghost" onClick={() => setStep(0)} data-back>
               Back
             </button>
             <button className="btn primary" onClick={() => setStep(2)}>
@@ -399,7 +399,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             </div>
           )}
           <div className="btn-row" style={{ marginTop: 12, justifyContent: 'space-between' }}>
-            <button className="btn ghost" onClick={() => setStep(1)}>
+            <button className="btn ghost" onClick={() => setStep(1)} data-back>
               Back
             </button>
             <span className="row">
@@ -578,7 +578,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             </div>
           </div>
           <div className="btn-row" style={{ marginTop: 12, justifyContent: 'space-between' }}>
-            <button className="btn ghost" onClick={() => setStep(2)}>
+            <button className="btn ghost" onClick={() => setStep(2)} data-back>
               Back
             </button>
             <button className="btn primary" onClick={begin}>

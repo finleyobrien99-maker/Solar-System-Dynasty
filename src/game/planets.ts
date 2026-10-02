@@ -309,6 +309,11 @@ export const FAITHS: Record<string, FaithDef> = {
   },
 };
 
+/** "the Red Codex", "the Solar Orthodoxy": reads right in the middle of a sentence. */
+export function theFaith(id: string): string {
+  return `the ${(FAITHS[id]?.name ?? 'Old Faith').replace(/^The /, '')}`;
+}
+
 export function makeName(planetId: string, gender: Gender, r: () => number): string {
   const p = PLANET_BY_ID[planetId] ?? PLANETS[2];
   const s = p.names.start[Math.floor(r() * p.names.start.length)];

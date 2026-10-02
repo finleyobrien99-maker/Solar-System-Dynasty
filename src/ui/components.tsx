@@ -8,6 +8,7 @@ import { costText, type Cost } from '../game/genetics';
 import { healthLabel } from '../game/life';
 import { STAT_HELP, STAT_NAMES, TRAITS, traitEffectText } from '../game/traits';
 import { STAT_KEYS, type Character, type GameState } from '../game/types';
+import { haptic } from '../native';
 import { Icon } from '../svg/Icons';
 import { Portrait } from '../svg/Portrait';
 import { Sigil } from '../svg/Sigil';
@@ -20,6 +21,9 @@ export function Tip({ text, children, className }: { text: ReactNode; children: 
   const [pos, setPos] = useState<{ left: number; top: number; below: boolean } | null>(null);
   const anchor = useRef<HTMLSpanElement>(null);
   const tip = useRef<HTMLDivElement>(null);
+  // A tap fires emulated hover and focus before the click, which would open
+  // the tip and then toggle it straight shut. Touch only listens to the tap.
+  const touch = useRef(false);
 
   useLayoutEffect(() => {
     if (!open || !anchor.current) return;
@@ -32,13 +36,26 @@ export function Tip({ text, children, className }: { text: ReactNode; children: 
     setPos({ left, top, below });
   }, [open]);
 
+  // Tapping anywhere else closes it (iOS doesn't always focus, so blur alone can miss).
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: PointerEvent) => {
+      if (!anchor.current?.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [open]);
+
   return (
     <span
       ref={anchor}
       className={`tip-anchor ${className ?? ''}`}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onFocus={() => setOpen(true)}
+      onPointerDown={(e) => {
+        touch.current = e.pointerType !== 'mouse';
+      }}
+      onMouseEnter={() => !touch.current && setOpen(true)}
+      onMouseLeave={() => !touch.current && setOpen(false)}
+      onFocus={() => !touch.current && setOpen(true)}
       onBlur={() => setOpen(false)}
       onClick={(e) => {
         e.stopPropagation();
@@ -107,6 +124,7 @@ export function Btn({
       return;
     }
     setArmed(false);
+    haptic('light');
     onClick?.();
   };
   return (

@@ -8,7 +8,6 @@ import {
   ch,
   childrenOf,
   clanRegions,
-  courtMembers,
   dynastyMembers,
   effStats,
   fullName,
@@ -20,74 +19,19 @@ import {
   ruler,
   vassalsOf,
 } from './core';
+import { clearFlag, dynastyKids, getFlag, myRegion, randomCourt, rivalClan, sicken, type EventCtx, type EventDef } from './eventKit';
+import { MORE_EVENTS } from './eventsMore';
 import { randomGoodGene } from './genetics';
 import { makeItem } from './items';
 import { currentHeir, killCharacter } from './life';
-import { FAITHS } from './planets';
+import { FAITHS, theFaith } from './planets';
 import { chance, int, pick, shuffle, weighted } from './rng';
 import { addTrait, TRAITS } from './traits';
-import type { Character, GameState, Pending } from './types';
+import type { GameState, Pending } from './types';
 import { arrestVassal } from './intrigue';
 import { generateSuitors } from './family';
 
-export interface EventCtx {
-  s: GameState;
-  r: Character;
-  subject?: Character;
-  data: Record<string, string | number>;
-}
-
-export interface EventChoice {
-  label: string;
-  hint?: string;
-  available?: (c: EventCtx) => boolean;
-  run: (c: EventCtx) => string;
-}
-
-export interface EventDef {
-  id: string;
-  title: string;
-  icon: string;
-  weight: number;
-  cooldown?: number;
-  when?: (s: GameState) => boolean;
-  subject?: (s: GameState) => Character | undefined;
-  setup?: (c: EventCtx) => void;
-  text: (c: EventCtx) => string;
-  choices: EventChoice[];
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────
-
-function sicken(_s: GameState, c: Character): boolean {
-  if (hasTrait(c, 'xenoblood') || hasTrait(c, 'nano_immune') || hasTrait(c, 'ironblood')) return false;
-  c.traits = addTrait(c.traits, 'ill');
-  return true;
-}
-
-function randomCourt(s: GameState): Character | undefined {
-  const pool = courtMembers(s);
-  return pool.length ? pick(s, pool) : undefined;
-}
-
-function rivalClan(s: GameState) {
-  const pool = Object.values(s.clans).filter((c) => !c.isPlayer && clanRegions(s, c.id).length);
-  if (!pool.length) return undefined;
-  const sorted = pool.sort((a, b) => a.opinion - b.opinion);
-  return chance(s, 0.6) ? sorted[int(s, 0, Math.min(4, sorted.length - 1))] : pick(s, pool);
-}
-
-function myRegion(s: GameState) {
-  const regs = clanRegions(s, s.playerClanId);
-  return regs.length ? pick(s, regs) : undefined;
-}
-
-function dynastyKids(s: GameState, lo: number, hi: number) {
-  return dynastyMembers(s).filter((c) => {
-    const a = ageOf(s, c);
-    return a >= lo && a <= hi;
-  });
-}
+export type { EventChoice, EventCtx, EventDef } from './eventKit';
 
 
 // ── The deck ──────────────────────────────────────────────────────────────
@@ -727,7 +671,7 @@ export const EVENTS: EventDef[] = [
       const others = Object.keys(FAITHS).filter((f) => f !== playerClan(s).faithId);
       data.faith = pick(s, others);
     },
-    text: ({ data }) => `A prophet of the ${FAITHS[String(data.faith)].name} preaches in your markets. "${FAITHS[String(data.faith)].blurb}" Crowds are listening.`,
+    text: ({ data }) => `A prophet of ${theFaith(String(data.faith))} preaches in your markets. "${FAITHS[String(data.faith)].blurb}" Crowds are listening.`,
     choices: [
       {
         label: 'Listen politely',
@@ -748,7 +692,7 @@ export const EVENTS: EventDef[] = [
           const clan = playerClan(s);
           clan.faithId = f;
           for (const c of dynastyMembers(s)) c.faithId = f;
-          return `House ${clan.name} now follows the ${FAITHS[f].name}. Your old allies of the faith are shocked.`;
+          return `House ${clan.name} now follows ${theFaith(f)}. Your old allies of the faith are shocked.`;
         },
       },
     ],
@@ -953,7 +897,7 @@ export const EVENTS: EventDef[] = [
     title: 'Festival of the Faith',
     icon: 'faith',
     weight: 2,
-    text: ({ s }) => `The high holy days of the ${FAITHS[playerClan(s).faithId].name} are here. The faithful expect their lord to celebrate.`,
+    text: ({ s }) => `The high holy days of ${theFaith(playerClan(s).faithId)} are here. The faithful expect their lord to celebrate.`,
     choices: [
       {
         label: 'Fund it lavishly',
@@ -1103,6 +1047,10 @@ export const EVENTS: EventDef[] = [
         label: 'Take combat stims to keep going',
         run: ({ s, r }) => {
           r.base.eco += 1;
+          if (hasTrait(r, 'stim_addict')) {
+            r.health -= 6;
+            return 'The stims keep you upright, but the habit is eating you alive. +1 Economy, -6 health.';
+          }
           if (chance(s, 0.5)) {
             r.traits = addTrait(r.traits, 'stim_addict');
             return 'You get a lot done. You also cannot stop. You are a Stim-Addict.';
@@ -1331,6 +1279,16 @@ export const EVENTS: EventDef[] = [
     text: () => 'A fungal blight is rotting the hydroponic farms. Food stocks are falling.',
     choices: [
       {
+        label: 'Open the granaries',
+        hint: 'Your stored surplus, free',
+        show: ({ s }) => !!getFlag(s, 'granary'),
+        run: ({ s }) => {
+          clearFlag(s, 'granary');
+          s.prestige += 10;
+          return 'The surplus you stored in the good years feeds everyone. Not one family goes hungry. +10 prestige.';
+        },
+      },
+      {
         label: 'Import food',
         hint: '-130 credits',
         available: ({ s }) => s.credits >= 130,
@@ -1532,7 +1490,7 @@ export const EVENTS: EventDef[] = [
     title: 'Crisis of Faith',
     icon: 'faith',
     weight: 1,
-    text: ({ s }) => `Late at night, you find yourself doubting the teachings of the ${FAITHS[playerClan(s).faithId].name}.`,
+    text: ({ s }) => `Late at night, you find yourself doubting the teachings of ${theFaith(playerClan(s).faithId)}.`,
     choices: [
       {
         label: 'Double down on devotion',
@@ -1648,6 +1606,7 @@ export const EVENTS: EventDef[] = [
       },
     ],
   },
+  ...MORE_EVENTS,
 ];
 
 export const EVENT_BY_ID: Record<string, EventDef> = Object.fromEntries(EVENTS.map((e) => [e.id, e]));
@@ -1660,20 +1619,30 @@ export function buildCtx(s: GameState, p: Extract<Pending, { kind: 'event' }>): 
 
 export function rollEvents(s: GameState): void {
   if (s.gameOver) return;
-  const count = chance(s, 0.4) ? 2 : 1;
+  let count = chance(s, 0.4) ? 2 : 1;
   const used = new Set<string>();
+  // Follow-ups to earlier choices jump the queue and take one of the slots.
+  for (const e of EVENTS) {
+    if (!e.urgent || (e.when && !e.when(s))) continue;
+    used.add(e.id);
+    if (queueEvent(s, e)) count -= 1;
+  }
   for (let i = 0; i < count; i++) {
     const options: [EventDef, number][] = [];
     for (const e of EVENTS) {
-      if (used.has(e.id)) continue;
+      if (e.urgent || used.has(e.id)) continue;
       if ((s.eventCooldowns[e.id] ?? 0) > s.year) continue;
       if (e.when && !e.when(s)) continue;
       options.push([e, e.weight]);
     }
-    if (!options.length) return;
-    const pickE = weighted(s, options);
-    queueEvent(s, pickE);
-    used.add(pickE.id);
+    // An event with nobody to be about is put back and the draw tries again,
+    // rather than leaving the cycle empty.
+    while (options.length) {
+      const pickE = weighted(s, options);
+      used.add(pickE.id);
+      if (queueEvent(s, pickE)) break;
+      options.splice(options.findIndex(([e]) => e === pickE), 1);
+    }
   }
 }
 
@@ -1685,7 +1654,7 @@ export function queueEvent(s: GameState, e: EventDef): boolean {
   e.setup?.(ctx);
   p.data = ctx.data;
   s.pending.push(p);
-  s.eventCooldowns[e.id] = s.year + (e.cooldown ?? 6);
+  s.eventCooldowns[e.id] = s.year + (e.cooldown ?? 8);
   return true;
 }
 
@@ -1700,7 +1669,7 @@ export function resolveEvent(s: GameState, uid: string, choice: number): void {
   const ctx = buildCtx(s, p);
   if (def.subject && !alive(ctx.subject)) return;
   const c = def.choices[choice];
-  if (!c || (c.available && !c.available(ctx))) return;
+  if (!c || (c.show && !c.show(ctx)) || (c.available && !c.available(ctx))) return;
   const outcome = c.run(ctx);
   log(s, `${def.title}: ${outcome}`, 'info');
   s.pending.unshift({ kind: 'notice', uid: newId(s, 'n'), title: def.title, text: outcome, icon: def.icon, portraitId: ctx.subject?.id });

@@ -7,6 +7,7 @@
 
 import { clanTitle, ruler, SAVE_VERSION } from './core';
 import { compressToBase64, compressToUTF16, decompressFromBase64, decompressFromUTF16 } from 'lz-string';
+import { mirror } from '../native';
 import { hashString } from './rng';
 import type { GameState } from './types';
 
@@ -128,6 +129,7 @@ export function writeSave(slot: SlotId, s: GameState): WriteResult {
       if (prev) ls.setItem(key(slot), prev);
       return { ok: false, error: 'Save verification failed; kept the previous save.' };
     }
+    mirror(key(slot), raw);
     return { ok: true };
   } catch (e) {
     return { ok: false, error: isQuota(e) ? 'Browser storage is full. Delete an old save slot or export your save to a file.' : String(e) };
@@ -168,6 +170,7 @@ export function deleteSave(slot: SlotId): void {
   const ls = storage();
   ls?.removeItem(key(slot));
   ls?.removeItem(`${key(slot)}.bak`);
+  mirror(key(slot), null);
 }
 
 export function exportSave(s: GameState): string {

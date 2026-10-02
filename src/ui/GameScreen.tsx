@@ -1,6 +1,7 @@
 import { ageOf, clanTitle, fmt, isVip, ruler } from '../game/core';
 import { creditLines, faithLines, fleetCap, prestigeLines, sum, type Line } from '../game/economy';
 import { ageUp, canAgeUp } from '../game/tick';
+import { haptic } from '../native';
 import { Icon } from '../svg/Icons';
 import { Tip, Face } from './components';
 import { CharacterModal } from './modals/CharacterModal';
@@ -121,6 +122,7 @@ export function GameScreen() {
   const { s, act, ui, setUi } = useGame();
   const ready = canAgeUp(s);
   const doAgeUp = () => {
+    haptic('medium');
     act((d) => ageUp(d));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -149,7 +151,13 @@ export function GameScreen() {
       <nav className="nav" aria-label="Main">
         <div className="nav-inner">
           {TABS.map((t) => (
-            <button key={t.id} className={ui.tab === t.id ? 'active' : ''} onClick={() => setUi({ tab: t.id })} aria-current={ui.tab === t.id}>
+            <button
+              key={t.id}
+              className={ui.tab === t.id ? 'active' : ''}
+              onClick={() => setUi({ tab: t.id })}
+              aria-current={ui.tab === t.id}
+              data-back={t.id === 'life' && ui.tab !== 'life' ? '' : undefined}
+            >
               <Icon name={t.icon} size={20} />
               {t.label}
               {t.id === 'realm' && warBadge > 0 && <span className="badge">{warBadge}</span>}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { listSaves, readSave } from '../game/save';
 import type { GameState } from '../game/types';
+import { inApp } from '../native';
 import { Icon } from '../svg/Icons';
 import { PlanetArt } from '../svg/PlanetArt';
 import { CodexModal } from './modals/CodexModal';
@@ -69,7 +70,9 @@ export function TitleScreen({ onNew, onLoad }: { onNew: () => void; onLoad: (s: 
         </button>
         {err && <div className="bad">{err}</div>}
       </div>
-      <div className="dim" style={{ fontSize: '0.75rem' }}>Saves live in this browser. Export them from the menu to keep them safe.</div>
+      <div className="dim" style={{ fontSize: '0.75rem' }}>
+        {inApp ? 'Saves are kept on this phone. Export them from the menu to back them up.' : 'Saves live in this browser. Export them from the menu to keep them safe.'}
+      </div>
       {panel === 'saves' && <SavesPanel onLoad={onLoad} onClose={() => setPanel(null)} />}
       {panel === 'codex' && <CodexModal onClose={() => setPanel(null)} />}
     </div>

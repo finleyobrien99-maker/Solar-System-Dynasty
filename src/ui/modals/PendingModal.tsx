@@ -1,10 +1,12 @@
 // Shows whatever is at the front of the pending queue: an event with choices,
 // a notice, a battle report or a succession.
 
+import { useEffect } from 'react';
 import { ageOf, ch, clanTitle, fullName } from '../../game/core';
 import { buildCtx, EVENT_BY_ID, resolveEvent } from '../../game/events';
 import { TRAITS } from '../../game/traits';
 import type { BattleReport, Pending } from '../../game/types';
+import { haptic } from '../../native';
 import { Icon } from '../../svg/Icons';
 import { Ship } from '../../svg/Ship';
 import { Btn, Face, Modal, TraitList, WarBar } from '../components';
@@ -36,6 +38,7 @@ function EventView({ p }: { p: Extract<Pending, { kind: 'event' }> }) {
       </div>
       <div className="stack" style={{ marginTop: 12, gap: 8 }}>
         {def.choices.map((c, i) => {
+          if (c.show && !c.show(ctx)) return null;
           const ok = !c.available || c.available(ctx);
           return (
             <button key={i} className={`btn choice ${i === 0 ? 'primary' : ''}`} disabled={!ok} onClick={() => act((d) => resolveEvent(d, p.uid, i))}>
@@ -173,9 +176,21 @@ function SuccessionView({ p }: { p: Extract<Pending, { kind: 'succession' }> }) 
   );
 }
 
+function feel(p: Pending): void {
+  if (p.kind === 'battle') haptic(p.report.won ? 'success' : 'error');
+  else if (p.kind === 'succession') haptic('heavy');
+  else if (p.kind === 'notice') haptic(p.tone === 'bad' ? 'warning' : p.tone === 'good' ? 'success' : 'light');
+  else haptic('light');
+}
+
 export function PendingModal() {
   const { s } = useGame();
   const p = s.pending[0];
+  const uid = p?.uid;
+  useEffect(() => {
+    if (p) feel(p);
+    // Only when a new item reaches the front of the queue.
+  }, [uid]);
   if (!p) return null;
   switch (p.kind) {
     case 'event':

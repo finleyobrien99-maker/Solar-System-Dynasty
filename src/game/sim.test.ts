@@ -30,7 +30,7 @@ function drain(s: GameState, bot: Seeded): void {
     if (p.kind === 'event') {
       const def = EVENT_BY_ID[p.eventId];
       const ctx = buildCtx(s, p);
-      const ok = def.choices.map((c, i) => [c, i] as const).filter(([c]) => !c.available || c.available(ctx));
+      const ok = def.choices.map((c, i) => [c, i] as const).filter(([c]) => (!c.show || c.show(ctx)) && (!c.available || c.available(ctx)));
       if (!ok.length) {
         s.pending.shift();
         continue;

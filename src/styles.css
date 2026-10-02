@@ -47,6 +47,22 @@ body {
   overflow-x: hidden;
 }
 
+/* Inside the phone app: feel like an app, not a web page. No double-tap
+   zoom, no rubber-band bounce, no text-selection callouts on long press. */
+html.in-app,
+html.in-app body {
+  touch-action: manipulation;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+html.in-app input,
+html.in-app textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 h1,
 h2,
 h3,

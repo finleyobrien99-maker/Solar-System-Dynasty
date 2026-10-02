@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Solar Dynasty",
+    "slug": "solar-dynasty",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#060913",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.finfin030.solardynasty"
+    },
+    "android": {
+      "package": "com.finfin030.solardynasty",
+      "adaptiveIcon": {
+        "backgroundColor": "#060913",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#060913",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "de3e4cc2-76ef-4ac2-b244-3efb12299305"
+      }
+    },
+    "owner": "finfin030"
+  }
+}

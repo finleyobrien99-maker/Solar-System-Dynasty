@@ -251,6 +251,12 @@ export interface TradeRoute {
   since: number;
 }
 
+/** A choice remembered for a follow-up event, due in a given year. */
+export interface StoryFlag {
+  due: number;
+  data: Record<string, string | number>;
+}
+
 export interface GameState {
   version: number;
   seed: number;
@@ -283,6 +289,7 @@ export interface GameState {
   council: Partial<Record<CouncilRole, string>>;
   forge: ForgeState;
   routes: TradeRoute[];
+  flags?: Record<string, StoryFlag>;
   vip?: VipState;
   scenario?: ScenarioId;
   stats: { battlesWon: number; battlesLost: number; schemes: number; children: number; peakRank: number };

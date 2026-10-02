@@ -1,18 +1,23 @@
 import { useRef, useState } from 'react';
 import { deleteSave, exportSave, importSave, listSaves, readSave, writeSave, type SlotId } from '../../game/save';
 import type { GameState } from '../../game/types';
+import { shareFile } from '../../native';
 import { Btn, Modal } from '../components';
 import { useGame } from '../store';
 
 const LABEL: Record<SlotId, string> = { auto: 'Autosave', slot1: 'Slot 1', slot2: 'Slot 2', slot3: 'Slot 3' };
 
 export function downloadSave(s: GameState): void {
-  const blob = new Blob([exportSave(s)], { type: 'application/json' });
+  const house = s.clans[s.playerClanId]?.name ?? 'dynasty';
+  const filename = `solar-dynasty-${house.toLowerCase()}-${s.year}.json`;
+  const text = exportSave(s);
+  // In the phone app there is no download folder, so use the share sheet.
+  if (shareFile(filename, text)) return;
+  const blob = new Blob([text], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const house = s.clans[s.playerClanId]?.name ?? 'dynasty';
   a.href = url;
-  a.download = `solar-dynasty-${house.toLowerCase()}-${s.year}.json`;
+  a.download = filename;
   a.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

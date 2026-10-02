@@ -22,7 +22,7 @@ You lead a house on one planet, from a minor governor up to the Solar Emperor. E
 - **Family**: matchmaking with visible genes, betrothals, tutors and schooling, affairs and unsanctioned heirs, succession laws (primogeniture, ultimogeniture, meritocracy, designated) and gender laws, full family tree.
 - **War**: casus belli (claims, holy war, blood feud, naked conquest, independence), fleet battles, allies and vassals joining in, leading in person.
 - **Intrigue**: assassin drones, sabotage, blackmail, forged claims, seduction; arresting vassals, executions and ransoms.
-- **44 random events**, galas, xeno-beast hunts, pilgrimages, arena duels and more.
+- **67 random events**: galas, grav-jousts, poisoned feasts, masquerades, heretics, haunted wings, void leviathans, xeno-beast hunts, pilgrimages, arena duels and more. Some choices come back years later: lend an old friend money, raise a strange egg, fill the granaries before a blight. Childhood events shape your heirs' personalities.
 - **Treasury**: procedurally generated crowns, weapons, armour, flagships and relics that pass down the line.
 - **All art is procedural SVG**: portraits (genes, age, rank crowns, implants, scars, psionic glow), planets, house sigils, warships, relics and the solar system and planet region maps.
 - **Bulletproof saves**: autosave after every action, compressed, checksummed, with a verified backup per slot, 3 manual slots, and export/import to a file.
@@ -43,6 +43,26 @@ Every push to `main` builds the game and publishes it to GitHub Pages at
 https://finleyobrien99-maker.github.io/Solar-System-Dynasty/ (see `.github/workflows/deploy.yml`).
 One-time setup: in the repo's **Settings → Pages**, set **Source** to **GitHub Actions**.
 CI (`.github/workflows/ci.yml`) typechecks, tests and builds every branch.
+
+## On your phone
+
+`mobile/` is an Expo (SDK 57) app that runs the game full-screen. The whole game is
+bundled inside it, so it works offline. On top of the web version it adds:
+
+- saves mirrored to the phone's own storage (iOS can wipe web storage for idle apps),
+- haptics on Age Up, events, battles, births and deaths,
+- the Android back button closes tooltips, modals and setup steps,
+- Export save opens the share sheet.
+
+```bash
+npm run build:app        # rebuild the game into mobile/game/gameHtml.ts (run after any game change)
+cd mobile
+npx expo start           # dev: scan the QR code with Expo Go
+npx eas-cli build -p android --profile preview   # installable APK (opens in Expo Orbit)
+```
+
+The EAS project is `@finfin030/solar-dynasty`. Builds show up on expo.dev and in Expo Orbit.
+The folder isn't a git repo, so run EAS commands with `EAS_NO_VCS=1` set.
 
 ## Layout
 
