@@ -2,7 +2,7 @@
 
 A space dynasty life-sim (BitLife meets Crusader Kings, set in the solar system). Vite + React + TypeScript, no backend.
 
-**Start here: read [ROADMAP.md](ROADMAP.md).** It has the current state, what's shallow, the full plan, specs, known bugs, the first tickets to pick up, and the working agreement (section 20).
+**Start here: read [ROADMAP.md](ROADMAP.md).** It has the current state, what's shallow, the full plan, specs, known bugs, the first tickets to pick up, and the working agreement (section 20). Design detail for building each system (tables, numbers, content lists) is in [ROADMAP-DEEP-DIVES.md](ROADMAP-DEEP-DIVES.md).
 
 Quick facts:
 - Engine is pure TS in `src/game` (no React). UI changes state only through `act()` in `src/ui/store.tsx`.

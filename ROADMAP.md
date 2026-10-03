@@ -3,6 +3,8 @@
 > **Written for the next AI (or human) who picks this up.** Read this before you touch anything.
 > The game works and is live, but it's shallow: lots of systems, each only an inch deep.
 > This document is the plan to make it as deep as Crusader Kings and as sticky as BitLife.
+>
+> **Building something?** The full design detail (genome tables, perk trees, story cycles, 150 event pitches, buildings, goods, planets, ships, faiths, laws, AI maths, achievements, crises, UI spec, save versions, test plan) is in [ROADMAP-DEEP-DIVES.md](ROADMAP-DEEP-DIVES.md).
 
 Live build: https://finleyobrien99-maker.github.io/Solar-System-Dynasty/ (deploys on every push to `main`).
 
