@@ -105,7 +105,7 @@ export function healthTick(s: GameState): void {
 export function makeChild(s: GameState, mother: Character, father: Character, clanId: string, bastard = false): Character {
   // Locks reach every child of the blood, cadet branches included.
   const dynastic = isBloodlineClan(s, clanId);
-  const opts = dynastic ? { locked: s.dynasty.locked, purged: s.dynasty.purged } : {};
+  const opts = dynastic ? { locked: s.dynasty.locked, purged: s.dynasty.purged } : (s.clans[clanId]?.genetics ?? {});
   const genetic = inheritGenetics(s, father, mother, opts);
   const personality = inheritPersonality(s, father, mother, opts);
   const parentInClan = father.clanId === clanId ? father : mother;
@@ -132,9 +132,11 @@ export function makeChild(s: GameState, mother: Character, father: Character, cl
   return child;
 }
 
-export function birthChance(s: GameState, mother: Character, father: Character): number {
+export function birthChance(s: GameState, mother: Character, father: Character, hostId = father.marriedIn ? mother.clanId : father.clanId): number {
   const age = ageOf(s, mother);
-  const maxAge = (s.dynasty.gestationVats || s.vip?.on) && (mother.clanId === s.playerClanId || father.clanId === s.playerClanId) ? 58 : 45;
+  const playerVats = (s.dynasty.gestationVats || s.vip?.on) && isBloodlineClan(s, hostId);
+  const ownVats = s.clans[hostId]?.genetics?.forge.level === 2;
+  const maxAge = playerVats || ownVats ? 58 : 45;
   if (age < 16 || age > maxAge) return 0;
   const ageFactor = age <= 32 ? 1 : Math.max(0.15, 1 - (age - 32) / (maxAge - 30));
   return 0.3 * fertility(s, mother) * fertility(s, father) * ageFactor;
@@ -219,7 +221,7 @@ export function birthsTick(s: GameState): void {
   if (alive(lover) && ageOf(s, r) < 60) {
     const mother = r.gender === 'F' ? r : lover;
     const father = r.gender === 'F' ? lover : r;
-    if (chance(s, birthChance(s, mother, father) * 0.6)) {
+    if (chance(s, birthChance(s, mother, father, s.playerClanId) * 0.6)) {
       const child = makeChild(s, mother, father, s.playerClanId, true);
       announceBirth(s, child, mother, father, true);
     }

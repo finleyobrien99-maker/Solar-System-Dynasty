@@ -15,12 +15,13 @@ import {
 } from '../../game/intrigue';
 import { FAITHS, PLANET_BY_ID } from '../../game/planets';
 import { Sigil } from '../../svg/Sigil';
-import { Btn, CharCard, InfoDot, Modal, Opinion, Section } from '../components';
+import { Btn, CharCard, InfoDot, Modal, Opinion, Section, TraitChip } from '../components';
 import { useGame } from '../store';
 import { MemoryList } from '../sections/GrudgeSection';
 import { isRival } from '../../game/memory';
 import { aiAmbition } from '../../game/aiAmbition';
 import { pactsOf } from '../../game/aiCourt';
+import { TRAITS } from '../../game/traits';
 
 export function ClanModal({ id }: { id: string }) {
   const { s, act, openClan, setUi } = useGame();
@@ -162,6 +163,51 @@ export function ClanModal({ id }: { id: string }) {
         </div>
       )}
 
+      {!mine && clan.genetics && (
+        <details className="card flat" style={{ marginTop: 'var(--space-12px)' }}>
+          <summary>Bloodline programme</summary>
+          <div className="stack" style={{ gap: 'var(--space-8px)', marginTop: 'var(--space-8px)' }}>
+            <div className="row wrap">
+              <span className="pill">
+                Vault: {clan.genetics.locked.length + clan.genetics.purged.length}/{clan.genetics.slots} slots
+              </span>
+              <span className="pill">{['No Gene-Forge', 'Gene-Forge', 'Gene-Forge and vats'][clan.genetics.forge.level]}</span>
+            </div>
+            <div>
+              <b>Locked genes</b>
+              <div className="row wrap">
+                {clan.genetics.locked.length ? clan.genetics.locked.map((t) => <TraitChip key={t} id={t} />) : <span className="muted">None yet</span>}
+              </div>
+            </div>
+            <div>
+              <b>Purged genes</b>
+              <div className="row wrap">
+                {clan.genetics.purged.length ? clan.genetics.purged.map((t) => <TraitChip key={t} id={t} />) : <span className="muted">None yet</span>}
+              </div>
+            </div>
+            {clan.genetics.forge.project && (
+              <p className="muted">
+                Sequencing {TRAITS[clan.genetics.forge.project.trait]?.name}: {Math.round(clan.genetics.forge.project.progress)}/
+                {clan.genetics.forge.project.needed} research points. Upkeep: 40 credits per cycle.
+              </p>
+            )}
+            {!!clan.genetics.forge.researched.length && (
+              <div>
+                <b>Sequenced genes</b>
+                <div className="row wrap">
+                  {clan.genetics.forge.researched.map((t) => (
+                    <TraitChip key={t} id={t} />
+                  ))}
+                </div>
+              </div>
+            )}
+            <p className="muted">
+              Their treasury pays standard vault and Forge costs. Splices can fail, and condemning rulers resent gene-forging. These institutions pass to the
+              next head of house.
+            </p>
+          </div>
+        </details>
+      )}
       {!mine && (
         <div className="card flat" style={{ marginTop: 'var(--space-12px)' }}>
           <h4>What they remember</h4>

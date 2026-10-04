@@ -14,7 +14,6 @@ import {
   homePlanet,
   itemSum,
   liegeOf,
-  playerClan,
   regionIncome,
   ruler,
   traitSum,
@@ -105,15 +104,15 @@ export function prestigeLines(s: GameState): Line[] {
   return lines;
 }
 
-export function faithLines(s: GameState): Line[] {
-  const r = ruler(s);
+export function faithLines(s: GameState, clanId = s.playerClanId): Line[] {
+  const clan = s.clans[clanId];
+  const r = clanId === s.playerClanId ? ruler(s) : s.characters[clan.headId];
   const lines: Line[] = [{ label: 'Daily devotions', value: 2 }];
   const t = traitSum(r, 'faithYr');
   if (t) lines.push({ label: 'Ruler traits', value: t });
-  const items = itemSum(s, 'faithYr');
+  const items = clanId === s.playerClanId ? itemSum(s, 'faithYr') : 0;
   if (items) lines.push({ label: 'Relics', value: items });
-  if (homePlanet(s) === 'uranus') lines.push({ label: 'Uranian seers', value: 3 });
-  const clan = playerClan(s);
+  if (clan.planetId === 'uranus') lines.push({ label: 'Uranian seers', value: 3 });
   if (r.faithId !== clan.faithId) lines.push({ label: 'Ruler follows a foreign faith', value: -2 });
   return lines;
 }

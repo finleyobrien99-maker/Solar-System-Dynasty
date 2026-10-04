@@ -29,6 +29,7 @@ import { councilStat } from './council';
 import { capOpinion, grudgeOpinion, isRival, opinionCeiling } from './memory';
 import { addFeeling, feelingsSum, opinionOf } from './relations';
 import { aiIntrigueTick } from './aiIntrigue';
+import { aiDynastyTick } from './aiDynasty';
 import { aiAmbition, ambitionHouse, AMBITION_AGGRESSION, type AmbitionKind } from './aiAmbition';
 import { aiAffairsTick, aiArrests, aiMarriages, alliesAbandon, betrayPact, captivesTick, kinFleet, pactMap, takeCaptive, wouldBetray } from './aiCourt';
 import { neighbourPlanets, PLANET_BY_ID } from './planets';
@@ -344,6 +345,7 @@ function revolts(s: GameState): void {
 /** Liege flavours: AI sovereign clans keep their own vassals in line. */
 export function aiTick(s: GameState): void {
   resources(s);
+  aiDynastyTick(s);
   aiMarriages(s);
   aiAffairsTick(s);
   opinionDrift(s);

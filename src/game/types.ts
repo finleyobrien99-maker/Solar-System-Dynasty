@@ -95,6 +95,15 @@ export interface Clan {
   isPlayer?: boolean;
   cadetOf?: string; // a cadet branch of this clan (the player's bloodline)
   memories?: Memory[];
+  genetics?: HouseGenetics; // Independent AI vault and laboratory; player uses dynasty/forge.
+}
+
+export interface HouseGenetics {
+  locked: string[];
+  purged: string[];
+  slots: number;
+  faith: number;
+  forge: ForgeState;
 }
 
 export interface Region {

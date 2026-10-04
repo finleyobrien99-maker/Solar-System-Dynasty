@@ -9,6 +9,7 @@
 // are read off the family trees and captives off `prisonerOf`.
 
 import { aiAmbition } from './aiAmbition';
+import { geneticMatchWeight } from './houseGenetics';
 import { createCharacter } from './character';
 import { ageOf, alive, ch, childrenOf, clanRank, clanRegions, effStats, fullName, hasTrait, log, newId, notice, ruler, vassalsOf } from './core';
 import { breakFaithfulness, isCloseKin, recordDeed } from './epithets';
@@ -146,7 +147,12 @@ function matchFrom(s: GameState, other: Clan, c: Character): Character | undefin
         Math.abs(ageOf(s, x) - ageOf(s, c)) <= 15 &&
         !isCloseKin(x, c),
     );
-  return pool.length ? pick(s, pool) : undefined;
+  return pool.length
+    ? weighted(
+        s,
+        pool.map((x) => [x, geneticMatchWeight(c, x)] as const),
+      )
+    : undefined;
 }
 
 /** Each cycle, unmarried heads and their grown children are matched, for advantage. */
@@ -488,7 +494,8 @@ export function aiAffairsTick(s: GameState): void {
         continue;
       }
       if (c.gender === 'M') continue; // tend each affair once, from the woman's side
-      const child = !c.prisonerOf && !lover.prisonerOf && chance(s, birthChance(s, c, lover) * 0.35) ? makeChild(s, c, lover, c.clanId, true) : undefined;
+      const child =
+        !c.prisonerOf && !lover.prisonerOf && chance(s, birthChance(s, c, lover, c.clanId) * 0.35) ? makeChild(s, c, lover, c.clanId, true) : undefined;
       // Once it's out, it's out: the betrayed know, and the news has moved on.
       if (exposed(s, c, lover)) {
         if (chance(s, 0.15)) endAffair(c, lover);

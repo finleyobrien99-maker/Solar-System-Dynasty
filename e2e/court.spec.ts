@@ -171,3 +171,38 @@ for (const exposed of [false, true])
       expect(failures).toEqual([]);
     },
   );
+
+test('rival bloodline programmes show vault rules and research without overflowing a phone', async ({ page }, info) => {
+  const failures = errors(page),
+    { s, a } = fixture();
+  a.genetics = {
+    locked: ['genius', 'ironblood'],
+    purged: ['sickly'],
+    slots: 4,
+    faith: 22,
+    forge: { level: 2, researched: ['genius', 'radiant'], project: { trait: 'ageless', progress: 18.6, needed: 34 } },
+  };
+  await load(page, s);
+  await page.getByRole('tab', { name: 'Family', exact: true }).click();
+  await page
+    .locator('.char')
+    .filter({ has: page.locator('.nm', { hasText: 'Tala' }) })
+    .first()
+    .click();
+  await page.getByRole('dialog').last().getByRole('button', { name: 'View captor', exact: true }).click();
+  const dialog = page.getByRole('dialog').last();
+  await dialog.locator('summary').filter({ hasText: 'Bloodline programme' }).click();
+  const programme = dialog.locator('details').filter({ has: page.locator('summary', { hasText: 'Bloodline programme' }) });
+  await expect(programme).toContainText('Vault: 3/4 slots');
+  await expect(programme).toContainText('Gene-Forge and vats');
+  await expect(programme).toContainText('Sequencing Ageless: 19/34 research points');
+  await expect(programme).toContainText('Upkeep: 40 credits per cycle');
+  await expect(programme).toContainText('Locked genes');
+  await expect(programme).toContainText('Purged genes');
+  await expect(programme).toContainText('Sequenced genes');
+  await programme.scrollIntoViewIfNeeded();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  await page.mouse.move(0, 0);
+  await page.screenshot({ path: info.outputPath('rival-bloodline.png'), animations: 'disabled' });
+  expect(failures).toEqual([]);
+});

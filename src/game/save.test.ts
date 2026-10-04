@@ -13,6 +13,7 @@ import type { Seeded } from './rng';
 import { deleteSave, exportSave, importSave, listSaves, migrate, MIGRATIONS, NewerSaveError, readBackup, readSave, writeSave } from './save';
 import { botTurn, checkInvariants, drain } from './testkit';
 import { ageUp } from './tick';
+import { killCharacter } from './life';
 import type { GameState, ScenarioId } from './types';
 import { createWorld, rollRuler, scenarioHouses, startGame } from './world';
 
@@ -47,14 +48,16 @@ function play(s: GameState, cycles: number, bot: Seeded): void {
 // One save per starting scenario plus a VIP run, each played long enough to
 // have wars, kids, a council, a forge and trade routes in it. Saved straight
 // after an age-up, so pop-ups are still waiting, as they are for players.
-// Seed 303's ruler dies heirless in two cycles, giving a finished-game save.
-const RECIPES: { name: string; scenario: ScenarioId; planet: string; seed: number; vip?: boolean }[] = [
+// A separate deterministic finished-game recipe covers extinction even when
+// a new AI action changes the seeded sequence of births and deaths.
+const RECIPES: { name: string; scenario: ScenarioId; planet: string; seed: number; vip?: boolean; finished?: boolean }[] = [
   { name: 'governor', scenario: 'governor', planet: 'mars', seed: 101 },
   { name: 'viceroy', scenario: 'viceroy', planet: 'venus', seed: 202 },
   { name: 'monarch', scenario: 'monarch', planet: 'jupiter', seed: 306 },
   { name: 'emperor', scenario: 'emperor', planet: 'earth', seed: 404 },
   { name: 'vip', scenario: 'monarch', planet: 'mars', seed: 505, vip: true },
   { name: 'ended', scenario: 'monarch', planet: 'jupiter', seed: 303 },
+  { name: 'finished', scenario: 'governor', planet: 'mars', seed: 303, finished: true },
 ];
 
 describe.runIf(WRITE)('freeze fixture saves', () => {
@@ -66,7 +69,12 @@ describe.runIf(WRITE)('freeze fixture saves', () => {
       const w = createWorld(r.seed);
       const clan = scenarioHouses(w, r.planet, r.scenario)[0];
       const s = startGame(w, { clanId: clan.id, ruler: rollRuler(r.seed, r.planet, 'F', 'Ysolde'), focus: 'dip', scenario: r.scenario, vip: r.vip });
-      play(s, 40, { seed: r.seed });
+      if (r.finished) {
+        // Let the normal first annual update settle the replaced AI household.
+        ageUp(s);
+        killCharacter(s, s.rulerId, 'old age');
+        expect(s.gameOver).toBeTruthy();
+      } else play(s, 40, { seed: r.seed });
       writeFileSync(new URL(file, DIR), exportSave(s) + '\n');
       // eslint-disable-next-line no-console
       console.log(`froze ${file}: year ${s.year}, ${Object.keys(s.characters).length} characters`);

@@ -276,6 +276,21 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
         )}
         {page === 'forge' && (
           <>
+            <h3>Rival bloodlines</h3>
+            <p>
+              Other landed houses choose a bloodline action once every eight cycles. They prefer talented, healthy marriage candidates within their political
+              matches; they pay the same vault, laboratory, splice and vat prices as you. Each house starts with two vault slots and no laboratory. Research
+              costs 40 credits every cycle and stops if their treasury cannot pay.
+            </p>
+            <p>
+              Splices have the standard age-based failure risk. Older heirless rulers may build vats, grow a child or clone an exceptional original of their own
+              house. Zealous rulers whose faith condemns the Forge avoid it unless succession is threatened. Condemning heads hold personal resentment towards
+              the ruler responsible. Open a house to see its bloodline programme; private laboratory notices stay in that court.
+            </p>
+            <p>
+              Research uses that head's Science, without your councillors, relics or VIP benefits. Viceroy titles cost rivals 500 credits and 300 prestige at
+              three regions; they already receive Viceroy rank at that size. Rival rulers cannot claim the Solar Throne yet.
+            </p>
             <h3>The Gene-Forge</h3>
             <p>Build it from the Bloodline tab (600 credits, 150 prestige). It lets you go beyond what breeding gives you.</p>
             <ul>

@@ -1,4 +1,5 @@
 import { initialiseReputations } from './epithets';
+import { initialiseHouseGenetics } from './houseGenetics';
 // Bulletproof saves.
 //
 // Every slot is written with a checksum. Before overwriting, the previous good
@@ -225,6 +226,7 @@ export class NewerSaveError extends Error {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MIGRATIONS: Record<number, (s: any) => void> = {
+  4: (s) => initialiseHouseGenetics(s),
   // Lifetime reputations start counting real deeds from this update.
   3: (s) => initialiseReputations(s),
   // Relationships between characters (ROADMAP 1.1).

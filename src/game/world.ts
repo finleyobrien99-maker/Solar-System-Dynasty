@@ -1,4 +1,5 @@
 import { initialiseReputations } from './epithets';
+import { initialiseHouseGenetics } from './houseGenetics';
 // World generation: ten planets, their regions, the clans fighting over them,
 // and the player's starting house.
 
@@ -527,6 +528,7 @@ export function startGame(s: GameState, o: StartOpts): GameState {
       );
   }
   initialiseReputations(s);
+  initialiseHouseGenetics(s);
   if (o.vip) log(s, 'VIP mode is on: edit anyone, any time, and the Gene-Forge is yours without limit.', 'info');
   return s;
 }
