@@ -28,6 +28,7 @@ Live build: https://finleyobrien99-maker.github.io/Solar-System-Dynasty/ (deploy
 13. [Phase 9: UI/UX overhaul](#phase-9-uiux-overhaul)
 14. [Phase 10: Replayability, modes and endgame](#phase-10-replayability-modes-and-endgame)
 15. [Phase 11: Content backlog (ready-to-build lists)](#phase-11-content-backlog-ready-to-build-lists)
+    - [Phase 12: Realistic politics and warfare (Fin's brief)](#phase-12-realistic-politics-and-warfare-fins-brief)
 16. [Technical specs for the big systems](#16-technical-specs-for-the-big-systems)
 17. [Balance targets and the balance harness](#17-balance-targets-and-the-balance-harness)
 18. [Known bugs, rough edges and debt](#18-known-bugs-rough-edges-and-debt)
@@ -125,6 +126,7 @@ Hold every feature up to these. If it doesn't serve at least two, it waits.
 6. **Saves are sacred.** Never ship a change that can break an old save. Migrations for everything.
 7. **Phone first.** Most players will tap with a thumb on a 390px screen.
 8. **Fiction, not endorsement.** The "perfect bloodline" fantasy is a villain fantasy in a sci-fi setting. The world should react to it (backlash, rebellions, rival ideologies) so it plays like a story with consequences, not a lecture and not a celebration.
+9. **Medieval realism.** You are a person in a feudal web, not a god. Oaths bind, news is slow, nobody has plot armour, and AI houses play by the same rules (Fin's brief, see Phase 12).
 
 ---
 
@@ -759,6 +761,42 @@ Grav-ball tournament, zero-g ballet, asteroid racing, deep-space hunt (Leviathan
 - **Uranus**: the sideways world, ice-giant monasteries.
 - **Neptune**: diamond rain, Triton cryo-volcano cults.
 - **Pluto**: the long night, the Far Dark cult, gene cryo-vaults.
+
+---
+
+## Phase 12: Realistic politics and warfare (Fin's brief)
+
+Fin, Oct 2026: "a realistic political/warfare phone game like a medieval life game." The earlier phases are sci-fi-heavy (genes, ships). This phase is the medieval spine: you are a person inside a feudal web, not a god. Rule for all of it: **AI houses use the same rules** (see 8.1). Most items need a save change; Codex owns the v4 bump. Items marked **Fin's call** change balance.
+
+### Feudal structure
+- **12.1 Oaths and truces `P0` `M` (Fin's call).** Every deal is an oath with an expiry: fealty, truce, marriage pledge, hostage exchange. After any war a truce of N cycles blocks new wars between the same houses; breaking an oath costs prestige and every house's opinion, plus a long grudge (the `oathsBroken` deed and `betrayPact` already exist). This is also the cleanest fix for "war is far too easy": no hit-and-run war spam.
+- **12.2 Feudal contracts `P1` `M`.** Replace the flat 15% tribute with levy size, tax and crown authority per vassal. Vassals who dislike you send fewer ships, or none, when you call them (the `call_to_arms` event already works the other way round).
+- **12.3 Succession crises `P0` `L`.** A weak or disputed heir at a ruler's death starts a chain: claimants, a council vote, a regent who may not step down, then civil war. Add succession laws that split the realm among children (gavelkind) or let vassals elect. Builds on 6.6 and 2.6.
+- **12.4 Fosterage and wards `P1` `M`.** Children are fostered at other courts from age 6 to 16 and bond with their foster family (a lasting feeling in `relations.ts`). Hostages are the same system with teeth.
+- **12.5 Marriage contracts `P1` `M`.** Dowry or bride price, claims for the children, infant betrothals as alliances. Breaking a betrothal is an insult (a feud). AI proposals come with terms.
+- **12.6 Justice cards `P1` `S`.** Petitions from vassals (land disputes, a murder, a debt): one-card rulings that build Just or Arbitrary and leave a favour or a grudge, echoing later.
+- **12.7 Estates `P1` `M`.** Nobles, clergy, merchants and military each have loyalty and a demand, extending the factions in 6.2.
+
+### Realistic warfare
+- **12.8 War exhaustion and infamy `P0` `M` (Fin's call).** Long wars raise unrest and cut levies; grabbing land builds infamy; coalitions form against whoever snowballs (5.4 threat). The main lever for the harness target of 30% Builder / 50% Warmonger Sovereign.
+- **12.9 Levies, standing fleet, mercenaries `P1` `M`.** Levies are free to keep but vassals can refuse; a standing fleet costs upkeep; mercenaries cost most and can defect to the other side.
+- **12.10 Commanders and knights `P1` `M`.** Named commanders and champions; nobles die or are captured in battle (captives already exist); your son wants the vanguard; wounds leave permanent traits.
+- **12.11 Siege cards `P1` `S`.** Each cycle of a siege you pick: starve them, assault, bribe a gate, or sabotage the walls. One tap, a real cost for each (phone-friendly version of 5.2).
+- **12.12 Fog of war `P1` `S`.** You only see approximate rival fleets and secrets unless a spymaster or embassy reports; AI decisions use the same limited picture.
+- **12.13 Sack, ransom and atrocity `P2` `S`.** Looting regions, refugees, and a Cruel reputation that other houses remember.
+- **12.14 Campaign seasons `P2` `M`.** Optional season sub-steps inside a cycle for movement and sieges, so distance and orbital windows (4.5) matter.
+
+### Phone-first medieval feel
+- **12.15 The hand of cards `P0` `M`.** Age Up deals three to five cards (event, scheme progress, petition, letter, rumour) instead of modal after modal; swipe or tap, skip low-stakes ones.
+- **12.16 Letters and light-lag `P1` `M`.** Diplomacy arrives as letters with a delay by distance; far vassals act on old orders.
+- **12.17 Dossiers `P1` `M`.** One card per noble: face, traits, ambition (now exists for lords), what they hate, hooks you hold, what you know versus what is rumour. Extend ambitions to every courtier (an ambitious son plots against his father).
+- **12.18 Rumour mill `P1` `M`.** Your murder is a whisper until it is proven; blackmail trades in what is known; AI reacts only to what it has learned (the `known` flag in `murdered()` is the seed of this).
+- **12.19 Rise from nothing `P2` `M`.** Start as a squire, bastard or merchant's child and climb by service, marriage and intrigue (extends 10.2).
+- **12.20 Ironman and hard realism `P2` `S`.** One autosave, permanent deaths, no plot armour for the player's kin.
+- **12.21 Shareable cards `P2` `S`.** Obituary, family tree and war report as images; a chronicle export; a notification when an heir comes of age.
+
+### Suggested order
+12.1 and 12.8 first (they fix war balance with realism, after Fin signs off), then 12.3 and 12.15/12.17 (the biggest change to how it feels on a phone), then the rest as events and cards, each shipped with tests and a harness run.
 
 ---
 
