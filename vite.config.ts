@@ -20,7 +20,9 @@ export default defineConfig(({ mode }) =>
         // screens: the offline service worker only caches what has been
         // fetched, so a screen never opened online would fail offline.
         build: { rollupOptions: { output: { manualChunks: { react: ['react', 'react-dom', 'react-dom/client'] } } } },
-        // Unit tests live beside the engine; e2e/ belongs to Playwright.
-        test: { include: ['src/**/*.test.{ts,tsx}'] },
+        // Unit tests live beside the engine; e2e/ belongs to Playwright. Many
+        // play whole seeded games, which CI machines run far slower than a
+        // desktop, so the default 5s timeout is too tight to be a useful signal.
+        test: { include: ['src/**/*.test.{ts,tsx}'], testTimeout: 30000, hookTimeout: 60000 },
       },
 );
