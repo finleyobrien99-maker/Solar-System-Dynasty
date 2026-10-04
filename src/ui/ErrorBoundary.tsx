@@ -112,12 +112,15 @@ export class ErrorBoundary extends Component<Props, State> {
 
 /** The boundary for an open game: it can export the game in memory and step back a save. */
 export function GameErrorBoundary({ children }: { children: ReactNode }) {
-  const { s, replace, setUi, quit } = useGame();
+  const { s, replace, setUi, closePanels, quit } = useGame();
   return (
     <ErrorBoundary
       current={s}
       onRestore={replace}
-      onReset={() => setUi({ panel: null, charId: undefined, clanId: undefined, regionId: undefined })}
+      onReset={() => {
+        closePanels();
+        setUi({ regionId: undefined });
+      }}
       onQuit={quit}
     >
       {children}

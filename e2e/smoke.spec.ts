@@ -108,6 +108,8 @@ SCENARIOS.forEach((scenario, i) => {
         await page.getByRole('button', { name: 'Menu' }).click();
         await page.getByRole('button', { name: item }).click();
         await healthy(page);
+        await closeTop(page); // child window returns to its parent menu
+        await expect(page.getByRole('dialog')).toContainText('Save & quit to title');
         await closeTop(page);
       }
 

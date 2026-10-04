@@ -15,7 +15,7 @@ function onRulerPath(s: ReturnType<typeof useGame>['s'], c: Character): boolean 
 }
 
 function Node({ c, depth }: { c: Character; depth: number }) {
-  const { s, openChar, setUi } = useGame();
+  const { s, openChar } = useGame();
   const kids = childrenOf(s, c)
     .filter((k) => isBloodlineClan(s, k.clanId))
     .sort((a, b) => a.born - b.born);
@@ -28,7 +28,6 @@ function Node({ c, depth }: { c: Character; depth: number }) {
       <span
         className={`node ${c.id === s.rulerId || wasRuler ? 'ruler' : ''}`}
         onClick={() => {
-          setUi({ panel: null });
           openChar(c.id);
         }}
       >
@@ -83,7 +82,6 @@ export function TreeModal() {
               key={r.id + i}
               className="pill gold"
               onClick={() => {
-                setUi({ panel: null });
                 openChar(r.id);
               }}
             >

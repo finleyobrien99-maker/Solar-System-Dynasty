@@ -75,6 +75,7 @@ function handleBack(): void {
   const overlays = document.querySelectorAll('.overlay');
   const top = overlays[overlays.length - 1];
   if (top) {
+    // Each window's close callback pops the typed UI stack, revealing its parent.
     top.querySelector<HTMLButtonElement>('.close-x')?.click();
     return; // events must be answered, so back does nothing there
   }

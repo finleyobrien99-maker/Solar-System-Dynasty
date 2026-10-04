@@ -15,6 +15,7 @@ import { SuitorModal } from './modals/SuitorModal';
 import { TreeModal } from './modals/TreeModal';
 import { VipModal } from './vip/VipModal';
 import { useGame, type Tab } from './store';
+import { panelKey } from './panels';
 import { ActionsTab } from './tabs/ActionsTab';
 import { BloodlineTab } from './tabs/BloodlineTab';
 import { FamilyTab } from './tabs/FamilyTab';
@@ -219,14 +220,18 @@ export function GameScreen() {
           ))}
         </div>
       </nav>
-      {ui.charId && <CharacterModal id={ui.charId} />}
-      {ui.clanId && <ClanModal id={ui.clanId} />}
-      {ui.panel === 'saves' && <SavesModal />}
-      {ui.panel === 'codex' && <CodexModal onClose={() => setUi({ panel: null })} />}
-      {ui.panel === 'tree' && <TreeModal />}
-      {ui.panel === 'suitors' && <SuitorModal />}
-      {ui.panel === 'menu' && <MenuModal />}
-      {ui.panel === 'vip' && <VipModal />}
+      {ui.panels.map((panel, index) => (
+        <div key={panelKey(panel)} hidden={index !== ui.panels.length - 1}>
+          {panel.kind === 'character' && <CharacterModal id={panel.id} />}
+          {panel.kind === 'clan' && <ClanModal id={panel.id} />}
+          {panel.kind === 'saves' && <SavesModal />}
+          {panel.kind === 'codex' && <CodexModal onClose={() => setUi({ panel: null })} />}
+          {panel.kind === 'tree' && <TreeModal />}
+          {panel.kind === 'suitors' && <SuitorModal />}
+          {panel.kind === 'menu' && <MenuModal />}
+          {panel.kind === 'vip' && <VipModal />}
+        </div>
+      ))}
       {s.pending.length > 0 && <PendingModal />}
       {s.gameOver && s.pending.length === 0 && !ui.panel && !ui.charId && !ui.clanId && <GameOverModal />}
     </div>

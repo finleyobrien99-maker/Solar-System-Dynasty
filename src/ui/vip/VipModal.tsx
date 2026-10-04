@@ -90,7 +90,6 @@ export function VipModal() {
           kind="ghost"
           icon="eye"
           onClick={() => {
-            setUi({ panel: null });
             openChar(r.id);
           }}
         >

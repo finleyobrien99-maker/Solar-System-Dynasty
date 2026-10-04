@@ -7,13 +7,15 @@ import { writeSave } from '../game/save';
 import type { GameState } from '../game/types';
 
 export type Tab = 'life' | 'family' | 'bloodline' | 'realm' | 'system' | 'actions' | 'treasury';
-export type Panel = null | 'saves' | 'codex' | 'tree' | 'suitors' | 'menu' | 'vip';
+import { pushPanel, type Panel, type WindowPanel } from './panels';
+export type { Panel } from './panels';
 
 export interface UiState {
   tab: Tab;
   charId?: string;
   clanId?: string;
-  panel: Panel;
+  panel: Panel | null;
+  panels: WindowPanel[];
   planetId?: string;
   regionId?: string;
 }
@@ -28,12 +30,24 @@ interface Ctx {
   s: GameState;
   act: <T>(fn: (d: GameState) => T) => T;
   ui: UiState;
-  setUi: (patch: Partial<UiState>) => void;
+  setUi: (patch: Partial<Omit<UiState, 'panels'>>) => void;
+  closePanels: () => void;
   openChar: (id: string | undefined) => void;
   openClan: (id: string | undefined) => void;
   toast: (text: string, bad?: boolean) => void;
   replace: (next: GameState) => void;
   quit: () => void;
+}
+
+function withPanels(ui: UiState, panels: WindowPanel[]): UiState {
+  const top = panels.at(-1);
+  return {
+    ...ui,
+    panels,
+    panel: top && top.kind !== 'character' && top.kind !== 'clan' ? top.kind : null,
+    charId: top?.kind === 'character' ? top.id : undefined,
+    clanId: top?.kind === 'clan' ? top.id : undefined,
+  };
 }
 
 const GameCtx = createContext<Ctx | null>(null);
@@ -46,7 +60,7 @@ export function useGame(): Ctx {
 
 export function GameProvider({ initial, onQuit, children }: { initial: GameState; onQuit: () => void; children: ReactNode }) {
   const [s, setS] = useState(initial);
-  const [ui, setUiState] = useState<UiState>({ tab: 'life', panel: null, planetId: initial.clans[initial.playerClanId]?.planetId });
+  const [ui, setUiState] = useState<UiState>({ tab: 'life', panel: null, panels: [], planetId: initial.clans[initial.playerClanId]?.planetId });
   const [toasts, setToasts] = useState<Toast[]>([]);
   const saveTimer = useRef<number | undefined>(undefined);
   // act() and replace() are the only ways state changes, and both update this before setS.
@@ -91,16 +105,35 @@ export function GameProvider({ initial, onQuit, children }: { initial: GameState
   const replace = useCallback((next: GameState) => {
     latest.current = next;
     setS(next);
-    setUiState({ tab: 'life', panel: null, planetId: next.clans[next.playerClanId]?.planetId });
+    setUiState({ tab: 'life', panel: null, panels: [], planetId: next.clans[next.playerClanId]?.planetId });
   }, []);
 
-  const setUi = useCallback((patch: Partial<UiState>) => setUiState((u) => ({ ...u, ...patch })), []);
-  const openChar = useCallback((id: string | undefined) => setUiState((u) => ({ ...u, charId: id, clanId: undefined })), []);
-  const openClan = useCallback((id: string | undefined) => setUiState((u) => ({ ...u, clanId: id, charId: undefined })), []);
+  const setUi = useCallback(
+    (patch: Partial<Omit<UiState, 'panels'>>) =>
+      setUiState((u) => {
+        let panels = u.panels;
+        if ('panel' in patch) panels = patch.panel ? pushPanel(panels, { kind: patch.panel }) : panels.slice(0, -1);
+        return withPanels({ ...u, ...patch }, panels);
+      }),
+    [],
+  );
+  const closePanels = useCallback(() => setUiState((u) => withPanels(u, [])), []);
+  const openChar = useCallback(
+    (id: string | undefined) =>
+      setUiState((u) =>
+        withPanels(u, id ? pushPanel(u.panels, { kind: 'character', id }) : u.panels.at(-1)?.kind === 'character' ? u.panels.slice(0, -1) : u.panels),
+      ),
+    [],
+  );
+  const openClan = useCallback(
+    (id: string | undefined) =>
+      setUiState((u) => withPanels(u, id ? pushPanel(u.panels, { kind: 'clan', id }) : u.panels.at(-1)?.kind === 'clan' ? u.panels.slice(0, -1) : u.panels)),
+    [],
+  );
 
   const value = useMemo(
-    () => ({ s, act, ui, setUi, openChar, openClan, toast, replace, quit: onQuit }),
-    [s, act, ui, setUi, openChar, openClan, toast, replace, onQuit],
+    () => ({ s, act, ui, setUi, closePanels, openChar, openClan, toast, replace, quit: onQuit }),
+    [s, act, ui, setUi, closePanels, openChar, openClan, toast, replace, onQuit],
   );
 
   return (
