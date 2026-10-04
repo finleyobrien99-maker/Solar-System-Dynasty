@@ -245,6 +245,7 @@ export const MORE_EVENTS: EventDef[] = [
         label: 'Read the poems aloud at court',
         then: {
           do: [
+            { deed: 'cruelty' },
             { gain: 'prestige', n: 15 },
             { remember: 'Mocked one of ours', clan: 'clan', value: -20 },
             { trait: 'cruel', p: 0.3, say: 'is now' },
@@ -324,11 +325,7 @@ export const MORE_EVENTS: EventDef[] = [
         then: {
           roll: { base: 0.35, per: { stat: 'dip', n: 0.04 } },
           pass: {
-            do: [
-              { dev: 1, region: 'region' },
-              { gain: 'prestige', n: 10 },
-              { trait: 'just', p: 0.3, say: 'is now known as' },
-            ],
+            do: [{ deed: 'justice' }, { dev: 1, region: 'region' }, { gain: 'prestige', n: 10 }, { trait: 'just', p: 0.3, say: 'is now known as' }],
             text: 'You sit with the strike leaders until dawn and find a fair deal. Work resumes with a will. +1 development, +10 prestige.',
           },
           fail: { do: [{ lose: 'credits', n: 60 }], text: 'You promise far too much to end it quickly. -60 credits.' },
@@ -338,10 +335,7 @@ export const MORE_EVENTS: EventDef[] = [
         label: 'Cut their taxes',
         needs: [{ have: 'credits', n: 100 }],
         then: {
-          do: [
-            { lose: 'credits', n: 100 },
-            { dev: 1, region: 'region' },
-          ],
+          do: [{ deed: 'justice' }, { deed: 'kindness' }, { deed: 'charity', n: 100 }, { lose: 'credits', n: 100 }, { dev: 1, region: 'region' }],
           text: 'Grateful workers put in double shifts. +1 development.',
         },
       },
@@ -349,6 +343,7 @@ export const MORE_EVENTS: EventDef[] = [
         label: 'Send in the marines',
         then: {
           do: [
+            { deed: 'cruelty' },
             { lose: 'fleet', n: { of: 'fleet', times: 0.05, round: true, min: 1 }, as: 'lost' },
             { trait: 'cruel', p: 0.35, say: 'is now' },
           ],
@@ -875,7 +870,10 @@ export const MORE_EVENTS: EventDef[] = [
           fail: { text: (c) => `The trail goes cold somewhere past Uranus. ${c.data.name} is gone.` },
         },
       },
-      { label: 'Let it go', then: { do: [{ trait: 'kind', p: 0.4, say: 'is now' }], text: 'Some lessons cost 150 credits.' } },
+      {
+        label: 'Let it go',
+        then: { do: [{ deed: 'kindness' }, { deed: 'pardons' }, { trait: 'kind', p: 0.4, say: 'is now' }], text: 'Some lessons cost 150 credits.' },
+      },
     ],
   }),
   defineEvent({
@@ -893,6 +891,7 @@ export const MORE_EVENTS: EventDef[] = [
       {
         label: 'Punish them harshly',
         then: {
+          do: [{ deed: 'cruelty' }],
           roll: 0.5,
           pass: { do: [{ trait: 'humble', to: 'subject', say: 'grows up' }], text: 'Bread and water for a week.' },
           fail: {
@@ -908,7 +907,7 @@ export const MORE_EVENTS: EventDef[] = [
       {
         label: 'Make them confess to the court',
         then: {
-          do: [{ lose: 'prestige', n: 5 }],
+          do: [{ deed: 'justice' }, { lose: 'prestige', n: 5 }],
           roll: 0.6,
           pass: { do: [{ trait: 'honest', to: 'subject', say: 'grows up' }], text: 'A tearful confession before the whole court.' },
           fail: { text: (c) => `A mumbled confession before the whole court. ${c.subject!.name} goes red to the ears.` },
@@ -917,6 +916,7 @@ export const MORE_EVENTS: EventDef[] = [
       {
         label: 'Laugh it off',
         then: {
+          do: [{ deed: 'kindness' }],
           roll: 0.5,
           pass: { do: [{ trait: 'arrogant', to: 'subject', say: 'grows up' }] },
           fail: { do: [{ trait: 'gregarious', to: 'subject', say: 'grows up' }] },
@@ -991,10 +991,7 @@ export const MORE_EVENTS: EventDef[] = [
       {
         label: 'Grant sanctuary',
         then: {
-          do: [
-            { remember: 'Sheltered our runaway', clan: 'clan', value: -25 },
-            { gain: 'prestige', n: 10 },
-          ],
+          do: [{ deed: 'kindness' }, { deed: 'pardons' }, { remember: 'Sheltered our runaway', clan: 'clan', value: -25 }, { gain: 'prestige', n: 10 }],
           if: houseExists('clan'),
           pass: { roll: 0.5, pass: { do: [{ claim: 'clan', as: 'reg' }] } },
           text: (c) =>

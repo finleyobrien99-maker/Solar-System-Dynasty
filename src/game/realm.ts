@@ -1,3 +1,4 @@
+import { recordDeed } from './epithets';
 // Realm management: ships, development, titles, the bazaar and the treasury.
 
 import { clanRank, clanRegions, effStats, homePlanet, log, newId, notice, playerClan, ruler, sovereignPlanets } from './core';
@@ -19,6 +20,7 @@ export function recruitShips(s: GameState, n: number): number {
   if (!count) return 0;
   s.credits -= count * shipCost(s);
   s.fleet += count;
+  recordDeed(s, ruler(s), 'shipsBuilt', count);
   return count;
 }
 
@@ -49,6 +51,7 @@ export function developRegion(s: GameState, regionId: string): boolean {
   s.credits -= developCost(r.dev);
   r.dev += 1;
   r.lastDeveloped = s.year;
+  recordDeed(s, ruler(s), 'development');
   log(s, `${r.name} has been developed to level ${r.dev}.`, 'good');
   return true;
 }

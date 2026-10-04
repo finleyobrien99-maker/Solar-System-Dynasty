@@ -1,3 +1,4 @@
+import { observeReputation } from './epithets';
 // Birth, growing up, health, death and succession.
 
 import { createCharacter, eduTrait, inheritLooks, randomPersonality } from './character';
@@ -25,7 +26,7 @@ import {
   isBloodlineClan,
 } from './core';
 import { inheritGenetics, inheritPersonality } from './genetics';
-import { councilStat } from './council';
+import { appoint, councilStat, ROLE_KEYS, ROLES } from './council';
 import { isRival } from './memory';
 import { marriageMood } from './relations';
 import { cadetRescue } from './cadets';
@@ -45,6 +46,7 @@ export function killCharacter(s: GameState, id: string, cause: string): void {
     c.traits = c.traits.filter((t) => t !== 'ill' && t !== 'wounded');
     return;
   }
+  observeReputation(s, c);
   c.died = s.year;
   c.deathCause = cause;
   c.loverId = undefined;
@@ -125,6 +127,8 @@ export function makeChild(s: GameState, mother: Character, father: Character, cl
   }
   father.childrenIds.push(child.id);
   mother.childrenIds.push(child.id);
+  observeReputation(s, mother);
+  observeReputation(s, father);
   return child;
 }
 
@@ -351,7 +355,8 @@ function* successionGroups(s: GameState): Generator<Character[]> {
   const r = ruler(s);
   const law = s.dynasty.law;
   const g = s.dynasty.genderLaw;
-  const ok = (c: Character) => alive(c) && c.id !== r.id && c.clanId === s.playerClanId && !c.bastard;
+  const retired = new Set(s.dynasty.rulers.filter((r) => r.to !== undefined).map((r) => r.id));
+  const ok = (c: Character) => alive(c) && c.id !== r.id && c.clanId === s.playerClanId && !c.bastard && !retired.has(c.id);
   const order = (list: Character[]): Character[] => {
     const l = list.filter(ok);
     if (law === 'ultimogeniture') l.sort((a, b) => b.born - a.born);
@@ -410,6 +415,8 @@ export function succeed(s: GameState, deadId: string): void {
   s.rulerId = heir.id;
   clan.headId = heir.id;
   heir.prisonerOf = undefined;
+  // The new ruler cannot simultaneously serve as their own councillor.
+  for (const role of ROLE_KEYS) if (s.council[role] === heir.id) delete s.council[role];
   if (s.dynasty.designatedHeir === heir.id) s.dynasty.designatedHeir = undefined;
   s.suitors = undefined;
   s.prestige = Math.round(s.prestige * 0.9);
@@ -441,6 +448,35 @@ export function aiSucceed(s: GameState, clanId: string): void {
   // Grudges are inherited along with the house.
   if (isRival(clan)) log(s, `${fullName(s, heir)} now leads House ${clan.name}, and has sworn to settle the house's old scores with you.`, 'war');
   else log(s, `${fullName(s, heir)} now leads House ${clan.name}.`, 'news');
+}
+
+/** A finished reign with a living ruler means they have retired. */
+export function retiredRuler(s: GameState, id: string): boolean {
+  return alive(ch(s, id)) && s.dynasty.rulers.some((r) => r.id === id && r.to !== undefined);
+}
+export function abdicationBlocker(s: GameState): string | null {
+  if (s.gameOver || !alive(ruler(s))) return 'Your dynasty has ended.';
+  if (s.pending.length) return 'Resolve the current events first.';
+  if (ageOf(s, ruler(s)) < 16) return 'A regent cannot abdicate for a child.';
+  if (ruler(s).prisonerOf) return 'You cannot abdicate while imprisoned.';
+  const heir = currentHeir(s);
+  if (!heir) return 'You need a legitimate heir.';
+  if (ageOf(s, heir) < 16) return 'Your heir must be at least 16.';
+  if (heir.prisonerOf) return 'Your heir must be free to take the throne.';
+  return null;
+}
+/** A voluntary handover uses normal succession and leaves the old ruler alive. */
+export function abdicate(s: GameState): boolean {
+  if (abdicationBlocker(s)) return false;
+  const old = ruler(s),
+    heir = currentHeir(s)!;
+  const vacated = ROLE_KEYS.find((role) => s.council[role] === heir.id);
+  observeReputation(s, old);
+  succeed(s, old.id);
+  const seat = vacated ?? ROLE_KEYS.filter((role) => !s.council[role]).sort((a, b) => effStats(s, old)[ROLES[b].stat] - effStats(s, old)[ROLES[a].stat])[0];
+  if (seat) appoint(s, seat, old.id);
+  log(s, `${fullName(s, old)} abdicated in favour of ${fullName(s, heir)}. The old ruler remains with the family.`, 'family');
+  return true;
 }
 
 export function regencyActive(s: GameState): boolean {

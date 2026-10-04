@@ -1,3 +1,4 @@
+import { primaryEpithet } from './epithetDefs';
 // Shared helpers: lookups, derived stats, ranks, titles, logging.
 
 import { PLANET_BY_ID } from './planets';
@@ -5,7 +6,7 @@ import { clamp } from './rng';
 import { TRAITS, type TraitDef } from './traits';
 import { STAT_KEYS, type Character, type Clan, type GameState, type ItemEffects, type LogKind, type Pending, type Region, type StatKey } from './types';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export const ADULT_AGE = 16;
 
 export function newId(s: GameState, prefix: string): string {
@@ -54,7 +55,9 @@ export function isAdult(s: GameState, c: Character): boolean {
 
 export function fullName(s: GameState, c: Character): string {
   const clan = s.clans[c.clanId];
-  return clan ? `${c.name} ${clan.name}` : c.name;
+  const name = clan ? `${c.name} ${clan.name}` : c.name;
+  const epithet = primaryEpithet(c.reputation);
+  return epithet ? `${name} ${epithet.name}` : name;
 }
 
 export function hasTrait(c: Character, id: string): boolean {

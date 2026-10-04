@@ -1,8 +1,9 @@
+import { recordDeed } from './epithets';
 // Trade routes: run convoys from one of your regions to a partner house on
 // another world. Longer hauls and richer ports pay more; pirates hit routes
 // that a small fleet can't protect.
 
-import { clanRank, clanRegions, homePlanet, log, newId } from './core';
+import { clanRank, clanRegions, homePlanet, log, newId, ruler } from './core';
 import { councilStat } from './council';
 import { canAfford, pay, type Cost } from './genetics';
 import { remember } from './memory';
@@ -84,6 +85,8 @@ export function openRoute(s: GameState, fromId: string, partnerId: string): Trad
   pay(s, openCost(s, fromId, port));
   const route: TradeRoute = { id: newId(s, 't'), from: fromId, partner: partnerId, planetId: port, since: s.year };
   s.routes.push(route);
+  recordDeed(s, ruler(s), 'routes');
+  recordDeed(s, s.clans[partnerId].headId, 'routes');
   remember(s, partnerId, 'Opened a trade route with us', 12, 0.04);
   log(
     s,

@@ -1,3 +1,4 @@
+import { breakFaithfulness } from './epithets';
 // Family management: marriages, betrothals, tutors, cybernetics, laws.
 
 import { createCharacter, randomPersonality } from './character';
@@ -9,7 +10,7 @@ import type { Character, GameState, GenderLaw, StatKey, SuccessionLaw, Suitor, T
 import { atWarWith } from './war';
 import { remember } from './memory';
 import { councilStat } from './council';
-import { currentHeir } from './life';
+import { currentHeir, retiredRuler } from './life';
 import { passedOver } from './relations';
 
 // ── Marriage market ───────────────────────────────────────────────────────
@@ -117,6 +118,8 @@ export function divorce(s: GameState, id: string): boolean {
   const b = ch(s, a?.spouseId);
   if (!a || !alive(b) || !canAfford(s, divorceCost())) return false;
   pay(s, divorceCost());
+  breakFaithfulness(a);
+  breakFaithfulness(b);
   a.spouseId = undefined;
   b.spouseId = undefined;
   const clan = s.clans[b.clanId];
@@ -250,7 +253,7 @@ export function changeGenderLaw(s: GameState, law: GenderLaw): boolean {
 
 export function designateHeir(s: GameState, id: string): void {
   const c = s.characters[id];
-  if (!alive(c) || c.clanId !== s.playerClanId || c.bastard || id === s.rulerId) return;
+  if (!alive(c) || c.clanId !== s.playerClanId || c.bastard || id === s.rulerId || retiredRuler(s, id)) return;
   watchHeir(s, () => (s.dynasty.designatedHeir = id));
 }
 

@@ -1,3 +1,5 @@
+import { recordDeed } from './epithets';
+import { DEED_LABELS, type Deed } from './epithetDefs';
 // Event DSL (ROADMAP 3.1, sketched in §16.2).
 //
 // An option says what it does as data: what it needs, what it costs, which
@@ -55,6 +57,7 @@ export type Cond =
   | { test: (c: Ctx) => boolean; why: string; assume?: boolean };
 
 export type Effect =
+  | { deed: Deed; n?: number; to?: Who }
   | { gain: Resource; n: Num; as?: string }
   | { lose: Resource; n: Num; as?: string; upTo?: 'have' }
   /** Add a trait. With `p` it's rolled (`or` is the trait on a miss); `fresh` skips the roll if they have it already; `say` adds "Vula is now Brave." to the outcome. */
@@ -225,7 +228,9 @@ function whyNot(c: Ctx, k: Cond): string {
 
 function apply(c: Ctx, e: Effect, notes: string[]): void {
   const s = c.s;
-  if ('gain' in e) {
+  if ('deed' in e) {
+    recordDeed(s, who(c, e.to), e.deed, e.n ?? 1);
+  } else if ('gain' in e) {
     const n = num(c, e.n);
     s[e.gain] += n;
     if (e.as) c.vars[e.as] = n;
@@ -359,6 +364,7 @@ function signed(n: number, text: string): string {
 
 function describeEffect(d: Describe, e: Effect): string {
   const c = d.c;
+  if ('deed' in e) return `${nameOf(d, e.to)}: ${signed(e.n ?? 1, DEED_LABELS[e.deed].toLowerCase())} towards reputation`;
   if ('gain' in e) return amountText(c, '+', e.n, RESOURCE[e.gain]);
   if ('lose' in e) return amountText(c, '−', e.n, RESOURCE[e.lose]);
   if ('trait' in e) {

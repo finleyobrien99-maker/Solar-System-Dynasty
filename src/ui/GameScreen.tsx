@@ -1,4 +1,4 @@
-import { ageOf, clanTitle, fmt, isVip, ruler } from '../game/core';
+import { ageOf, clanTitle, fmt, fullName, isVip, ruler } from '../game/core';
 import { creditLines, faithLines, fleetCap, prestigeLines, sum, type Line } from '../game/economy';
 import { ageUp, canAgeUp } from '../game/tick';
 import { haptic } from '../native';
@@ -83,9 +83,7 @@ function TopBar() {
         >
           <Face c={r} size={44} />
           <div style={{ minWidth: 0 }}>
-            <div className="name">
-              {r.name} {s.clans[s.playerClanId].name}
-            </div>
+            <div className="name">{fullName(s, r)}</div>
             <div className="title">
               {clanTitle(s, s.playerClanId, r.gender)} · {ageOf(s, r)} yrs · Year {s.year}
             </div>

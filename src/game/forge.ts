@@ -1,3 +1,4 @@
+import { observeReputation, recordDeed } from './epithets';
 // The Gene-Forge: research genes nobody in your family carries, splice them
 // into living kin, and (with the Vat Complex) grow designer heirs or clone
 // your ancestors. Some faiths call this progress. Most call it heresy.
@@ -139,6 +140,7 @@ export function forgeTick(s: GameState): void {
   p.progress += researchRate(s);
   if (p.progress >= p.needed) {
     s.forge.researched.push(p.trait);
+    recordDeed(s, ruler(s), 'research');
     s.forge.project = undefined;
     const name = TRAITS[p.trait].name;
     heresy(s, 8, `Synthesised the ${name} gene`);
@@ -188,6 +190,7 @@ export function splice(s: GameState, charId: string, id: string): boolean {
   const name = TRAITS[id].name;
   if (chance(s, spliceChance(s, c))) {
     c.traits = addTrait(c.traits, id);
+    recordDeed(s, ruler(s), 'splices');
     notice(s, 'Splice Successful', `${c.name} now carries ${name}. Their children can inherit it.`, { icon: 'dna', tone: 'good', portraitId: c.id });
     log(s, `${c.name} was spliced with ${name}.`, 'good');
     return true;
@@ -248,11 +251,13 @@ export function growVatHeir(s: GameState, parentId: string, genes: string[]): Ch
   child.base = { ...parent.base };
   parent.childrenIds.push(child.id);
   heresy(s, 20, 'Grew a child in a vat');
+  recordDeed(s, ruler(s), 'vats');
   notice(s, 'A Child From the Vats', `${child.name} emerges from the Vat Complex, grown from ${parent.name}'s genome.`, {
     icon: 'dna',
     tone: 'good',
     portraitId: child.id,
   });
+  observeReputation(s, parent);
   log(s, `${child.name} was grown in the vats from ${parent.name}'s genome.`, 'birth');
   return child;
 }
@@ -294,6 +299,7 @@ export function cloneCharacter(s: GameState, sourceId: string): Character | unde
   });
   child.base = { ...src.base };
   child.cloneOf = src.id;
+  recordDeed(s, r, 'clones');
   r.childrenIds.push(child.id);
   heresy(s, 35, `Cloned ${src.name}`);
   notice(
@@ -302,6 +308,7 @@ export function cloneCharacter(s: GameState, sourceId: string): Character | unde
     `${child.name} opens their eyes for the first time, a perfect genetic copy of ${src.name}${alive(src) ? '' : `, dead since ${src.died}`}. They will be raised as your child.`,
     { icon: 'dna', tone: 'good', portraitId: child.id },
   );
+  observeReputation(s, r);
   log(s, `${src.name} was cloned. ${child.name} joins the family.`, 'birth');
   return child;
 }

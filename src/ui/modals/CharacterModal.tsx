@@ -1,3 +1,6 @@
+import { retiredRuler } from '../../game/life';
+import { RulerLegacy } from '../sections/RulerLegacy';
+import { EpithetsSection } from '../sections/EpithetsSection';
 import { ageOf, alive, ch, charTitle, childrenOf, fullName, isVip, lifespan, relationTo, ruler, siblingsOf } from '../../game/core';
 import {
   augment,
@@ -76,6 +79,7 @@ export function CharacterModal({ id }: { id: string }) {
             </div>
             <div className="row wrap" style={{ marginTop: 'var(--space-6px)' }}>
               <ClanBadge clanId={c.clanId} />
+              {retiredRuler(s, c.id) && <span className="pill gold">Retired ruler</span>}
               {c.bastard && <span className="pill red">Unsanctioned birth</span>}
               {c.prisonerOf && <span className="pill red">Prisoner of House {s.clans[c.prisonerOf]?.name}</span>}
               {s.dynasty.designatedHeir === c.id && <span className="pill gold">Designated heir</span>}
@@ -100,6 +104,8 @@ export function CharacterModal({ id }: { id: string }) {
       <Links label="Betrothed" people={c.betrothedId && s.characters[c.betrothedId] ? [s.characters[c.betrothedId]] : []} />
       <Links label="Children" people={kids} />
       <Links label="Siblings" people={sibs} />
+      {(c.reputation || s.dynasty.rulers.some((r) => r.id === c.id)) && <RulerLegacy c={c} />}
+      <EpithetsSection c={c} />
       <RelationshipsSection c={c} />
 
       {living && isDynasty && c.edu && (
@@ -129,7 +135,7 @@ export function CharacterModal({ id }: { id: string }) {
             </Btn>
           )}
           {s.dynasty.law === 'designated' && !c.bastard && s.dynasty.designatedHeir !== c.id && (
-            <Btn kind="good" onClick={() => act((d) => designateHeir(d, c.id))}>
+            <Btn kind="good" reason={retiredRuler(s, c.id) ? 'Retired rulers cannot inherit again.' : null} onClick={() => act((d) => designateHeir(d, c.id))}>
               Designate as heir
             </Btn>
           )}

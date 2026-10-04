@@ -1,3 +1,4 @@
+import { breakPeace, recordDeed } from './epithets';
 // Wars and fleet battles involving the player.
 
 import {
@@ -87,6 +88,7 @@ export function declareWar(s: GameState, regionId: string, cb: CasusBelli): bool
   }
   if (enemy.allied) {
     enemy.allied = false;
+    recordDeed(s, ruler(s), 'oathsBroken');
     s.prestige -= 50;
     log(s, `You broke your alliance with House ${enemy.name}. Oath-breaker!`, 'bad');
   }
@@ -94,6 +96,8 @@ export function declareWar(s: GameState, regionId: string, cb: CasusBelli): bool
   remember(s, enemy.id, cb === 'conquest' ? 'Attacked us without any cause' : `Made war on us over ${region.name}`, cb === 'conquest' ? -30 : -15);
   s.feuds = s.feuds.filter((f) => f !== enemy.id || cb !== 'feud');
   s.wars.push({ id: newId(s, 'w'), enemy: enemy.id, playerAttacker: true, target: regionId, cb, score: 0, started: s.year });
+  recordDeed(s, ruler(s), 'warsStarted');
+  breakPeace(s, enemy.headId);
   log(s, `War! You declared a ${CB_INFO[cb].name} on House ${enemy.name} for ${region.name}.`, 'war');
   return true;
 }
@@ -103,6 +107,9 @@ export function declareIndependence(s: GameState): boolean {
   if (!liege || atWarWith(s, liege) || s.wars.length >= 3) return false;
   s.wars.push({ id: newId(s, 'w'), enemy: liege, playerAttacker: true, target: '', cb: 'independence', score: 0, started: s.year });
   s.clans[liege].opinion = -80;
+  recordDeed(s, ruler(s), 'warsStarted');
+  recordDeed(s, ruler(s), 'rebellions');
+  breakPeace(s, s.clans[liege].headId);
   log(s, `You declared independence from House ${s.clans[liege].name}!`, 'war');
   return true;
 }
@@ -112,6 +119,9 @@ export function aiDeclareWar(s: GameState, enemyId: string, cb: CasusBelli, targ
   if (atWarWith(s, enemyId)) return;
   const enemy = s.clans[enemyId];
   s.wars.push({ id: newId(s, 'w'), enemy: enemyId, playerAttacker: false, target: targetRegionId, cb, score: 0, started: s.year });
+  recordDeed(s, enemy.headId, 'warsStarted');
+  if (cb === 'revolt') recordDeed(s, enemy.headId, 'rebellions');
+  breakPeace(s, s.rulerId);
   const what = cb === 'revolt' ? 'rises in revolt against you' : `declares war on you over ${s.regions[targetRegionId]?.name ?? 'your lands'}`;
   log(s, `House ${enemy.name} ${what}!`, 'war');
   notice(s, 'War Declared!', `House ${enemy.name} ${what}. Fight battles from the Realm tab, or sue for peace.`, {
@@ -200,6 +210,7 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
   const war = s.wars.find((w) => w.id === warId);
   if (!war) return undefined;
   const enemy = s.clans[war.enemy];
+  const actorId = s.rulerId;
   const personal = !aiInitiated && s.leadPersonally && s.year - ruler(s).born >= 16;
   const ps = playerSide(s, war, personal);
   const es = enemySide(s, war);
@@ -219,6 +230,9 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
   s.fleet -= playerLosses;
   enemy.fleet -= enemyLosses;
 
+  recordDeed(s, actorId, won ? 'battlesWon' : 'battlesLost');
+  recordDeed(s, enemy.headId, won ? 'battlesLost' : 'battlesWon');
+  if (personal) recordDeed(s, actorId, 'personalBattles');
   let note: string | undefined;
   if (won) {
     s.stats.battlesWon += 1;
@@ -233,6 +247,7 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
       note = `${r.name} was killed leading the charge.`;
       killCharacter(s, r.id, 'killed in battle');
     } else if (chance(s, 0.05 * danger)) {
+      recordDeed(s, r, 'battleWounds');
       r.traits = addTrait(r.traits, 'wounded');
       if (chance(s, 0.4)) r.traits = addTrait(r.traits, 'scarred');
       note = `${r.name} was wounded on the bridge.`;
@@ -263,25 +278,34 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
     `${won ? 'Victory' : 'Defeat'} against House ${enemy.name}${aiInitiated ? ' (they attacked)' : ''}: you lost ${playerLosses} ships, they lost ${enemyLosses}.`,
     won ? 'good' : 'bad',
   );
-  if (war.score >= 100) endWar(s, war, 'win');
-  else if (war.score <= -100) endWar(s, war, 'lose');
+  if (war.score >= 100) endWar(s, war, 'win', actorId);
+  else if (war.score <= -100) endWar(s, war, 'lose', actorId);
   return report;
 }
 
-export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'): void {
+export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white', actorId = s.rulerId): void {
+  if (!s.wars.some((w) => w.id === war.id)) return;
   s.wars = s.wars.filter((w) => w.id !== war.id);
   const enemy = s.clans[war.enemy];
   const region = s.regions[war.target];
   const clan = playerClan(s);
   if (outcome === 'white') {
+    recordDeed(s, actorId, 'peaceTreaties');
+    recordDeed(s, enemy.headId, 'peaceTreaties');
     log(s, `White peace with House ${enemy.name}. Nobody gains anything.`, 'war');
     notice(s, 'Peace', `The war with House ${enemy.name} ends in a white peace.`, { icon: 'peace' });
     return;
   }
+  recordDeed(s, actorId, outcome === 'win' ? 'warsWon' : 'warsLost');
+  recordDeed(s, enemy.headId, outcome === 'win' ? 'warsLost' : 'warsWon');
+  if (outcome === 'win' && !war.playerAttacker) recordDeed(s, actorId, 'defensiveWins');
+  if (outcome === 'lose' && war.playerAttacker) recordDeed(s, enemy.headId, 'defensiveWins');
+  if (outcome === 'lose' && war.cb === 'revolt') recordDeed(s, enemy.headId, 'independence');
   if (outcome === 'win') {
     s.prestige += 60;
     enemy.opinion = Math.max(-100, enemy.opinion - 20);
     if (war.cb === 'independence') {
+      recordDeed(s, actorId, 'independence');
       clan.liege = 'none';
       s.prestige += 80;
       log(s, `Independence won! House ${clan.name} bows to nobody.`, 'good');
@@ -292,6 +316,8 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
       const wasCapital = region.capital;
       remember(s, enemy.id, wasCapital ? `Stole our throne, ${region.name}` : `Took ${region.name} from us`, wasCapital ? -55 : -35, 0.025);
       setOwner(s, region, clan.id);
+      recordDeed(s, actorId, 'regionsTaken', 1, region.id);
+      if (wasCapital) recordDeed(s, actorId, 'capitalsTaken', 1, region.planetId);
       s.claims = s.claims.filter((c) => c !== region.id);
       log(s, `${region.name} is yours!`, 'good');
       if (wasCapital) {
@@ -337,6 +363,8 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
   }
   if (region && region.owner === s.playerClanId) {
     setOwner(s, region, enemy.id);
+    recordDeed(s, enemy.headId, 'regionsTaken', 1, region.id);
+    if (region.capital) recordDeed(s, enemy.headId, 'capitalsTaken', 1, region.planetId);
     notice(s, 'Region Lost', `House ${enemy.name} takes ${region.name} from you.`, { icon: 'lose', tone: 'bad' });
     log(s, `You lost ${region.name} to House ${enemy.name}.`, 'bad');
   }

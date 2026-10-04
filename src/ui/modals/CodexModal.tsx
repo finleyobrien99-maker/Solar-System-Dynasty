@@ -147,10 +147,32 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
             </p>
             <h3>Affairs</h3>
             <p>Lovers can give you unsanctioned children. They cannot inherit unless legitimised for 150 prestige.</p>
+            <h3>Earned epithets</h3>
+            <p>
+              Every house head can earn 57 names from their deeds: the Just, the Cruel, the Conqueror, the Builder and more. Your profile lists every earned
+              epithet, the year and the actions behind it, plus the full catalogue and its requirements. More defining names appear beside a ruler's name.
+              Equally notable newer names take precedence, while every older epithet remains in their history, even after death.
+            </p>
+            <p>
+              Deeds belong to a person: heirs and clones start their own reputations. AI heads use the same rules, based on their actual wars, schemes, families
+              and governance. Old saves start recording new deeds from this update; inherited wealth and titles do not count as achievements.
+            </p>
             <h3>Succession</h3>
             <p>
               When your ruler dies, the next in line inherits everything. Laws decide the order: Primogeniture (eldest), Ultimogeniture (youngest), Meritocracy
               (best total stats) or Designated (you choose). A gender law can favour sons or daughters. If no legitimate dynasty member is alive, the game ends.
+            </p>
+            <h3>Pass the torch</h3>
+            <p>
+              On Life, Abdicate lets an adult ruler hand over to their free, adult heir, including in VIP mode. The old ruler stays alive and takes a vacant
+              council seat if one is available. They retire from the succession line. The normal handover costs 10% prestige and lowers each vassal's opinion by
+              10.
+            </p>
+            <h3>A reign remembered</h3>
+            <p>
+              Succession and the end of a dynasty show the old ruler's life, family, earned epithets and recorded deeds. The same legacy is available in ruler
+              profiles, including rivals. These are personal achievements, never the dynasty's totals; older saves can only show deeds recorded since the
+              epithet update.
             </p>
             <h3>Sprawling dynasties</h3>
             <p>

@@ -31,6 +31,9 @@ export function ClanModal({ id }: { id: string }) {
     .filter((c) => alive(c) && (c.clanId === id || (c.spouseId && s.characters[c.spouseId]?.clanId === id && c.marriedIn)))
     .sort((a, b) => (a.id === clan.headId ? -1 : b.id === clan.headId ? 1 : a.born - b.born))
     .slice(0, 12);
+  const pastRulers = Object.values(s.characters)
+    .filter((c) => c.id !== clan.headId && c.reputation?.houses.includes(id) && c.reputation.earned.length)
+    .sort((a, b) => (b.died ?? s.year) - (a.died ?? s.year));
   const mine = clan.isPlayer;
   const atWar = s.wars.some((w) => w.enemy === id);
 
@@ -143,6 +146,16 @@ export function ClanModal({ id }: { id: string }) {
           <CharCard key={m.id} c={m} size={46} traitsMax={3} sub={`${m.id === clan.headId ? 'Head of house · ' : ''}${ageOf(s, m)} yrs`} />
         ))}
       </div>
+      {!!pastRulers.length && (
+        <details className="card flat" style={{ marginTop: 'var(--space-14px)' }}>
+          <summary>Past named rulers ({pastRulers.length})</summary>
+          <div className="grid tight">
+            {pastRulers.map((c) => (
+              <CharCard key={c.id} c={c} size={44} traitsMax={2} sub={c.died === undefined ? 'Former ruler' : `Died ${c.died}`} />
+            ))}
+          </div>
+        </details>
+      )}
     </Modal>
   );
 }

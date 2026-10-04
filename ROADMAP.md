@@ -240,6 +240,9 @@ Childhood events already exist (shaping personality). Deepen them:
 - A court physician position (see 6.3) with skill and personality. Bad doctors kill people.
 
 ### 1.7 Life log, obituaries and epitaphs `P1` `S`
+- **Status: earned epithets (57) and factual ruler memorials done; personal life logs, obituary ratings and regnal numbers still to do.** Shared player/AI rules in `epithetDefs.ts` and lifetime tracking in `epithets.ts` (save v3). Real deeds award dated names with reasons; the most defining appears in names, profiles and the dynasty tree. Profiles include the full catalogue and progress. Heirs and clones never inherit deeds. Named AI rulers remain in the character archive after death. See [EPITHETS.md](EPITHETS.md) for the catalogue.
+- **Validation:** save v1/v2/v3 fixtures, player and AI deeds, succession, cloning and interrupted streaks are covered. Serial 10k-member benchmark on the same machine: Age Up 101.4 ms before / 101.3 ms after; compressed save 1,257 KB / 1,299 KB. Ordinary kin skip the ruler scan. The mid-phone timing target in §0.4 still needs device testing.
+- **Memorials:** succession and the end-of-dynasty screen show the outgoing ruler's lifespan, reign, family, personal recorded deeds and earned name. Profiles expose the same legacy for player and AI rulers. These use existing save data; older lives receive no fabricated achievements or happiness scores. Death age and completed reign length stay fixed as the years pass.
 - Each character keeps a short log of their own notable moments (born, married, battles, scandals, children, titles).
 - On death, show a BitLife-style **obituary card**: life summary, "Known for…", epithet, and ratings (Happiness, Glory, Family, Infamy).
 - Epithets earned by behaviour: "the Cruel", "the Builder", "the Twice-Cloned", "Gene-Mother", "the Unready", "Voidborn".
@@ -371,6 +374,7 @@ Content is the cheapest depth there is. This phase builds the machine and then f
 - Aim for 25 story cycles by the end of the phase.
 
 ### 3.3 Decisions `P1` `M`
+- **Status: Abdicate done; the other decisions remain to do.** Life's Pass the torch section previews the heir, explains the normal 10% prestige / −10 vassal opinion handover, and requires a second press. Both ruler and heir must be adults and free, with no unresolved events. VIP immortality permits abdication. Retired rulers stay alive, keep their epithets, fill a vacant council seat if available and leave the succession line. Occupied seats are preserved; the incoming ruler leaves their former seat immediately, on voluntary and natural succession. Uses existing ruler-history and succession records, so no save schema change.
 - Player-initiated, conditional, usually big. A Decisions panel lists what's available and what's locked (and why). Examples:
   - **Form the Jovian League** (hold Jupiter plus 2 moons)
   - **Restore the Old Earth Senate**
@@ -867,7 +871,7 @@ export interface Story { id: string; def: string; stage: number; actors: Record<
 ## 18. Known bugs, rough edges and debt
 
 - [x] **VIP off with an overfull vault:** existing traits stay active; the Bloodline tab now explains how many to release, links to the vault filter, and caps the displayed bar at 100%.
-- [ ] **Immortal VIP rulers block succession forever.** Needs the Abdicate decision (3.3).
+- [x] **Immortal VIP rulers block succession forever.** Abdicate on Life hands over to a free adult heir while the old ruler stays alive (3.3).
 - [ ] **Suitors live outside `s.characters`** (in `s.suitors`). The editor handles it via `findChar`, but anything new that looks up characters must remember this.
 - [x] **Bundle size** over 500kB (Vite warning). React split into its own chunk (0.6).
 - [x] **No ESLint/Prettier** (0.7). Both run in CI.
@@ -903,8 +907,8 @@ Why this order: the DSL, relations, secrets and genotype are the multipliers. Ev
 7. ✅ `3.1` Port the remaining 57 events and delete the old path. **M**
 8. ✅ `1.1` Relations data model, decay, baseline opinion, and the UI list on the character modal. **M**
 9. ✅ `1.1` 15 relationship events (friendship, rivalry, romance) using the DSL. **M**
-10. `1.7` Obituary card on death, epithets and regnal numbers. **S**
-11. `3.3` Decisions panel MVP with Abdicate, Move Capital and Hold a Tournament. **S**
+10. 🟡 `1.7` Ruler memorials and epithets done; personal life logs, obituary ratings and regnal numbers remain. **S**
+11. 🟡 `3.3` Abdicate done; Move Capital and Hold a Tournament remain. **S**
 12. `1.5` Secrets and hooks MVP (affair and murder secrets, discovery by spymaster, spending a hook to force a marriage). **M**
 13. `2.2` Consanguinity coefficient with the Kinship warning in suitors. Works before the full genotype by approximating with trait-groups. **S**
 14. `3.4` Ruler ambitions (pick 1 of 3 at coronation, with rewards). **S**

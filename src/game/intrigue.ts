@@ -1,3 +1,4 @@
+import { isCloseKin, recordDeed } from './epithets';
 // Schemes, diplomacy and prisoners.
 
 import { ageOf, alive, ch, clanRank, effStats, fullName, homePlanet, itemSum, liegeOf, log, notice, playerClan, ruler, traitSum, vassalsOf } from './core';
@@ -140,6 +141,9 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
         title = 'Target Eliminated';
         text = `The drone found ${fullName(s, t)}. They will not wake up.`;
         if (t.clanId === s.playerClanId) r.traits = addTrait(r.traits, 'kinslayer');
+        recordDeed(s, r, 'assassinations');
+        recordDeed(s, r, 'cruelty');
+        if (isCloseKin(r, t)) recordDeed(s, r, 'kinslayings');
         killCharacter(s, t.id, 'assassinated');
         if (caught) remember(s, t.clanId, `Murdered ${wasHead ? 'our lord ' : ''}${t.name}`, wasHead ? -70 : -55, 0.015);
         else if (chance(s, 0.3)) remember(s, t.clanId, `Suspected of murdering ${t.name}`, -25, 0.03);
@@ -234,6 +238,11 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
       if (caught && victimClan && !victimClan.isPlayer) remember(s, victimClan.id, `Seduced ${t.name}`, -15);
       break;
     }
+  }
+  if (success) {
+    recordDeed(s, r, 'schemes');
+    if (kind === 'sabotage') recordDeed(s, r, 'sabotages');
+    if (kind === 'blackmail') recordDeed(s, r, 'blackmails');
   }
   if (caught && kind !== 'sway') text += caughtText;
   notice(s, title, text, { icon: 'scheme', tone: success ? 'good' : 'bad', portraitId: SCHEMES[kind].target === 'char' ? targetId : undefined });
@@ -375,6 +384,9 @@ export function executePrisoner(s: GameState, id: string): void {
   const r = ruler(s);
   const clan = s.clans[c.clanId];
   c.prisonerOf = undefined;
+  recordDeed(s, r, 'executions');
+  recordDeed(s, r, 'cruelty');
+  if (isCloseKin(r, c)) recordDeed(s, r, 'kinslayings');
   killCharacter(s, id, 'executed');
   executed(s, c);
   remember(s, c.clanId, `Executed ${c.name}`, -75, 0.012);
@@ -409,5 +421,6 @@ export function releasePrisoner(s: GameState, id: string): void {
   const clan = s.clans[c.clanId];
   if (clan) remember(s, clan.id, `Freed ${c.name}`, 25, 0.05);
   s.prestige += 10;
+  recordDeed(s, ruler(s), 'pardons');
   log(s, `${fullName(s, c)} was released.`, 'info');
 }

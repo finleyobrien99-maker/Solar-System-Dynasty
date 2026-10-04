@@ -1,3 +1,5 @@
+import type { Reputation } from './epithetDefs';
+
 // Core data shapes for the whole game. Everything in GameState must be plain
 // JSON (no classes, no functions) so saves round-trip cleanly.
 
@@ -49,6 +51,7 @@ export interface Character {
   bastard?: boolean;
   marriedIn?: boolean; // joined their spouse's household; children go to the spouse's house
   prisonerOf?: string; // clan id holding them
+  reputation?: Reputation; // lifetime deeds and dated earned epithets; not inherited
   cloneOf?: string; // id of the character this one was cloned from
 }
 
@@ -212,6 +215,7 @@ export type Pending =
       portraitId?: string;
     }
   | { kind: 'battle'; uid: string; report: BattleReport }
+  // deadId identifies the outgoing ruler; after abdication they are still alive.
   | { kind: 'succession'; uid: string; deadId: string; heirId: string };
 
 export interface Suitor {
