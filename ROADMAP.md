@@ -415,6 +415,7 @@ Content is the cheapest depth there is. This phase builds the machine and then f
 | Endgame and crises | 15 | See 10.4 |
 
 - **Every event needs:** at least two meaningful options, at least one option that touches another system, and an icon or art seed. Childhood events must have personality consequences.
+- **Status (Oct 2026): ticket 15 done, +30 events** in `src/game/eventsExpansion.ts` (no save change; tests in `eventsExpansion.test.ts`). Childhood and youth (10): first_flight, cousin_rivalry, imaginary_friend, stowaway, tutor_opinions, runs_away, rite_of_passage, hangar_prank, bad_company, night_terrors. Court and family (10): drunk_councillor, portrait_commission, guest_overstays, parent_forgetting, sibling_debts, unequal_match, court_feud, ancestor_gallery, dowry_dispute, old_soldier. One per world (10, only when you hold land there): sunside_fires (Mercury), acid_storm (Venus), sunken_ruins (Earth), dust_storm (Mars), water_war (Ceres), helium_skimmer (Jupiter), ring_disputation (Saturn), seer_prophecy (Uranus), cryo_cult (Neptune), long_night (Pluto). Consequences land mostly on the person involved (feelings, traits, stats), childhood choices shape personality, and house goodwill respects the grudge ceiling. About 12% of events fired in the harness; the most frequent new one is under 1% of all. The deck is now about 117 distinct events against the 400 target.
 
 ---
 
@@ -608,6 +609,7 @@ Content is the cheapest depth there is. This phase builds the machine and then f
 ### 8.2 AI dynastic strategy `P1` `M`
 - **Status: genetic mate preferences, independent house vaults/forges and Viceroy decisions done.** Mate preferences operate within eligible political matches, reward good genetic tiers and matching genes, and penalise harmful genes without weakening kinship restrictions. House vaults govern births in the host house and persist across succession. Older heirless heads may build vats, grow an heir or clone an exceptional original of their own bloodline; copies cannot be cloned again. Captive and child heads cannot choose new actions. Zealots of condemning faiths avoid new Forge procedures unless heirless. AI spending stays parked pending Fin's choice; AI Solar Throne is deferred.
 - **Measured against b832304, 20 seeds x 150 cycles (80 games):** Passive endings by 100: 0% -> 10%; Builder Sovereign by 150: 85% -> 95%; Warmonger Sovereign: 90% -> 90%, endings by 100: 5% -> 15%; Breeder endings: 5% -> 5%. Median final living dynasty: Passive 76.5 -> 98.5, Builder 84 -> 72, Warmonger 106.5 -> 99.5, Breeder 246 -> 258.5. These are seed-sensitive changes, not evidence that war balance is fixed. Event share stays within the harness limit. Serial 10k benchmark: Age Up 115.5 -> 122.0 ms, autosave 248 -> 252 ms, compressed save 1,344 -> 1,330 KB; different generated checkpoints, desktop only. Full character indexing occurs once for all AI programmes per tick, covered by a 10k-member regression.
+- **Combined with the 30-event batch, same 20 seeds x 150 cycles:** Passive endings by 100: 15%; Breeder: 10% (above the under-5% target); Builder Sovereign: 85%; Warmonger: 100%. Median final living dynasty: 58.5 / 84.5 / 73 / 288.5 respectively; events average 1.41 per cycle and the most frequent stays below 3%. Do not infer a causal balance fix from these small seeded samples or silently retune war. Serial combined 10k benchmark: Age Up 105.2 ms, copy 76.7 ms, autosave 231 ms, save 1,354 KB, at a different generated checkpoint. These are desktop numbers, not proof of the mid-phone timing target. All 341 unit tests and 38 desktop/390px browser tests pass; all v1-v4 frozen saves load, play and round-trip. Phone embed rebuilt with both batches.
 - AI houses marry for alliances and genes, use their own Gene Vault in Standard mode (it makes rivals feel alive; VIP never helps them), press claims for their kids, and react to your bloodline's reputation.
 
 ### 8.3 AI memory and personality consistency `P1` `S`
@@ -929,7 +931,7 @@ export interface Story { id: string; def: string; stage: number; actors: Record<
 - [x] **VIP off with an overfull vault:** existing traits stay active; the Bloodline tab now explains how many to release, links to the vault filter, and caps the displayed bar at 100%.
 - [x] **Immortal VIP rulers block succession forever.** Abdicate on Life hands over to a free adult heir while the old ruler stays alive (3.3).
 - [ ] **Suitors live outside `s.characters`** (in `s.suitors`). The editor handles it via `findChar`, but anything new that looks up characters must remember this.
-- [ ] **Bundle size:** React is split into its own chunk (0.6), but the growing AI/event engine puts the game chunk back over 500 kB (~518 kB / 170 kB gzipped). Consider lazy loading the Codex and character tools without breaking offline or the single-file phone build.
+- [ ] **Bundle size:** React is split into its own chunk (0.6), but the growing AI/event engine puts the game chunk back over 500 kB (~562 kB / 183 kB gzipped). Consider lazy loading the Codex and character tools without breaking offline or the single-file phone build.
 - [x] **No ESLint/Prettier** (0.7). Both run in CI.
 - [ ] **Single `fleet` number for the player**, separate `clan.fleet` for the AI (will be replaced by 5.1).
 - [x] **Trait colours alone** distinguish categories (accessibility, 9.6). Category glyphs and accessible labels now identify them.
@@ -969,7 +971,7 @@ Why this order: the DSL, relations, secrets and genotype are the multipliers. Ev
 12. `1.5` Secrets and hooks MVP (affair and murder secrets, discovery by spymaster, spending a hook to force a marriage). **M**
 13. `2.2` Consanguinity coefficient with the Kinship warning in suitors. Works before the full genotype by approximating with trait-groups. **S**
 14. `3.4` Ruler ambitions (pick 1 of 3 at coronation, with rewards). **S**
-15. `3.6` 30 new events across childhood, court and planet-specific categories. **M**
+15. `3.6` 30 new events across childhood, court and planet-specific categories. **M** (done Oct 2026: see 3.6)
 
 ---
 

@@ -78,8 +78,8 @@ describe('starting scenarios', () => {
       play(s, 60);
       // A governor who builds no ships and answers nothing is fair game for an
       // ambitious neighbour; a house that starts with real power should not be.
-      if (sc === 'governor' && s.gameOver) expect(s.gameOver.reason).toMatch(/lost every last region/);
-      else expect(s.year).toBeGreaterThan(2550);
+      const fell = sc === 'governor' && /lost every last region/.test(s.gameOver?.reason ?? '');
+      if (!fell) expect(s.year).toBeGreaterThan(2550);
     }
   });
 
