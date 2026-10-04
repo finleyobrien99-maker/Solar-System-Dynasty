@@ -71,11 +71,12 @@ export function creditLines(s: GameState): Line[] {
 
   lines.push({ label: `Fleet upkeep (${s.fleet} ships)`, value: -Math.round(s.fleet * UPKEEP_PER_SHIP) });
 
-  const school = dynastyMembers(s).reduce((a, c) => a + (c.edu && ageOf(s, c) < 16 ? TUTOR_COST[c.edu.tutor] : 0), 0);
+  const members = dynastyMembers(s);
+  const school = members.reduce((a, c) => a + (c.edu && ageOf(s, c) < 16 ? TUTOR_COST[c.edu.tutor] : 0), 0);
   if (school) lines.push({ label: 'Heir tuition', value: -school });
 
   // Only the household you actually keep at court costs money; distant kin pay their own way.
-  const court = dynastyMembers(s).filter((c) => isCloseFamily(s, c)).length * 2 + (alive(ch(s, r.spouseId)) ? 2 : 0);
+  const court = members.filter((c) => isCloseFamily(s, c)).length * 2 + (alive(ch(s, r.spouseId)) ? 2 : 0);
   lines.push({ label: 'Court upkeep (close family)', value: -court });
 
   const items = itemSum(s, 'creditsYr');

@@ -6,11 +6,11 @@
 
 /// <reference types="node" />
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { decompressFromBase64 } from 'lz-string';
-import { describe, expect, it } from 'vitest';
+import { compressToUTF16, decompressFromBase64 } from 'lz-string';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SAVE_VERSION } from './core';
 import type { Seeded } from './rng';
-import { exportSave, importSave, migrate, MIGRATIONS, NewerSaveError } from './save';
+import { deleteSave, exportSave, importSave, listSaves, migrate, MIGRATIONS, NewerSaveError, readBackup, readSave, writeSave } from './save';
 import { botTurn, checkInvariants, drain } from './testkit';
 import { ageUp } from './tick';
 import type { GameState, ScenarioId } from './types';
@@ -123,5 +123,59 @@ describe('save migrations', () => {
     const s = importSave(readFileSync(new URL(fixtures()[0], DIR), 'utf8'));
     s.version = SAVE_VERSION + 1;
     expect(() => importSave(exportSave(s))).toThrow(NewerSaveError);
+  });
+});
+
+describe('browser storage', () => {
+  // A stand-in for localStorage, so the real write and read paths run.
+  function fakeStorage(): Map<string, string> {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    });
+    return store;
+  }
+  const fixture = () => importSave(readFileSync(new URL('save-v1-governor.json', DIR), 'utf8'));
+  afterEach(() => {
+    for (const slot of ['auto', 'slot1'] as const) deleteSave(slot);
+    vi.unstubAllGlobals();
+  });
+
+  it('writes deflated saves and reads them back exactly', () => {
+    const store = fakeStorage();
+    const s = fixture();
+    expect(writeSave('slot1', s).ok).toBe(true);
+    expect(JSON.parse(store.get('solar-dynasty:slot1')!).z).toBe('df');
+    expect(readSave('slot1')).toEqual({ state: JSON.parse(JSON.stringify(s)), fromBackup: false });
+    expect(listSaves().map((x) => x.slot)).toEqual(['slot1']);
+  });
+
+  it('still reads saves older builds wrote with lz-string', () => {
+    const store = fakeStorage();
+    const s = fixture();
+    const json = JSON.stringify(s);
+    // What the v1 builds put in storage: lz-string UTF16, checksum of the JSON.
+    writeSave('auto', s);
+    const env = JSON.parse(store.get('solar-dynasty:auto')!);
+    store.set('solar-dynasty:auto', JSON.stringify({ ...env, z: 'utf16', data: compressToUTF16(json) }));
+    expect(readSave('auto')?.state.year).toBe(s.year);
+  });
+
+  it('keeps the previous save as a backup and falls back to it if the main one is corrupt', () => {
+    const store = fakeStorage();
+    const s = fixture();
+    writeSave('auto', s);
+    const first = s.year;
+    s.year += 1;
+    writeSave('auto', s);
+    expect(readBackup('auto')?.year).toBe(first);
+    store.set('solar-dynasty:auto', store.get('solar-dynasty:auto')!.slice(0, 500));
+    expect(readSave('auto')).toMatchObject({ fromBackup: true, state: { year: first } });
+  });
+
+  it('exports in lz-string base64 so older builds can import them', () => {
+    expect(JSON.parse(exportSave(fixture())).z).toBe('b64');
   });
 });

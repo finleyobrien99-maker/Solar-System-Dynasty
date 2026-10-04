@@ -80,9 +80,8 @@ function deathChance(s: GameState, c: Character): number {
 export function healthTick(s: GameState): void {
   for (const c of Object.values(s.characters)) {
     if (!alive(c)) continue;
-    const sci = effStats(s, c).sci;
     if (hasTrait(c, 'ill')) {
-      if (hasTrait(c, 'nano_immune') || hasTrait(c, 'xenoblood') || chance(s, 0.35 + sci * 0.02)) {
+      if (hasTrait(c, 'nano_immune') || hasTrait(c, 'xenoblood') || chance(s, 0.35 + effStats(s, c).sci * 0.02)) {
         c.traits = c.traits.filter((t) => t !== 'ill');
         if (c.clanId === s.playerClanId) log(s, `${c.name} has recovered from illness.`, 'good');
       } else c.health -= 6;
@@ -340,7 +339,12 @@ export function betrothalTick(s: GameState): void {
 
 // ── Succession ────────────────────────────────────────────────────────────
 
-export function lineOfSuccession(s: GameState): Character[] {
+/**
+ * Succession candidates in order, as ranked groups: designated heir, children,
+ * grandchildren, great-grandchildren, siblings, nephews and nieces, then the
+ * whole dynasty. Lazy, so finding the heir rarely has to rank everyone.
+ */
+function* successionGroups(s: GameState): Generator<Character[]> {
   const r = ruler(s);
   const law = s.dynasty.law;
   const g = s.dynasty.genderLaw;
@@ -358,36 +362,40 @@ export function lineOfSuccession(s: GameState): Character[] {
     }
     return l;
   };
+  if (law === 'designated') {
+    const d = ch(s, s.dynasty.designatedHeir);
+    if (d && ok(d)) yield [d];
+  }
+  const kids = order(childrenOf(s, r));
+  yield kids;
+  for (const k of kids) yield order(childrenOf(s, k));
+  for (const k of childrenOf(s, r)) for (const gk of childrenOf(s, k)) yield order(childrenOf(s, gk));
+  const sibs = order(siblingsOf(s, r));
+  yield sibs;
+  for (const sib of sibs) yield order(childrenOf(s, sib));
+  yield order(dynastyMembers(s));
+}
+
+export function lineOfSuccession(s: GameState): Character[] {
   const out: Character[] = [];
   const seen = new Set<string>();
-  const add = (l: Character[]) => {
-    for (const c of l) {
+  for (const group of successionGroups(s)) {
+    for (const c of group) {
       if (seen.has(c.id)) continue;
       seen.add(c.id);
       out.push(c);
     }
-  };
-  if (law === 'designated') {
-    const d = ch(s, s.dynasty.designatedHeir);
-    if (d && ok(d)) add([d]);
   }
-  const kids = order(childrenOf(s, r));
-  add(kids);
-  for (const k of order(childrenOf(s, r))) add(order(childrenOf(s, k)));
-  for (const k of childrenOf(s, r)) for (const gk of childrenOf(s, k)) add(order(childrenOf(s, gk)));
-  const sibs = order(siblingsOf(s, r));
-  add(sibs);
-  for (const sib of sibs) add(order(childrenOf(s, sib)));
-  add(order(dynastyMembers(s)));
   return out;
 }
 
 export function currentHeir(s: GameState): Character | undefined {
-  return lineOfSuccession(s)[0];
+  for (const group of successionGroups(s)) if (group.length) return group[0];
+  return undefined;
 }
 
 export function succeed(s: GameState, deadId: string): void {
-  const heir = lineOfSuccession(s)[0] ?? cadetRescue(s);
+  const heir = currentHeir(s) ?? cadetRescue(s);
   const clan = playerClan(s);
   const dead = s.characters[deadId];
   const last = s.dynasty.rulers[s.dynasty.rulers.length - 1];
@@ -412,9 +420,8 @@ export function succeed(s: GameState, deadId: string): void {
 export function aiSucceed(s: GameState, clanId: string): void {
   const clan = s.clans[clanId];
   const old = s.characters[clan.headId];
-  const kin = Object.values(s.characters).filter((c) => alive(c) && c.clanId === clanId && c.id !== clan.headId);
   const kids = old ? childrenOf(s, old).filter((c) => alive(c) && c.clanId === clanId) : [];
-  const pool = kids.length ? kids : kin;
+  const pool = kids.length ? kids : Object.values(s.characters).filter((c) => alive(c) && c.clanId === clanId && c.id !== clan.headId);
   let heir = pool.sort((a, b) => a.born - b.born)[0];
   if (!heir) {
     heir = createCharacter(s, {

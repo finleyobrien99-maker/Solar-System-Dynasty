@@ -5,9 +5,10 @@
 // verified. If a save is ever corrupted, the backup is used automatically.
 // Players can also export/import saves as files.
 
-import { clanTitle, ruler, SAVE_VERSION } from './core';
-import { compressToBase64, compressToUTF16, decompressFromBase64, decompressFromUTF16 } from 'lz-string';
+import { compressToBase64, decompressFromBase64, decompressFromUTF16 } from 'lz-string';
 import { mirror } from '../native';
+import { deflateString, inflateString } from './codec';
+import { clanTitle, ruler, SAVE_VERSION } from './core';
 import { hashString } from './rng';
 import type { GameState } from './types';
 
@@ -29,7 +30,13 @@ interface Envelope {
   savedAt: number;
   checksum: number; // hash of the uncompressed JSON
   summary: SaveSummary;
-  z?: 'utf16' | 'b64'; // compression used for `data`
+  /**
+   * How `data` is compressed. 'df' is deflate (codec.ts), used for saves in
+   * storage. 'b64' is lz-string base64, still used for exported files so an
+   * older build (say, a phone app that hasn't updated) can import them.
+   * 'utf16' is lz-string from older builds' storage; none means raw JSON.
+   */
+  z?: 'df' | 'b64' | 'utf16';
   data: string;
 }
 
@@ -67,15 +74,15 @@ export function summarise(s: GameState): SaveSummary {
 
 // Saves are compressed: a sprawling dynasty can run to thousands of
 // characters, and browser storage is only a few megabytes.
-function envelope(s: GameState, z: 'utf16' | 'b64' = 'utf16'): Envelope {
+function envelope(s: GameState, z: 'df' | 'b64' = 'df'): Envelope {
   const json = JSON.stringify(s);
-  const data = z === 'utf16' ? compressToUTF16(json) : compressToBase64(json);
+  const data = z === 'df' ? deflateString(json) : compressToBase64(json);
   return { v: SAVE_VERSION, savedAt: Date.now(), checksum: hashString(json), summary: summarise(s), z, data };
 }
 
 function unpack(env: Envelope): string | null {
   if (!env.z) return env.data;
-  const json = env.z === 'utf16' ? decompressFromUTF16(env.data) : decompressFromBase64(env.data);
+  const json = env.z === 'df' ? inflateString(env.data) : env.z === 'utf16' ? decompressFromUTF16(env.data) : decompressFromBase64(env.data);
   return json || null;
 }
 
@@ -107,14 +114,18 @@ export interface WriteResult {
   error?: string;
 }
 
+/** What this session last wrote and verified in each slot, so the next write needn't re-check it. */
+const verified = new Map<SlotId, string>();
+
 export function writeSave(slot: SlotId, s: GameState): WriteResult {
   const ls = storage();
   if (!ls) return { ok: false, error: 'Browser storage is unavailable.' };
   const env = envelope(s);
   const raw = JSON.stringify(env);
   const prev = ls.getItem(key(slot));
+  const prevGood = prev !== null && (verified.get(slot) === prev || !!parseEnvelope(prev));
   const attempt = (withBackup: boolean) => {
-    if (withBackup && parseEnvelope(prev)) ls.setItem(`${key(slot)}.bak`, prev!);
+    if (withBackup && prevGood) ls.setItem(`${key(slot)}.bak`, prev!);
     ls.setItem(key(slot), raw);
   };
   try {
@@ -131,6 +142,7 @@ export function writeSave(slot: SlotId, s: GameState): WriteResult {
       if (prev) ls.setItem(key(slot), prev);
       return { ok: false, error: 'Save verification failed; kept the previous save.' };
     }
+    verified.set(slot, raw);
     mirror(key(slot), raw);
     return { ok: true };
   } catch (e) {
@@ -178,6 +190,7 @@ export function deleteSave(slot: SlotId): void {
   const ls = storage();
   ls?.removeItem(key(slot));
   ls?.removeItem(`${key(slot)}.bak`);
+  verified.delete(slot);
   mirror(key(slot), null);
 }
 

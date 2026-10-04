@@ -69,7 +69,7 @@ type NumericTraitKey = 'health' | 'fertility' | 'life' | 'fleetPct' | 'prestigeY
 
 export function traitSum(c: Character, key: NumericTraitKey): number {
   let total = 0;
-  for (const t of traitDefs(c)) total += t[key] ?? 0;
+  for (const id of c.traits) total += TRAITS[id]?.[key] ?? 0;
   // A bionic arm cancels out the Maimed penalty.
   if (key === 'health' && c.traits.includes('maimed') && c.traits.includes('bionic_arm')) total += 10;
   return total;
@@ -96,7 +96,9 @@ export function homePlanet(s: GameState): string {
 
 export function effStats(s: GameState, c: Character): Record<StatKey, number> {
   const out = { ...c.base };
-  for (const t of traitDefs(c)) {
+  for (const id of c.traits) {
+    const t = TRAITS[id];
+    if (!t) continue;
     for (const k of STAT_KEYS) {
       out[k] += (t.all ?? 0) + (t.stats?.[k] ?? 0);
     }

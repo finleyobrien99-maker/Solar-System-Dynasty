@@ -154,15 +154,18 @@ Do these first. Everything after this phase gets cheaper because of them.
   - Time-slice AI work over cycles.
   - Add `npm run bench`, which reports tick time and save size at 500 / 2k / 10k members.
 - **Done when:** a 10k-member dynasty ages up in under 100ms on a mid phone and saves stay under 2MB compressed.
-- **Status: bench done, optimisation not started.** `npm run bench` grows a dynasty as fast as it will go and measures each checkpoint. First numbers (desktop, Oct 2026):
+- **Status: first pass done.** `npm run bench` grows a dynasty as fast as it will go (the Breeder bot plus forced marriages) and times the real `writeSave` against an in-memory localStorage. Desktop, Oct 2026, same seeded game before and after:
 
-  | Living dynasty | All characters | Age Up | act() copy per click | Save compressed | Save time |
+  | Living dynasty | All characters | Age Up | act() copy per click | Autosave | Saved |
   |---|---|---|---|---|---|
-  | 504 | 1,071 | 7 ms | 4 ms | 131 KB | 67 ms |
-  | 2,064 | 3,515 | 23 ms | 13 ms | 320 KB | 196 ms |
-  | 10,054 | 16,314 | 145 ms | 80 ms | 1,191 KB | 1,428 ms |
+  | 504 | 1,071 | 6.9 → 4.5 ms | 3.6 ms | 69 → 16 ms | 97 KB |
+  | 2,064 | 3,515 | 24 → 15 ms | 12 ms | 226 → 47 ms | 287 KB |
+  | 10,054 | 16,314 | 145 → 95 ms | 82 ms | 1,721 → 233 ms | 1.2 MB |
 
-  What this says: at 10k we're over budget on a desktop, so well over on a phone. The **autosave** is the worst of it: it runs after every click, and `writeSave` also decompresses the previous save and the new one to verify them. The per-click `structuredClone` in `act()` comes next, then the tick's full scans of `s.characters` (`dynastyMembers` and friends filter every character on every call). Dead characters are only ~37% of the total, so the archive helps less than these. Suggested order: cheaper autosave (skip re-verifying a save we verified ourselves, compress off the main thread or less often), then indexes by clan and alive, then the archive.
+  - **Autosave:** compression was 85% of it. Storage saves now use deflate (`fflate`, `codec.ts`, envelope `z: 'df'`), about 10× faster than lz-string. Old lz-string saves still load, and exports stay lz-string base64 so older builds can import them. Every write is still read back and verified; a save this session already verified isn't re-checked before it's rotated into the backup.
+  - **Age Up:** `currentHeir` no longer ranks the whole dynasty to find one heir (lazy succession groups). Health skips stat maths for the healthy. Trait sums don't allocate. AI succession only scans for kin when the old head left no children in the house.
+  - All of it is behaviour-preserving: fingerprints of the full state after 150 seeded cycles (every bot, three seeds, plus the 10k dynasty) were identical before and after.
+  - **Still to do, in order:** (1) the per-click `structuredClone` in `act()` (82 ms at 10k); (2) an index of characters by house, which means a `setClan()` rule like `setOwner()` (houses change in `createCharacter`, `cadets.ts` twice and the suitor-adoption event), worth about a fifth of an Age Up; (3) the archive for the dead (only ~37% of characters, so it comes last).
 
 ### 0.5 Balance harness `P0` `M`
 See section 17. Headless runner, bot strategies, CSV/JSON output, a summary table in CI artefacts.

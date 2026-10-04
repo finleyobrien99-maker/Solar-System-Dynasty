@@ -18,6 +18,7 @@
     "bench": "vite-node scripts/bench.ts --"
   },
   "dependencies": {
+    "fflate": "^0.8.3",
     "lz-string": "^1.5.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
