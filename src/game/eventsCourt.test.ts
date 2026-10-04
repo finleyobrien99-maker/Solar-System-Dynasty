@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createCharacter } from './character';
-import { alive, ch, clanRegions } from './core';
+import { alive, ch, clanRank, clanRegions, liegeOf } from './core';
+import { neighbourPlanets } from './planets';
 import { buildCtx, EVENT_BY_ID, queueEvent } from './events';
 import { COURT_EVENTS, courtingHouse, courtship, heldKin } from './eventsCourt';
 import { remember } from './memory';
@@ -26,7 +27,30 @@ function aiHouses(s: GameState): Clan[] {
   return out;
 }
 
+function grownSon(s: GameState) {
+  const son = createCharacter(s, { gender: 'M', born: s.year - 20, clanId: s.playerClanId, planetId: 'mars', fatherId: s.rulerId, adultExtras: true });
+  s.characters[s.rulerId].childrenIds.push(son.id);
+  return son;
+}
+
+/** A powerful house near Mars that isn't your liege. */
+function bigNeighbour(s: GameState): Clan {
+  const near = new Set(['mars', ...neighbourPlanets('mars')]);
+  const liege = liegeOf(s, s.playerClanId);
+  return aiHouses(s).find((k) => near.has(k.planetId) && k.id !== liege && clanRank(s, k.id) >= 2)!;
+}
+
 const SETUP: Record<string, (s: GameState) => void> = {
+  fealty_demand: (s) => {
+    const k = bigNeighbour(s);
+    k.fleet = 400;
+    k.opinion = -30;
+    s.characters[k.headId].traits.push('ambitious');
+  },
+  liege_charges: (s) => {
+    grownSon(s);
+    s.clans[liegeOf(s, s.playerClanId)!].opinion = -60;
+  },
   kin_ransom: (s) => {
     const [k] = aiHouses(s);
     const son = createCharacter(s, { gender: 'M', born: s.year - 20, clanId: s.playerClanId, planetId: 'mars', fatherId: s.rulerId, adultExtras: true });
@@ -150,5 +174,31 @@ describe('who asks for your hand', () => {
     remember(s, k.id, 'Executed our heir', -75, undefined, true);
     def.choices[0].run(ctx);
     expect(k.opinion).toBeLessThan(0);
+  });
+});
+
+describe('the strong lean on you', () => {
+  it('bending the knee to a stronger house makes it your liege', () => {
+    const s = court();
+    SETUP.fealty_demand(s);
+    const { def, ctx } = event(s, 'fealty_demand');
+    def.choices[0].run(ctx);
+    expect(liegeOf(s, s.playerClanId)).toBe(ctx.data.clan);
+  });
+
+  it('a hostile liege who catches you out keeps one of your family, preferably your heir', () => {
+    const s = court();
+    SETUP.liege_charges(s);
+    const { def, ctx } = event(s, 'liege_charges');
+    def.choices[1].run(ctx);
+    expect(heldKin(s)?.prisonerOf).toBe(ctx.data.clan);
+  });
+
+  it('ignoring the summons brings your liege to war', () => {
+    const s = court();
+    SETUP.liege_charges(s);
+    const { def, ctx } = event(s, 'liege_charges');
+    def.choices[2].run(ctx);
+    expect(s.wars.some((w) => w.enemy === ctx.data.clan)).toBe(true);
   });
 });
