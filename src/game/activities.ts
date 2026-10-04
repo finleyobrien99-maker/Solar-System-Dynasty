@@ -1,3 +1,4 @@
+import { recordDeed } from './epithets';
 // Once-a-cycle activities: galas, hunts, pilgrimages and the rest.
 
 import { ageOf, alive, clanRank, effStats, fullName, hasTrait, log, newId, notice, playerClan, ruler, setCooldown, cooldownReady } from './core';
@@ -100,6 +101,12 @@ export function doActivity(s: GameState, kind: ActivityKind): void {
   pay(s, def.cost(s));
   setCooldown(s, `act:${kind}`, def.cooldown);
   const r = ruler(s);
+  if (kind === 'donate') {
+    recordDeed(s, r, 'charity', def.cost(s).credits ?? 0);
+    recordDeed(s, r, 'kindness');
+  }
+  if (kind === 'pilgrimage') recordDeed(s, r, 'pilgrimages');
+  if (kind === 'study') recordDeed(s, r, 'studies');
   const st = effStats(s, r);
   const title = def.name;
   let text = '';

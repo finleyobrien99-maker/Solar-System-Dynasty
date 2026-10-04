@@ -1,5 +1,6 @@
+import { primaryEpithet } from '../../game/epithetDefs';
 import { useState } from 'react';
-import { alive, ch, childrenOf, dynastyMembers, isBloodlineClan } from '../../game/core';
+import { alive, ch, childrenOf, dynastyMembers, fullName, isBloodlineClan } from '../../game/core';
 import type { Character } from '../../game/types';
 import { Face, Modal } from '../components';
 import { useGame } from '../store';
@@ -44,6 +45,7 @@ function Node({ c, depth }: { c: Character; depth: number }) {
           <b style={{ color: alive(c) ? undefined : 'var(--muted)' }}>
             {wasRuler && '♛ '}
             {c.name}
+            {primaryEpithet(c.reputation) ? ' ' + primaryEpithet(c.reputation)!.name : ''}
           </b>
           <span className="spouse">
             {' '}
@@ -99,7 +101,7 @@ export function TreeModal() {
                 openChar(r.id);
               }}
             >
-              {i + 1}. {r.name} ({r.from}–{r.to ?? 'now'})
+              {i + 1}. {s.characters[r.id] ? fullName(s, s.characters[r.id]) : r.name} ({r.from}–{r.to ?? 'now'})
             </button>
           ))}
         </div>

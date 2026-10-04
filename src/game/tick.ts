@@ -1,3 +1,4 @@
+import { epithetsTick, recordDeed } from './epithets';
 // Ageing up one cycle: the heartbeat of the game.
 
 import { aiTick, prune } from './ai';
@@ -36,6 +37,8 @@ export function ageUp(s: GameState): void {
   }
 
   const r = ruler(s);
+  recordDeed(s, r, 'income', Math.max(0, dc));
+  epithetsTick(s);
   log(
     s,
     `${r.name} turns ${ageOf(s, r)}. Income: ${dc >= 0 ? '+' : ''}${dc} credits, ${dp >= 0 ? '+' : ''}${dp} prestige, ${df >= 0 ? '+' : ''}${df} faith.`,

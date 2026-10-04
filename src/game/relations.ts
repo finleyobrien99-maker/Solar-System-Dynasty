@@ -1,3 +1,4 @@
+import { breakFaithfulness, recordDeed } from './epithets';
 // Personal relationships (ROADMAP §1.1, numbers from deep dives §C).
 //
 // How A feels about B runs from −100 to 100: a baseline worked out on the
@@ -131,6 +132,17 @@ export function spendTime(s: GameState, targetId: string, kind: TimeKind): boole
   if (timeBlocker(s, targetId)) return false;
   const t = s.characters[targetId];
   const r = ruler(s);
+  if (kind === 'stargazing') recordDeed(s, r, 'stargazing');
+  if (
+    t.spouseId === r.id ||
+    t.fatherId === r.id ||
+    t.motherId === r.id ||
+    r.fatherId === t.id ||
+    r.motherId === t.id ||
+    (r.fatherId && r.fatherId === t.fatherId) ||
+    (r.motherId && r.motherId === t.motherId)
+  )
+    recordDeed(s, r, 'familyVisits');
   forget(s, t.id, r.id, 'neglect');
   const v = timeValue(t, kind);
   if (v) addFeeling(s, t.id, r.id, { why: 'Time together', value: v, decay: 1, key: 'time' });
@@ -146,6 +158,10 @@ export function spendTime(s: GameState, targetId: string, kind: TimeKind): boole
 
 /** The ruler's spouse learns of a lover. */
 export function lovers(s: GameState, r: Character, lover: Character): void {
+  breakFaithfulness(r);
+  breakFaithfulness(ch(s, r.spouseId));
+  breakFaithfulness(lover);
+  breakFaithfulness(ch(s, lover.spouseId));
   const spouse = ch(s, r.spouseId);
   if (alive(spouse)) addFeeling(s, spouse.id, r.id, { why: 'Has a lover', value: -40, decay: 2, key: 'lover' });
   relationOf(s, r.id, lover.id, true)!.kind = 'lover';

@@ -1,3 +1,4 @@
+import { recordDeed } from './epithets';
 // Cadet branches: grant a kinsman a region and they found an offshoot house
 // of your bloodline. Cadets are sworn to you, share your Gene Vault, send
 // ships to your wars, and if your main line ever dies out, the strongest
@@ -73,6 +74,7 @@ export function foundCadet(s: GameState, charId: string, regionId: string, name?
     memories: [],
   };
   s.clans[id] = cadet;
+  recordDeed(s, main.headId, 'cadetsFounded');
   const moving = [founder, ...descendantsInHouse(s, founder, main.id)];
   for (const m of moving) m.clanId = id;
   if (moving.some((m) => m.id === s.dynasty.designatedHeir)) s.dynasty.designatedHeir = undefined;

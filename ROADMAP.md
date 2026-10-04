@@ -240,6 +240,8 @@ Childhood events already exist (shaping personality). Deepen them:
 - A court physician position (see 6.3) with skill and personality. Bad doctors kill people.
 
 ### 1.7 Life log, obituaries and epitaphs `P1` `S`
+- **Status: earned epithets done (57); life logs, obituaries and regnal numbers still to do.** Shared player/AI rules in `epithetDefs.ts` and lifetime tracking in `epithets.ts` (save v3). Real deeds award dated names with reasons; the most defining appears in names, profiles and the dynasty tree. Profiles include the full catalogue and progress. Heirs and clones never inherit deeds. Named AI rulers remain in the character archive after death. See [EPITHETS.md](EPITHETS.md) for the catalogue.
+- **Validation:** save v1/v2/v3 fixtures, player and AI deeds, succession, cloning and interrupted streaks are covered. Serial 10k-member benchmark on the same machine: Age Up 101.4 ms before / 101.3 ms after; compressed save 1,257 KB / 1,299 KB. Ordinary kin skip the ruler scan. The mid-phone timing target in §0.4 still needs device testing.
 - Each character keeps a short log of their own notable moments (born, married, battles, scandals, children, titles).
 - On death, show a BitLife-style **obituary card**: life summary, "Known for…", epithet, and ratings (Happiness, Glory, Family, Infamy).
 - Epithets earned by behaviour: "the Cruel", "the Builder", "the Twice-Cloned", "Gene-Mother", "the Unready", "Voidborn".

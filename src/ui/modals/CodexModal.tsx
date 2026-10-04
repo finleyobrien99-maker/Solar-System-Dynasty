@@ -147,6 +147,16 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
             </p>
             <h3>Affairs</h3>
             <p>Lovers can give you unsanctioned children. They cannot inherit unless legitimised for 150 prestige.</p>
+            <h3>Earned epithets</h3>
+            <p>
+              Every house head can earn 57 names from their deeds: the Just, the Cruel, the Conqueror, the Builder and more. Your profile lists every earned
+              epithet, the year and the actions behind it, plus the full catalogue and its requirements. More defining names appear beside a ruler's name.
+              Equally notable newer names take precedence, while every older epithet remains in their history, even after death.
+            </p>
+            <p>
+              Deeds belong to a person: heirs and clones start their own reputations. AI heads use the same rules, based on their actual wars, schemes, families
+              and governance. Old saves start recording new deeds from this update; inherited wealth and titles do not count as achievements.
+            </p>
             <h3>Succession</h3>
             <p>
               When your ruler dies, the next in line inherits everything. Laws decide the order: Primogeniture (eldest), Ultimogeniture (youngest), Meritocracy

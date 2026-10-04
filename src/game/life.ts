@@ -1,3 +1,4 @@
+import { observeReputation } from './epithets';
 // Birth, growing up, health, death and succession.
 
 import { createCharacter, eduTrait, inheritLooks, randomPersonality } from './character';
@@ -45,6 +46,7 @@ export function killCharacter(s: GameState, id: string, cause: string): void {
     c.traits = c.traits.filter((t) => t !== 'ill' && t !== 'wounded');
     return;
   }
+  observeReputation(s, c);
   c.died = s.year;
   c.deathCause = cause;
   c.loverId = undefined;
@@ -125,6 +127,8 @@ export function makeChild(s: GameState, mother: Character, father: Character, cl
   }
   father.childrenIds.push(child.id);
   mother.childrenIds.push(child.id);
+  observeReputation(s, mother);
+  observeReputation(s, father);
   return child;
 }
 

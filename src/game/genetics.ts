@@ -1,3 +1,4 @@
+import { recordDeed } from './epithets';
 // Inheritance and the Gene Vault.
 //
 // Every heritable trait has a chance to pass from parent to child. Matching
@@ -6,7 +7,7 @@
 //   • Locked traits are ALWAYS given to every child born into the dynasty.
 //   • Purged traits are NEVER given to a dynasty child.
 
-import { alive, bloodlineMembers, ageOf, isVip, log } from './core';
+import { alive, bloodlineMembers, ageOf, isVip, log, ruler } from './core';
 import { chance, pick, rand, weighted, type Seeded } from './rng';
 import { addTrait, conflicts, GENETIC, isHeritable, TRAIT_LIST, TRAITS } from './traits';
 import type { Character, GameState } from './types';
@@ -208,6 +209,7 @@ export function purgeTrait(s: GameState, id: string): boolean {
   pay(s, purgePrice(s, id));
   s.dynasty.locked = s.dynasty.locked.filter((t) => t !== id);
   s.dynasty.purged.push(id);
+  recordDeed(s, ruler(s), 'purges', 1, id);
   const t = TRAITS[id];
   if (t.cat === 'personality') {
     for (const c of bloodlineMembers(s)) {

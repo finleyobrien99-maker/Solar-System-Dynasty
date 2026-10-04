@@ -1,3 +1,4 @@
+import { breakFaithfulness } from './epithets';
 // Family management: marriages, betrothals, tutors, cybernetics, laws.
 
 import { createCharacter, randomPersonality } from './character';
@@ -117,6 +118,8 @@ export function divorce(s: GameState, id: string): boolean {
   const b = ch(s, a?.spouseId);
   if (!a || !alive(b) || !canAfford(s, divorceCost())) return false;
   pay(s, divorceCost());
+  breakFaithfulness(a);
+  breakFaithfulness(b);
   a.spouseId = undefined;
   b.spouseId = undefined;
   const clan = s.clans[b.clanId];

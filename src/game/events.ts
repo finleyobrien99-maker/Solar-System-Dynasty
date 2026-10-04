@@ -310,23 +310,23 @@ export const EVENTS: EventDef[] = [
       {
         label: 'Meet their demands',
         needs: [{ have: 'credits', n: 100 }],
-        then: { do: [{ lose: 'credits', n: 100 }], text: 'The miners cheer your name. Production resumes.' },
+        then: {
+          do: [{ deed: 'justice' }, { deed: 'kindness' }, { deed: 'charity', n: 100 }, { lose: 'credits', n: 100 }],
+          text: 'The miners cheer your name. Production resumes.',
+        },
       },
       {
         label: 'Negotiate',
         then: {
           roll: { base: 0.3, per: { stat: 'dip', n: 0.05 } },
-          pass: { do: [{ gain: 'prestige', n: 10 }], text: 'You talk them round with a fair deal. +10 prestige.' },
+          pass: { do: [{ deed: 'justice' }, { gain: 'prestige', n: 10 }], text: 'You talk them round with a fair deal. +10 prestige.' },
           fail: { do: [{ dev: -1, region: 'region' }], text: 'Talks collapse. The strike drags on and the region suffers (-1 development).' },
         },
       },
       {
         label: 'Send in the marines',
         then: {
-          do: [
-            { lose: 'prestige', n: 10 },
-            { trait: 'cruel', p: 0.25 },
-          ],
+          do: [{ deed: 'cruelty' }, { lose: 'prestige', n: 10 }, { trait: 'cruel', p: 0.25 }],
           text: 'The strike is broken with stun batons. Nobody will forget it. -10 prestige.',
         },
       },
@@ -574,20 +574,20 @@ export const EVENTS: EventDef[] = [
     options: [
       {
         label: 'Punish them firmly',
-        then: { do: [{ trait: 'calm', to: 'subject', p: 0.5, or: 'just' }], text: (c) => `${c.subject!.name} learns their lesson.` },
+        then: { do: [{ deed: 'justice' }, { trait: 'calm', to: 'subject', p: 0.5, or: 'just' }], text: (c) => `${c.subject!.name} learns their lesson.` },
       },
       {
         label: 'Praise their spirit',
-        then: { do: [{ trait: 'brave', to: 'subject', p: 0.5, or: 'wrathful' }], text: (c) => `${c.subject!.name} walks a little taller after that.` },
+        then: {
+          do: [{ deed: 'arbitrary' }, { trait: 'brave', to: 'subject', p: 0.5, or: 'wrathful' }],
+          text: (c) => `${c.subject!.name} walks a little taller after that.`,
+        },
       },
       {
         label: 'Pay off the other family',
         needs: [{ have: 'credits', n: 40 }],
         then: {
-          do: [
-            { lose: 'credits', n: 40 },
-            { trait: 'arrogant', to: 'subject', p: 0.4, or: 'deceitful' },
-          ],
+          do: [{ deed: 'arbitrary' }, { lose: 'credits', n: 40 }, { trait: 'arrogant', to: 'subject', p: 0.4, or: 'deceitful' }],
           text: (c) => `${c.subject!.name} learns that money makes problems vanish.`,
         },
       },
@@ -1193,17 +1193,21 @@ export const EVENTS: EventDef[] = [
         label: 'Take them in',
         needs: [{ have: 'credits', n: 60 }],
         then: {
-          do: [{ lose: 'credits', n: 60 }, myRegionPick('reg'), { dev: 1, region: 'reg' }, { gain: 'faith', n: 10 }],
+          do: [
+            { deed: 'kindness' },
+            { deed: 'charity', n: 60 },
+            { lose: 'credits', n: 60 },
+            myRegionPick('reg'),
+            { dev: 1, region: 'reg' },
+            { gain: 'faith', n: 10 },
+          ],
           text: (c) => `The refugees settle ${regionOf(c, 'reg')?.name}. Workers and gratitude. +1 development, +10 faith.`,
         },
       },
       {
         label: 'Press them into the fleet',
         then: {
-          do: [
-            { gain: 'fleet', n: 10 },
-            { lose: 'prestige', n: 10 },
-          ],
+          do: [{ deed: 'cruelty' }, { gain: 'fleet', n: 10 }, { lose: 'prestige', n: 10 }],
           text: 'Uniforms for everyone. +10 ships, -10 prestige.',
         },
       },
@@ -1225,7 +1229,7 @@ export const EVENTS: EventDef[] = [
         label: 'Claim it for the treasury',
         then: { do: [keepItem('item')], text: (c) => `The ${itemIn(c, 'item').name} joins your treasury. Equip it from the Treasury tab.` },
       },
-      { label: 'Gift it to the temple', then: { do: [{ gain: 'faith', n: 60 }], text: 'The priests weep with joy. +60 faith.' } },
+      { label: 'Gift it to the temple', then: { do: [{ deed: 'kindness' }, { gain: 'faith', n: 60 }], text: 'The priests weep with joy. +60 faith.' } },
       {
         label: 'Sell it on Ceres',
         then: { do: [{ gain: 'credits', n: { roll: [150, 260] }, as: 'n' }], text: (c) => `A collector pays ${c.vars.n} credits.` },
@@ -1258,16 +1262,13 @@ export const EVENTS: EventDef[] = [
       {
         label: 'Execute them publicly',
         then: {
-          do: [
-            { gain: 'prestige', n: 10 },
-            { opinion: -20, clan: 'clan' },
-          ],
+          do: [{ deed: 'executions' }, { deed: 'cruelty' }, { gain: 'prestige', n: 10 }, { opinion: -20, clan: 'clan' }],
           text: 'A message to all would-be spies.',
         },
       },
       {
         label: 'Send them home',
-        then: { do: [{ opinion: 15, clan: 'clan' }], text: (c) => 'House ' + houseName(c, 'clan') + ' is surprised by your mercy.' },
+        then: { do: [{ deed: 'pardons' }, { opinion: 15, clan: 'clan' }], text: (c) => 'House ' + houseName(c, 'clan') + ' is surprised by your mercy.' },
       },
     ],
   }),

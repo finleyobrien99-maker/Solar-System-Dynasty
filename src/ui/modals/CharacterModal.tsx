@@ -1,3 +1,4 @@
+import { EpithetsSection } from '../sections/EpithetsSection';
 import { ageOf, alive, ch, charTitle, childrenOf, fullName, isVip, lifespan, relationTo, ruler, siblingsOf } from '../../game/core';
 import {
   augment,
@@ -100,6 +101,7 @@ export function CharacterModal({ id }: { id: string }) {
       <Links label="Betrothed" people={c.betrothedId && s.characters[c.betrothedId] ? [s.characters[c.betrothedId]] : []} />
       <Links label="Children" people={kids} />
       <Links label="Siblings" people={sibs} />
+      <EpithetsSection c={c} />
       <RelationshipsSection c={c} />
 
       {living && isDynasty && c.edu && (

@@ -1,3 +1,4 @@
+import { breakPeace, isCloseKin, recordDeed } from './epithets';
 // The rest of the solar system: rival houses grow, marry, feud, and sometimes
 // come for you.
 
@@ -102,11 +103,16 @@ function resources(s: GameState): void {
       clan.fleet = Math.round(clan.fleet * 0.7);
       continue;
     }
-    clan.credits += Math.round(grossRegionIncome(s, clan.id) * 0.3);
+    const income = Math.round(grossRegionIncome(s, clan.id) * 0.3);
+    clan.credits += income;
+    recordDeed(s, clan.headId, 'income', Math.max(0, income));
     clan.prestige += clanRank(s, clan.id) * 3;
     const target = fleetTarget(s, clan.id);
-    if (clan.fleet < target) clan.fleet += Math.max(1, Math.round((target - clan.fleet) * 0.18));
-    else clan.fleet -= Math.round((clan.fleet - target) * 0.08);
+    if (clan.fleet < target) {
+      const built = Math.max(1, Math.round((target - clan.fleet) * 0.18));
+      clan.fleet += built;
+      recordDeed(s, clan.headId, 'shipsBuilt', built);
+    } else clan.fleet -= Math.round((clan.fleet - target) * 0.08);
   }
 }
 
@@ -166,6 +172,8 @@ function startAiWar(s: GameState): void {
   const target = pick(s, targets);
   const war: AiWar = { id: newId(s, 'aw'), attacker: attacker.id, defender: target.owner, target: target.id, started: s.year, progress: 0 };
   s.aiWars.push(war);
+  recordDeed(s, attacker.headId, 'warsStarted');
+  breakPeace(s, s.clans[target.owner].headId);
   log(s, `House ${attacker.name} (${PLANET_BY_ID[attacker.planetId].name}) declares war on House ${s.clans[target.owner].name} over ${target.name}.`, 'news');
 }
 
@@ -184,17 +192,31 @@ function tickAiWars(s: GameState): void {
     if (liege && liege !== a.id && liegeOf(s, a.id) !== liege && liege !== s.playerClanId) def += s.clans[liege].fleet * 0.3;
     const pAtt = a.fleet / Math.max(1, a.fleet + def);
     const attWins = chance(s, pAtt);
+    recordDeed(s, a.headId, attWins ? 'battlesWon' : 'battlesLost');
+    recordDeed(s, d.headId, attWins ? 'battlesLost' : 'battlesWon');
     w.progress += attWins ? int(s, 25, 45) : -int(s, 25, 45);
     a.fleet = Math.round(a.fleet * range(s, 0.85, 0.95));
     d.fleet = Math.round(d.fleet * range(s, 0.85, 0.95));
     if (w.progress >= 100) {
       const wasCapital = target.capital;
       setOwner(s, target, a.id);
+      recordDeed(s, a.headId, 'warsWon');
+      recordDeed(s, d.headId, 'warsLost');
+      recordDeed(s, a.headId, 'regionsTaken', 1, target.id);
+      if (wasCapital) recordDeed(s, a.headId, 'capitalsTaken', 1, target.planetId);
       done();
       const p = PLANET_BY_ID[target.planetId];
       if (wasCapital) log(s, `House ${a.name} has seized ${target.name} and the throne of ${p.name}!`, 'news');
       else log(s, `House ${a.name} took ${target.name} (${p.name}) from House ${d.name}.`, 'news');
     } else if (w.progress <= -100 || s.year - w.started >= 5) {
+      if (w.progress <= -100) {
+        recordDeed(s, d.headId, 'warsWon');
+        recordDeed(s, d.headId, 'defensiveWins');
+        recordDeed(s, a.headId, 'warsLost');
+      } else {
+        recordDeed(s, a.headId, 'peaceTreaties');
+        recordDeed(s, d.headId, 'peaceTreaties');
+      }
       done();
       log(s, `House ${d.name} beat off House ${a.name}'s attack on ${target.name}.`, 'news');
     }
@@ -235,6 +257,7 @@ function rivalPlots(s: GameState): void {
   const myDefence = Math.max(effStats(s, ruler(s)).int, councilStat(s, 'spymaster'));
   const odds = clamp(0.35 + (effStats(s, head).int - myDefence) * 0.03 - traitSum(ruler(s), 'defense'), 0.08, 0.7);
   const success = chance(s, odds);
+  if (success) recordDeed(s, head, 'schemes');
   const kind = weighted(s, [
     ['assassinate', 0.35],
     ['sabotage', 0.35],
@@ -249,6 +272,9 @@ function rivalPlots(s: GameState): void {
     const target = chance(s, 0.25) ? ruler(s) : heir && chance(s, 0.6) ? heir : family.length ? pick(s, family) : ruler(s);
     if (success) {
       notice(s, 'Assassination!', `${fullName(s, target)} was found dead this morning.${blame}`, { icon: 'death', tone: 'bad', portraitId: target.id });
+      recordDeed(s, head, 'assassinations');
+      recordDeed(s, head, 'cruelty');
+      if (isCloseKin(head, target)) recordDeed(s, head, 'kinslayings');
       killCharacter(s, target.id, `assassinated by agents of House ${rival.name}`);
     } else {
       notice(
@@ -263,6 +289,7 @@ function rivalPlots(s: GameState): void {
       );
     }
   } else if (kind === 'sabotage' && success) {
+    recordDeed(s, head, 'sabotages');
     const lost = Math.round(s.fleet * range(s, 0.08, 0.18));
     s.fleet -= lost;
     notice(s, 'Sabotage!', `Explosions rip through your docks. ${lost} ships are lost.${blame}`, { icon: 'war', tone: 'bad' });
@@ -318,7 +345,7 @@ export function prune(s: GameState): void {
   }
   for (const clan of Object.values(s.clans)) keep.add(clan.headId);
   for (const c of Object.values(s.characters)) {
-    if (c.died !== undefined && !keep.has(c.id) && c.died < s.year - 2) delete s.characters[c.id];
+    if (c.died !== undefined && !c.reputation?.earned.length && !keep.has(c.id) && c.died < s.year - 2) delete s.characters[c.id];
   }
 }
 
