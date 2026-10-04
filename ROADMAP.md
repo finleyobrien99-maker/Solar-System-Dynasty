@@ -415,6 +415,7 @@ Content is the cheapest depth there is. This phase builds the machine and then f
 | Endgame and crises | 15 | See 10.4 |
 
 - **Every event needs:** at least two meaningful options, at least one option that touches another system, and an icon or art seed. Childhood events must have personality consequences.
+- **Status (Oct 2026): ticket 15 done, +30 events** in `src/game/eventsExpansion.ts` (no save change; tests in `eventsExpansion.test.ts`). Childhood and youth (10): first_flight, cousin_rivalry, imaginary_friend, stowaway, tutor_opinions, runs_away, rite_of_passage, hangar_prank, bad_company, night_terrors. Court and family (10): drunk_councillor, portrait_commission, guest_overstays, parent_forgetting, sibling_debts, unequal_match, court_feud, ancestor_gallery, dowry_dispute, old_soldier. One per world (10, only when you hold land there): sunside_fires (Mercury), acid_storm (Venus), sunken_ruins (Earth), dust_storm (Mars), water_war (Ceres), helium_skimmer (Jupiter), ring_disputation (Saturn), seer_prophecy (Uranus), cryo_cult (Neptune), long_night (Pluto). Consequences land mostly on the person involved (feelings, traits, stats), childhood choices shape personality, and house goodwill respects the grudge ceiling. About 12% of events fired in the harness; the most frequent new one is under 1% of all. The deck is now about 117 distinct events against the 400 target.
 
 ---
 
@@ -967,7 +968,7 @@ Why this order: the DSL, relations, secrets and genotype are the multipliers. Ev
 12. `1.5` Secrets and hooks MVP (affair and murder secrets, discovery by spymaster, spending a hook to force a marriage). **M**
 13. `2.2` Consanguinity coefficient with the Kinship warning in suitors. Works before the full genotype by approximating with trait-groups. **S**
 14. `3.4` Ruler ambitions (pick 1 of 3 at coronation, with rewards). **S**
-15. `3.6` 30 new events across childhood, court and planet-specific categories. **M**
+15. `3.6` 30 new events across childhood, court and planet-specific categories. **M** (done Oct 2026: see 3.6)
 
 ---
 
