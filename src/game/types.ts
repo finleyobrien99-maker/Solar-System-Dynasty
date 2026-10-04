@@ -72,6 +72,8 @@ export interface Memory {
   year: number;
   value: number;
   decay: number; // fraction lost per cycle
+  /** Murder, a murder attempt, blackmail, an execution, a stolen throne: barely fades, and favours can't buy it back. Older saves infer it from severity. */
+  grave?: boolean;
 }
 
 export interface Clan {

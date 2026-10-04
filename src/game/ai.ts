@@ -28,7 +28,8 @@ import {
 import { grossRegionIncome } from './economy';
 import { aiSucceed, isCloseFamily, killCharacter, currentHeir } from './life';
 import { councilStat } from './council';
-import { grudgeOpinion, isRival } from './memory';
+import { capOpinion, grudgeOpinion, isRival, opinionCeiling } from './memory';
+import { feelingsSum } from './relations';
 import { PLANET_BY_ID } from './planets';
 import { chance, clamp, int, pick, range, weighted } from './rng';
 import type { AiWar, Clan, GameState } from './types';
@@ -76,6 +77,12 @@ export function baselineOpinion(s: GameState, clan: Clan, ties: Set<string> = fa
   for (const t of ['cruel', 'arbitrary', 'tyrant', 'kinslayer', 'deceitful']) if (hasTrait(r, t)) o -= 6;
   o += clamp(Math.round(s.prestige / 100), -10, 15);
   o += grudgeOpinion(clan);
+  // The head's own history with you: personal hatred drags the whole house down.
+  const head = ch(s, clan.headId);
+  if (alive(head)) {
+    const f = feelingsSum(s, head, r);
+    o += Math.round(f < 0 ? f * 0.5 : f * 0.25);
+  }
   o += Math.floor(councilStat(s, 'envoy') / 3);
   if (clan.cadetOf === pc.id) o += 30; // blood is thicker than vacuum
   if (homePlanet(s) === 'earth') o += 10;
@@ -85,12 +92,15 @@ export function baselineOpinion(s: GameState, clan: Clan, ties: Set<string> = fa
   return o;
 }
 
-function opinionDrift(s: GameState): void {
+/** Each cycle a house's opinion drifts toward its baseline, never above the ceiling a grave grudge sets. */
+export function opinionDrift(s: GameState): void {
   const ties = familyTies(s);
   for (const clan of Object.values(s.clans)) {
     if (clan.isPlayer) continue;
-    const base = baselineOpinion(s, clan, ties);
-    clan.opinion = clamp(Math.round(clan.opinion + (base - clan.opinion) * 0.15), -100, 100);
+    const ceiling = opinionCeiling(clan);
+    const base = ceiling === null ? baselineOpinion(s, clan, ties) : Math.min(ceiling, baselineOpinion(s, clan, ties));
+    // Gifts and favours can lift opinion for a moment, never above the ceiling.
+    clan.opinion = capOpinion(clan, clamp(Math.round(clan.opinion + (base - clan.opinion) * 0.15), -100, 100));
   }
 }
 

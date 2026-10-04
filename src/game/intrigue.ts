@@ -4,7 +4,7 @@ import { isCloseKin, recordDeed } from './epithets';
 import { ageOf, alive, ch, clanRank, effStats, fullName, homePlanet, itemSum, liegeOf, log, notice, playerClan, ruler, traitSum, vassalsOf } from './core';
 import { canAfford, pay, type Cost } from './genetics';
 import { killCharacter } from './life';
-import { executed, lovers } from './relations';
+import { addFeeling, attempted, blackmailed, cuckolded, executed, lovers, murdered } from './relations';
 import { chance, clamp, int } from './rng';
 import { addTrait } from './traits';
 import type { Character, GameState } from './types';
@@ -137,6 +137,9 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
     case 'assassinate': {
       const t = s.characters[targetId];
       const wasHead = s.clans[t.clanId]?.headId === t.id;
+      // The closer to the lord, the deeper the wound: the lord, then his spouse, children and heir.
+      const lord = ch(s, s.clans[t.clanId]?.headId);
+      const nearLord = !!lord && (lord.spouseId === t.id || t.fatherId === lord.id || t.motherId === lord.id);
       if (success) {
         title = 'Target Eliminated';
         text = `The drone found ${fullName(s, t)}. They will not wake up.`;
@@ -145,12 +148,20 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
         recordDeed(s, r, 'cruelty');
         if (isCloseKin(r, t)) recordDeed(s, r, 'kinslayings');
         killCharacter(s, t.id, 'assassinated');
-        if (caught) remember(s, t.clanId, `Murdered ${wasHead ? 'our lord ' : ''}${t.name}`, wasHead ? -70 : -55, 0.015);
-        else if (chance(s, 0.3)) remember(s, t.clanId, `Suspected of murdering ${t.name}`, -25, 0.03);
+        if (caught) {
+          remember(s, t.clanId, `Murdered ${wasHead ? 'our lord ' : ''}${t.name}`, wasHead ? -80 : nearLord ? -70 : -55, undefined, true);
+          murdered(s, t, r.id, true);
+        } else if (chance(s, 0.3)) {
+          remember(s, t.clanId, `Suspected of murdering ${t.name}`, -25, 0.03);
+          murdered(s, t, r.id, false);
+        }
       } else {
         title = 'Assassination Failed';
         text = `${t.name} survived your drone strike.`;
-        if (caught) remember(s, t.clanId, `Sent an assassin after ${t.name}`, -40, 0.03);
+        if (caught) {
+          remember(s, t.clanId, `Sent an assassin after ${t.name}`, -45, undefined, true);
+          attempted(s, t, r.id);
+        }
       }
       if (caught && victimClan && !victimClan.isPlayer) {
         victimClan.opinion = -100;
@@ -185,7 +196,9 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
       if (success) {
         const amount = int(s, 80, 160) + clanRank(s, clan.id) * 50;
         s.credits += amount;
-        remember(s, clan.id, 'Blackmailed us', -15);
+        remember(s, clan.id, 'Blackmailed us', -40, undefined, true);
+        const head = ch(s, clan.headId);
+        if (alive(head)) blackmailed(s, head, r.id);
         title = 'They Paid Up';
         text = `${fullName(s, ch(s, clan.headId)!)} pays ${amount} credits to keep their secrets buried.`;
       } else {
@@ -194,6 +207,8 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
       }
       if (caught) {
         remember(s, clan.id, 'Tried to blackmail us', -25);
+        const head = ch(s, clan.headId);
+        if (alive(head)) addFeeling(s, head.id, r.id, { why: 'Tried to blackmail me', value: -30, decay: 1 });
         s.prestige -= 20;
       }
       break;
@@ -235,7 +250,10 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
         title = 'Rejected';
         text = `${t.name} turns you down flat.`;
       }
-      if (caught && victimClan && !victimClan.isPlayer) remember(s, victimClan.id, `Seduced ${t.name}`, -15);
+      if (caught && victimClan && !victimClan.isPlayer) {
+        remember(s, victimClan.id, `Seduced ${t.name}`, -30);
+        cuckolded(s, t, r.id);
+      }
       break;
     }
   }

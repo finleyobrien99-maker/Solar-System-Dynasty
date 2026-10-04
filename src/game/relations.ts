@@ -173,14 +173,58 @@ export function passedOver(s: GameState, who: Character): void {
 }
 
 /** The ruler executed someone: their close family will not forget. */
-export function executed(s: GameState, victim: Character): void {
+/** Someone's living parents, spouse, children and siblings. */
+export function closeKin(s: GameState, victim: Character): Character[] {
   const kin = new Set<Character>();
   for (const id of [victim.fatherId, victim.motherId, victim.spouseId]) {
     const k = ch(s, id);
     if (alive(k)) kin.add(k);
   }
   for (const k of [...childrenOf(s, victim), ...siblingsOf(s, victim)]) if (alive(k)) kin.add(k);
-  for (const k of kin) if (k.id !== s.rulerId) addFeeling(s, k.id, s.rulerId, { why: `Executed ${victim.name}`, value: -75, decay: 0.5, grave: true });
+  return [...kin];
+}
+
+/** The victim's close family hold `byId` responsible for a death. */
+function grieve(s: GameState, victim: Character, byId: string, why: string, value: number, decay: number): void {
+  for (const k of closeKin(s, victim)) if (k.id !== byId) addFeeling(s, k.id, byId, { why, value, decay, grave: true });
+}
+
+/** The ruler executed someone: their close family barely ever forgive it. */
+export function executed(s: GameState, victim: Character): void {
+  grieve(s, victim, s.rulerId, `Executed ${victim.name}`, -75, 0.2);
+}
+
+/**
+ * Someone was murdered. If the killer is known, the victim's close family
+ * hate them for life; if only suspected, they mistrust them for a while.
+ */
+export function murdered(s: GameState, victim: Character, byId: string, known: boolean): void {
+  if (known) grieve(s, victim, byId, `Murdered ${victim.name}`, -90, 0);
+  else
+    for (const k of closeKin(s, victim))
+      if (k.id !== byId) addFeeling(s, k.id, byId, { why: `Suspected of killing ${victim.name}`, value: -30, decay: 1, key: `suspect:${victim.id}` });
+}
+
+/** `victim` survived a murder attempt by `byId` and knows it. */
+export function attempted(s: GameState, victim: Character, byId: string): void {
+  addFeeling(s, victim.id, byId, { why: 'Tried to have me killed', value: -70, decay: 0.2, grave: true });
+}
+
+/** `victim` was blackmailed by `byId`. Nobody forgets being squeezed. */
+export function blackmailed(s: GameState, victim: Character, byId: string): void {
+  addFeeling(s, victim.id, byId, { why: 'Blackmailed me', value: -50, decay: 0.3, key: `blackmail:${byId}` });
+}
+
+/** `byId` seduced `target`; their spouse found out. */
+export function cuckolded(s: GameState, target: Character, byId: string): void {
+  const spouse = ch(s, target.spouseId);
+  if (alive(spouse) && spouse.id !== byId)
+    addFeeling(s, spouse.id, byId, { why: `Seduced ${target.name}`, value: -50, decay: 0.5, key: `seduced:${target.id}` });
+}
+
+/** What A's personal history with B adds up to: feelings only, not the baseline. */
+export function feelingsSum(s: GameState, a: Character, b: Character): number {
+  return (s.relations[a.id]?.[b.id]?.feelings ?? []).reduce((n, f) => n + feelingNow(f, s.year), 0);
 }
 
 /** The ruler granted someone land. */

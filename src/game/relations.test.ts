@@ -134,7 +134,8 @@ describe('relationships', () => {
     const grief = opinionLines(s, mum, ruler(s)).find((l) => l.label === `Executed ${son.name}`);
     expect(grief?.value).toBe(-75);
     cycles(s, 20);
-    expect(opinionLines(s, mum, ruler(s)).find((l) => l.label === `Executed ${son.name}`)?.value).toBe(-65);
+    // Executions barely fade: 0.2 a cycle.
+    expect(opinionLines(s, mum, ruler(s)).find((l) => l.label === `Executed ${son.name}`)?.value).toBe(-71);
   });
 
   it('settles friends and rivals, at most three of each, and forgets the long dead', () => {
