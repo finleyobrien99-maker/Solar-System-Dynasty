@@ -26,8 +26,8 @@ import type { Character, Clan, ItemSlot, Rarity, Region, StatKey } from './types
 
 export type Resource = 'credits' | 'prestige' | 'faith' | 'fleet';
 
-/** A character: the ruler ('root'), the event's subject, the heir, or a name bound by a pick or the event's setup data. */
-export type Who = 'root' | 'subject' | 'heir' | (string & {});
+/** A character: the ruler ('root'), the event's subject, the heir, the ruler's spouse, or a name bound by a pick or the event's setup data. */
+export type Who = 'root' | 'subject' | 'heir' | 'spouse' | (string & {});
 
 /** A stat that scales a number or a chance: `n` per point of `stat` on `of` (the ruler by default). */
 export interface Per {
@@ -129,6 +129,7 @@ export function who(c: Ctx, w: Who = 'root'): Character | undefined {
   if (w === 'root') return c.r;
   if (w === 'subject') return c.subject;
   if (w === 'heir') return currentHeir(c.s);
+  if (w === 'spouse') return c.s.characters[c.r.spouseId ?? ''];
   if (w in c.picks) return c.picks[w] as Character | undefined;
   const id = c.data[w];
   return id === undefined ? undefined : c.s.characters[String(id)];

@@ -29,7 +29,8 @@ import { grossRegionIncome } from './economy';
 import { aiSucceed, isCloseFamily, killCharacter, currentHeir } from './life';
 import { councilStat } from './council';
 import { capOpinion, grudgeOpinion, isRival, opinionCeiling } from './memory';
-import { feelingsSum } from './relations';
+import { feelingsSum, opinionOf } from './relations';
+import { aiIntrigueTick } from './aiIntrigue';
 import { PLANET_BY_ID } from './planets';
 import { chance, clamp, int, pick, range, weighted } from './rng';
 import type { AiWar, Clan, GameState } from './types';
@@ -179,7 +180,16 @@ function startAiWar(s: GameState): void {
   }
   targets = targets.filter((r) => !s.clans[r.owner]?.isPlayer && !s.aiWars.some((w) => w.defender === r.owner));
   if (!targets.length) return;
-  const target = pick(s, targets);
+  // Grudges pick the enemy: the more the attacker's head hates a house, the likelier its land.
+  const lord = ch(s, attacker.headId);
+  const target = weighted(
+    s,
+    targets.map((r) => {
+      const theirs = ch(s, s.clans[r.owner]?.headId);
+      const hate = alive(lord) && alive(theirs) ? Math.max(0, -opinionOf(s, lord, theirs)) : 0;
+      return [r, 1 + hate / 20] as const;
+    }),
+  );
   const war: AiWar = { id: newId(s, 'aw'), attacker: attacker.id, defender: target.owner, target: target.id, started: s.year, progress: 0 };
   s.aiWars.push(war);
   recordDeed(s, attacker.headId, 'warsStarted');
@@ -338,6 +348,7 @@ export function aiTick(s: GameState): void {
   if (chance(s, 0.3)) startAiWar(s);
   aggressionOnPlayer(s);
   rivalPlots(s);
+  aiIntrigueTick(s);
   revolts(s);
 }
 

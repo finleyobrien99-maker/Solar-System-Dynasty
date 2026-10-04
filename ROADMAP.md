@@ -586,12 +586,14 @@ Content is the cheapest depth there is. This phase builds the machine and then f
 ## Phase 8: AI that plays the game
 
 ### 8.1 Utility AI with goals `P0` `L`
+- **Status: first slice done: AI intrigue** (Fin, Oct 2026: "AI characters should have the same freedom I have"). `src/game/aiIntrigue.ts`: each cycle some AI heads plot against other houses with the player's toolkit (murder, sabotage, blackmail, seduction, charm), chosen by personality and by how they feel about each rival (vendettas from murdered kin drive revenge), paid from their treasury, with odds shaped like the player's and the same consequences (personal grief, feuds, deeds for epithets). AI war targets are weighted by hatred. About 9 visible plots per 100 cycles across the system, reported as news. Against the player: a blackmail letter and a seducer of your spouse (`eventsIntrigue.ts`). **Still to do:** goals and a real utility planner for everything else (alliances, gifts, marriages for advantage, building, vault and forge, titles, executions of prisoners, AI lovers beyond seduction).
 - AI houses get **personalities** (from the head's traits) and **goals** (expand, secure succession, breed a trait, revenge, get rich, convert others). Each cycle they score options (war, marry, scheme, build, trade, ally) with utility functions. They use the *same rules* as the player (no hidden cheats except difficulty multipliers).
 
 ### 8.2 AI dynastic strategy `P1` `M`
 - AI houses marry for alliances and genes, use their own Gene Vault in Standard mode (it makes rivals feel alive; VIP never helps them), press claims for their kids, and react to your bloodline's reputation.
 
 ### 8.3 AI memory and personality consistency `P1` `S`
+- **Status: partly done.** AI characters now hold personal feelings about each other (relations.ts) from murders, attempts, blackmail, sabotage, seduction and charm, and act on them (aiIntrigue.ts). Grudges toward the player stick (see section 18).
 - Grudges exist. Add favours, debts and personal relations from 1.1 so AI heads behave consistently with their history and traits.
 
 ### 8.4 Difficulty levels `P2` `S`
