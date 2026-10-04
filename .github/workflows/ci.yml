@@ -37,3 +37,21 @@ jobs:
         with:
           name: balance-report
           path: balance-report
+
+  # Plays every starting scenario in a real browser at desktop and phone
+  # widths (see e2e/smoke.spec.ts). Uses the runner's installed Chrome.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: playwright-report

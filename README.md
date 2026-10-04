@@ -36,6 +36,9 @@ npm run build     # static build in dist/ (works on any static host, e.g. GitHub
 npm test          # long headless simulations, every starting scenario, VIP mode and genetics tests
 npm run typecheck
 npm run lint      # ESLint, including the engine-purity rules
+npm run e2e       # build, then play every scenario in a real browser (Edge locally, Chrome on CI)
+npm run balance   # seeded bot games scored against the ROADMAP §17 balance targets
+npm run bench     # Age Up, act() and autosave timings as a dynasty grows to 10k
 npm run fixtures  # after bumping SAVE_VERSION: freeze test saves for the new version
 ```
 

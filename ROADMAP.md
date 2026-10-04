@@ -179,7 +179,7 @@ See section 17. Headless runner, bot strategies, CSV/JSON output, a summary tabl
 - Code-split the bundle (Vite warns the main chunk is over 500kB). Lazy-load Codex, Tree and the solar map.
 
 ### 0.7 Test and tooling upgrades `P1` `S`
-- **Status: ESLint and Prettier done, both in CI** (`npm run lint`, `npm run format:check`). `eslint.config.js` also enforces engine purity and no `Math.random` in `src/game`. Prettier is width 160; `styles.css` and the markdown docs are left hand-laid-out, and one-line-per-entry data tables carry `// prettier-ignore` (see `TRAITS`). Playwright and RTL still to do.
+- **Status: ESLint and Prettier done, both in CI** (`npm run lint`, `npm run format:check`). `eslint.config.js` also enforces engine purity and no `Math.random` in `src/game`. Prettier is width 160; `styles.css` and the markdown docs are left hand-laid-out, and one-line-per-entry data tables carry `// prettier-ignore` (see `TRAITS`). **Playwright smoke done and in CI** (`npm run e2e`, `e2e/smoke.spec.ts`): every scenario at 1280px and 390px plays 20 cycles and opens every tab and window, failing on console errors, the crash screen or sideways scrolling. It drives an installed browser (Edge locally, Chrome on CI), so nothing is downloaded. RTL component tests still to do.
 - ESLint + Prettier (the repo has neither), run in CI.
 - Playwright e2e smoke in CI: new game in each scenario, age 20 cycles, open every tab and modal, assert no console errors. (Chromium is available in CI images; use the installed one.)
 - React Testing Library for a few components (trait picker, Btn tap-twice confirm, save modal).

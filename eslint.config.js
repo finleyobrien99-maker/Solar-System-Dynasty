@@ -35,7 +35,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['**/*.test.ts', 'src/game/testkit.ts', 'scripts/**', '*.config.{js,ts}'],
+    files: ['**/*.test.ts', 'src/game/testkit.ts', 'scripts/**', 'e2e/**', '*.config.{js,ts}'],
     languageOptions: { globals: globals.node },
   },
   {
