@@ -33,9 +33,15 @@ export interface Per {
   of?: Who;
 }
 
-/** A number: fixed, or base + a value from the event's data × times + a roll + a stat bonus. `calc` is the escape hatch. */
+/**
+ * A number: fixed, or base + (a value from the event's data, or a share of a
+ * resource you hold) × times + a roll + a stat bonus, then rounded and floored
+ * at `min` if asked. `calc` is the escape hatch.
+ */
 export type Num =
-  number | { base?: number; data?: string; times?: number; roll?: [number, number]; per?: Per; round?: boolean } | { calc: (c: Ctx) => number; text: string };
+  | number
+  | { base?: number; data?: string; of?: Resource; times?: number; roll?: [number, number]; per?: Per; round?: boolean; min?: number }
+  | { calc: (c: Ctx) => number; text: string };
 
 /** A chance: fixed, a stat check (base + per point), or custom odds with their own roll. */
 export type Prob = number | { base: number; per: Per } | { odds: (c: Ctx) => number; roll: (c: Ctx) => boolean; text: string };
@@ -66,12 +72,12 @@ export type Effect =
   | { item: { slot?: ItemSlot; rarity?: Rarity | [Prob, Rarity, Rarity]; origin: string }; as?: string }
   | { flag: string; in: Num; data?: (c: Ctx) => Record<string, string | number> }
   | { clearFlag: string }
-  /** Bind a character, region or clan for later effects. `get` may roll dice (it runs in order). */
-  | { pick: string; get: (c: Ctx) => Character | Region | Clan | undefined; text: string }
+  /** Bind a character, region or clan for later effects. `get` may roll dice (it runs in order). `text` names it in tooltips; `say` adds a line of its own. */
+  | { pick: string; get: (c: Ctx) => Character | Region | Clan | undefined; text: Text; say?: Text }
   /** Roll a chance in secret and keep the result (1 or 0) for later. */
   | { set: string; roll: Prob }
   /** The escape hatch. May return a sentence to add to the outcome. */
-  | { run: (c: Ctx) => string | void; text: string };
+  | { run: (c: Ctx) => string | void; text: Text };
 
 export type Text = string | ((c: Ctx) => string);
 
@@ -144,9 +150,15 @@ function num(c: Ctx, n: Num): number {
   if ('calc' in n) return n.calc(c);
   let v = n.base ?? 0;
   if (n.data !== undefined) v += Number(c.data[n.data]) * (n.times ?? 1);
+  if (n.of !== undefined) v += c.s[n.of] * (n.times ?? 1);
   if (n.roll) v += int(c.s, n.roll[0], n.roll[1]);
   if (n.per) v += statOf(c, n.per) * n.per.n;
-  return n.round ? Math.round(v) : v;
+  return finish(n, v);
+}
+
+function finish(n: { round?: boolean; min?: number }, v: number): number {
+  const r = n.round ? Math.round(v) : v;
+  return n.min === undefined ? r : Math.max(n.min, r);
 }
 
 /** The lowest and highest a number can come out, without rolling. Null for `calc`. */
@@ -155,10 +167,10 @@ function numRange(c: Ctx, n: Num): [number, number] | null {
   if ('calc' in n) return null;
   let v = n.base ?? 0;
   if (n.data !== undefined) v += Number(c.data[n.data]) * (n.times ?? 1);
+  if (n.of !== undefined) v += c.s[n.of] * (n.times ?? 1);
   if (n.per) v += statOf(c, n.per) * n.per.n;
   const [lo, hi] = n.roll ?? [0, 0];
-  const f = (x: number) => (n.round ? Math.round(x) : x);
-  return [f(v + lo), f(v + hi)];
+  return [finish(n, v + lo), finish(n, v + hi)];
 }
 
 /** "+192–272 credits (+12 per Science)". */
@@ -369,11 +381,11 @@ function describeEffect(d: Describe, e: Effect): string {
   if ('claim' in e) return `a claim on land held by ${clanName(d, e.claim)}`;
   if ('item' in e) return e.item.slot === 'relic' ? 'a relic for your treasury' : e.item.slot === 'flagship' ? 'a new flagship' : 'an item for your treasury';
   if ('pick' in e) {
-    d.names[e.pick] = e.text;
-    return '';
+    d.names[e.pick] = render(c, e.text);
+    return e.say ? render(c, e.say) : '';
   }
   if ('flag' in e || 'clearFlag' in e || 'set' in e) return '';
-  return e.text;
+  return render(c, e.text);
 }
 
 function describeOutcome(d: Describe, o: Outcome): string {

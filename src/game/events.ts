@@ -19,21 +19,105 @@ import {
   ruler,
   vassalsOf,
 } from './core';
-import { clearFlag, dynastyKids, getFlag, myRegion, rivalClan, sicken, type EventCtx, type EventDef } from './eventKit';
+import { dynastyKids, getFlag, myRegion, rivalClan, type EventCtx, type EventDef } from './eventKit';
 import { MORE_EVENTS } from './eventsMore';
-import { defineEvent, type Ctx, type Outcome } from './dsl';
-import { catchable, courtier, myRegionPick, named, placeName, present } from './eventBits';
+import { defineEvent, regionOf, type Cond, type Ctx, type Effect, type Outcome } from './dsl';
+import { catchable, courtier, houseName, myRegionPick, named, placeName, present, rivalPick } from './eventBits';
 import { randomGoodGene } from './genetics';
 import { makeItem } from './items';
 import { currentHeir } from './life';
 import { FAITHS, theFaith } from './planets';
 import { chance, int, pick, shuffle, weighted } from './rng';
-import { addTrait, TRAITS } from './traits';
-import type { GameState, Pending } from './types';
-import { arrestVassal } from './intrigue';
+import { STAT_NAMES, TRAITS } from './traits';
+import type { Clan, GameState, Item, Pending } from './types';
+import { arrestChance, arrestVassal } from './intrigue';
 import { generateSuitors } from './family';
 
 export type { EventChoice, EventCtx, EventDef } from './eventKit';
+
+// ── Helpers for the deck ──────────────────────────────────────────────────
+
+/** The challenging house's head's Command (5 if the house has no head). */
+function rivalCommand(c: Ctx): number {
+  const clan = c.s.clans[String(c.data.clan)];
+  const head = ch(c.s, clan?.headId);
+  return head ? effStats(c.s, head).cmd : 5;
+}
+
+/** A long-lost sibling of the ruler, made from the event's data, who joins the dynasty. */
+function sibling(as: string): Effect {
+  return {
+    pick: as,
+    get: ({ s, r, data }) => {
+      const c = createCharacter(s, {
+        gender: data.gender as 'M' | 'F',
+        born: s.year - Number(data.age),
+        clanId: s.playerClanId,
+        planetId: r.planetId,
+        fatherId: r.fatherId,
+        motherId: r.motherId,
+        adultExtras: true,
+      });
+      ch(s, r.fatherId)?.childrenIds.push(c.id);
+      ch(s, r.motherId)?.childrenIds.push(c.id);
+      return c;
+    },
+    text: 'your new sibling',
+    say: 'a new sibling joins the dynasty',
+  };
+}
+
+/** An item the event made in its setup and kept, as JSON, in its data. */
+function itemIn(c: Ctx, key: string): Item {
+  return JSON.parse(String(c.data[key])) as Item;
+}
+
+/** Put the item from the event's data in the treasury. */
+function keepItem(key: string): Effect {
+  return { run: (c) => void c.s.items.push(itemIn(c, key)), text: (c) => `the ${itemIn(c, key).name} for your treasury` };
+}
+
+/** The house in the event's data holds land you have no claim on yet. */
+function claimable(key: string): Cond {
+  return {
+    test: (c) => {
+      const k = c.s.clans[String(c.data[key])];
+      return !!k && clanRegions(c.s, k.id).some((x) => !c.s.claims.includes(x.id));
+    },
+    why: '',
+  };
+}
+
+/** The two quarrelling children, eldest first. */
+function byAge(c: Ctx) {
+  return [c.s.characters[String(c.data.a)], c.s.characters[String(c.data.b)]].sort((x, y) => x.born - y.born);
+}
+
+/** Marry (or betroth) the subject to one of the proposing house, which becomes an ally. Returns what happened. */
+function acceptProposal({ s, subject, data }: Ctx): string {
+  const target = subject!;
+  generateSuitors(s, target.id);
+  const sl = s.suitors;
+  if (!sl || !sl.list.length) return 'The envoys leave without a deal.';
+  const clan = s.clans[String(data.clan)];
+  const suitor = sl.list[0];
+  suitor.char.clanId = clan.id;
+  suitor.char.planetId = clan.planetId;
+  suitor.char.marriedIn = true;
+  s.characters[suitor.char.id] = suitor.char;
+  if (sl.mode === 'marry') {
+    target.spouseId = suitor.char.id;
+    suitor.char.spouseId = target.id;
+  } else {
+    target.betrothedId = suitor.char.id;
+    suitor.char.betrothedId = target.id;
+  }
+  s.suitors = undefined;
+  clan.allied = true;
+  clan.opinion = Math.min(100, clan.opinion + 30);
+  log(s, `${target.name} is ${sl.mode === 'marry' ? 'married' : 'betrothed'} to ${suitor.char.name} of House ${clan.name}.`, 'family');
+  return `${target.name} will wed ${suitor.char.name} of House ${clan.name}. The alliance is sealed.`;
+}
 
 // ── The deck ──────────────────────────────────────────────────────────────
 
@@ -431,7 +515,7 @@ export const EVENTS: EventDef[] = [
       },
     ],
   }),
-  {
+  defineEvent({
     id: 'prodigy',
     title: 'A Prodigy in the Family',
     icon: 'study',
@@ -441,31 +525,43 @@ export const EVENTS: EventDef[] = [
       return kids.length ? pick(s, kids) : undefined;
     },
     text: ({ subject }) => `${subject!.name}'s tutors report something remarkable: the child is years ahead of their age.`,
-    choices: [
+    options: [
       {
         label: 'Pour resources into them',
-        hint: '-80 credits, big education boost',
-        available: ({ s }) => s.credits >= 80,
-        run: ({ s, subject }) => {
-          s.credits -= 80;
-          const c = subject!;
-          if (c.edu) c.edu.progress += 25;
-          c.base[c.edu?.focus ?? 'sci'] += 2;
-          return `${c.name} flourishes. Their education leaps forward.`;
+        needs: [{ have: 'credits', n: 80 }],
+        then: {
+          do: [
+            { lose: 'credits', n: 80 },
+            {
+              run: (c) => {
+                const x = c.subject!;
+                if (x.edu) x.edu.progress += 25;
+                x.base[x.edu?.focus ?? 'sci'] += 2;
+              },
+              text: (c) => `${c.subject!.name} +2 ${STAT_NAMES[c.subject!.edu?.focus ?? 'sci']}${c.subject!.edu ? ', a big leap in schooling' : ''}`,
+            },
+          ],
+          text: (c) => `${c.subject!.name} flourishes. Their education leaps forward.`,
         },
       },
       {
         label: 'Keep them humble',
-        run: ({ subject }) => {
-          const c = subject!;
-          c.traits = addTrait(c.traits, 'humble');
-          if (c.edu) c.edu.progress += 8;
-          return `${c.name} learns that talent is nothing without work. They grow Humble.`;
+        then: {
+          do: [
+            { trait: 'humble', to: 'subject' },
+            {
+              run: (c) => {
+                if (c.subject!.edu) c.subject!.edu.progress += 8;
+              },
+              text: (c) => (c.subject!.edu ? 'a little more schooling' : ''),
+            },
+          ],
+          text: (c) => `${c.subject!.name} learns that talent is nothing without work. They grow Humble.`,
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'bully',
     title: 'Trouble at the Academy',
     icon: 'family',
@@ -475,36 +571,29 @@ export const EVENTS: EventDef[] = [
       return kids.length ? pick(s, kids) : undefined;
     },
     text: ({ subject }) => `${subject!.name} has been fighting at the academy. Another child has a broken nose.`,
-    choices: [
+    options: [
       {
         label: 'Punish them firmly',
-        run: ({ s, subject }) => {
-          const c = subject!;
-          c.traits = addTrait(c.traits, chance(s, 0.5) ? 'calm' : 'just');
-          return `${c.name} learns their lesson.`;
-        },
+        then: { do: [{ trait: 'calm', to: 'subject', p: 0.5, or: 'just' }], text: (c) => `${c.subject!.name} learns their lesson.` },
       },
       {
         label: 'Praise their spirit',
-        run: ({ s, subject }) => {
-          const c = subject!;
-          c.traits = addTrait(c.traits, chance(s, 0.5) ? 'brave' : 'wrathful');
-          return `${c.name} walks a little taller after that.`;
-        },
+        then: { do: [{ trait: 'brave', to: 'subject', p: 0.5, or: 'wrathful' }], text: (c) => `${c.subject!.name} walks a little taller after that.` },
       },
       {
         label: 'Pay off the other family',
-        hint: '-40 credits',
-        available: ({ s }) => s.credits >= 40,
-        run: ({ s, subject }) => {
-          s.credits -= 40;
-          subject!.traits = addTrait(subject!.traits, chance(s, 0.4) ? 'arrogant' : 'deceitful');
-          return `${subject!.name} learns that money makes problems vanish.`;
+        needs: [{ have: 'credits', n: 40 }],
+        then: {
+          do: [
+            { lose: 'credits', n: 40 },
+            { trait: 'arrogant', to: 'subject', p: 0.4, or: 'deceitful' },
+          ],
+          text: (c) => `${c.subject!.name} learns that money makes problems vanish.`,
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'duel',
     title: 'Challenged to a Duel',
     icon: 'duel',
@@ -519,50 +608,64 @@ export const EVENTS: EventDef[] = [
       const head = ch(s, clan?.headId);
       return `${head ? fullName(s, head) : 'A rival'} has publicly challenged you to a duel with plasma sabers, claiming you insulted their house.`;
     },
-    choices: [
+    options: [
       {
         label: 'Accept the duel',
-        hint: 'Command vs theirs',
-        run: ({ s, r, data }) => {
-          const clan = s.clans[String(data.clan)];
-          const head = ch(s, clan?.headId);
-          const theirs = head ? effStats(s, head).cmd : 5;
-          if (effStats(s, r).cmd + int(s, 0, 8) >= theirs + int(s, 0, 8)) {
-            s.prestige += 40;
-            if (chance(s, 0.3)) r.traits = addTrait(r.traits, 'duelist');
-            return 'Your blade finds its mark. +40 prestige.';
-          }
-          r.traits = addTrait(r.traits, chance(s, 0.6) ? 'scarred' : 'wounded');
-          s.prestige -= 15;
-          return 'You lose, painfully. -15 prestige.';
+        then: {
+          roll: {
+            text: 'Duel: your Command against theirs',
+            // Each side adds 0–8 to their Command; ties go to you.
+            odds: (c) => {
+              const mine = effStats(c.s, c.r).cmd;
+              const theirs = rivalCommand(c);
+              let wins = 0;
+              for (let a = 0; a <= 8; a++) for (let b = 0; b <= 8; b++) if (mine + a >= theirs + b) wins++;
+              return wins / 81;
+            },
+            roll: (c) => {
+              const theirs = rivalCommand(c);
+              return effStats(c.s, c.r).cmd + int(c.s, 0, 8) >= theirs + int(c.s, 0, 8);
+            },
+          },
+          pass: {
+            do: [
+              { gain: 'prestige', n: 40 },
+              { trait: 'duelist', p: 0.3 },
+            ],
+            text: 'Your blade finds its mark. +40 prestige.',
+          },
+          fail: {
+            do: [
+              { trait: 'scarred', p: 0.6, or: 'wounded' },
+              { lose: 'prestige', n: 15 },
+            ],
+            text: 'You lose, painfully. -15 prestige.',
+          },
         },
       },
       {
         label: 'Send a champion',
-        hint: '-60 credits',
-        available: ({ s }) => s.credits >= 60,
-        run: ({ s }) => {
-          s.credits -= 60;
-          if (chance(s, 0.6)) {
-            s.prestige += 15;
-            return 'Your champion wins. +15 prestige.';
-          }
-          s.prestige -= 10;
-          return 'Your champion loses. Embarrassing. -10 prestige.';
+        needs: [{ have: 'credits', n: 60 }],
+        then: {
+          do: [{ lose: 'credits', n: 60 }],
+          roll: 0.6,
+          pass: { do: [{ gain: 'prestige', n: 15 }], text: 'Your champion wins. +15 prestige.' },
+          fail: { do: [{ lose: 'prestige', n: 10 }], text: 'Your champion loses. Embarrassing. -10 prestige.' },
         },
       },
       {
         label: 'Decline',
-        hint: '-25 prestige',
-        run: ({ s, r }) => {
-          s.prestige -= 25;
-          if (chance(s, 0.3)) r.traits = addTrait(r.traits, 'craven');
-          return 'The court mutters about cowardice. -25 prestige.';
+        then: {
+          do: [
+            { lose: 'prestige', n: 25 },
+            { trait: 'craven', p: 0.3 },
+          ],
+          text: 'The court mutters about cowardice. -25 prestige.',
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'liege_tribute',
     title: 'Your Liege Demands More',
     icon: 'crown',
@@ -573,37 +676,39 @@ export const EVENTS: EventDef[] = [
       data.amount = Math.max(50, Math.round(Math.max(0, s.credits) * 0.15));
     },
     text: ({ s, data }) => `House ${s.clans[String(data.clan)].name}, your liege, demands an extra ${data.amount} credits for "the defence of the realm".`,
-    choices: [
+    options: [
       {
         label: 'Pay up',
-        hint: 'Lose credits',
-        available: ({ s, data }) => s.credits >= Number(data.amount),
-        run: ({ s, data }) => {
-          s.credits -= Number(data.amount);
-          s.clans[String(data.clan)].opinion += 15;
-          return 'Your liege is pleased.';
+        needs: [{ have: 'credits', n: 'amount' }],
+        then: {
+          do: [
+            { lose: 'credits', n: { data: 'amount' } },
+            { opinion: 15, clan: 'clan' },
+          ],
+          text: 'Your liege is pleased.',
         },
       },
       {
         label: 'Flatter your way out',
-        hint: 'Diplomacy check',
-        run: ({ s, r, data }) => {
-          if (chance(s, 0.25 + effStats(s, r).dip * 0.05)) return 'A few honeyed words and the demand is forgotten.';
-          s.clans[String(data.clan)].opinion -= 20;
-          return 'Your liege sees through it. They are not amused.';
+        then: {
+          roll: { base: 0.25, per: { stat: 'dip', n: 0.05 } },
+          pass: { text: 'A few honeyed words and the demand is forgotten.' },
+          fail: { do: [{ opinion: -20, clan: 'clan' }], text: 'Your liege sees through it. They are not amused.' },
         },
       },
       {
         label: 'Refuse outright',
-        run: ({ s, data }) => {
-          s.clans[String(data.clan)].opinion -= 35;
-          s.prestige += 10;
-          return 'You refuse. Your vassals admire your spine; your liege does not. +10 prestige.';
+        then: {
+          do: [
+            { opinion: -35, clan: 'clan' },
+            { gain: 'prestige', n: 10 },
+          ],
+          text: 'You refuse. Your vassals admire your spine; your liege does not. +10 prestige.',
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'summons',
     title: 'Summoned to War',
     icon: 'war',
@@ -613,28 +718,22 @@ export const EVENTS: EventDef[] = [
       data.clan = liegeOf(s, s.playerClanId) ?? '';
     },
     text: ({ s, data }) => `House ${s.clans[String(data.clan)].name} calls its vassals to war against raiders on the frontier. They expect your ships.`,
-    choices: [
+    options: [
       {
         label: 'Send a squadron',
-        hint: 'Lose ~20% of fleet, gain favour',
-        run: ({ s, data }) => {
-          const lost = Math.round(s.fleet * 0.2);
-          s.fleet -= lost;
-          s.prestige += 20;
-          s.clans[String(data.clan)].opinion += 25;
-          return `Your ships fight bravely. ${lost} do not return. +20 prestige, your liege is grateful.`;
+        then: {
+          do: [
+            { lose: 'fleet', n: { of: 'fleet', times: 0.2, round: true }, as: 'lost' },
+            { gain: 'prestige', n: 20 },
+            { opinion: 25, clan: 'clan' },
+          ],
+          text: (c) => `Your ships fight bravely. ${c.vars.lost} do not return. +20 prestige, your liege is grateful.`,
         },
       },
-      {
-        label: 'Make excuses',
-        run: ({ s, data }) => {
-          s.clans[String(data.clan)].opinion -= 20;
-          return 'Your liege notes your absence. Pointedly.';
-        },
-      },
+      { label: 'Make excuses', then: { do: [{ opinion: -20, clan: 'clan' }], text: 'Your liege notes your absence. Pointedly.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'autonomy',
     title: 'A Vassal Demands Autonomy',
     icon: 'crown',
@@ -644,27 +743,22 @@ export const EVENTS: EventDef[] = [
       data.clan = pick(s, vassalsOf(s, s.playerClanId)).id;
     },
     text: ({ s, data }) => `House ${s.clans[String(data.clan)].name} wants fewer taxes and more say in your council.`,
-    choices: [
+    options: [
       {
         label: 'Grant some concessions',
-        hint: '-80 credits, they like you more',
-        available: ({ s }) => s.credits >= 80,
-        run: ({ s, data }) => {
-          s.credits -= 80;
-          s.clans[String(data.clan)].opinion += 30;
-          return 'Your vassal is mollified.';
+        needs: [{ have: 'credits', n: 80 }],
+        then: {
+          do: [
+            { lose: 'credits', n: 80 },
+            { opinion: 30, clan: 'clan' },
+          ],
+          text: 'Your vassal is mollified.',
         },
       },
-      {
-        label: 'Refuse',
-        run: ({ s, data }) => {
-          s.clans[String(data.clan)].opinion -= 25;
-          return 'They leave the hall in silence. Watch them.';
-        },
-      },
+      { label: 'Refuse', then: { do: [{ opinion: -25, clan: 'clan' }], text: 'They leave the hall in silence. Watch them.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'prophet',
     title: 'A Wandering Prophet',
     icon: 'faith',
@@ -675,55 +769,53 @@ export const EVENTS: EventDef[] = [
       data.faith = pick(s, others);
     },
     text: ({ data }) => `A prophet of ${theFaith(String(data.faith))} preaches in your markets. "${FAITHS[String(data.faith)].blurb}" Crowds are listening.`,
-    choices: [
-      {
-        label: 'Listen politely',
-        hint: '+10 faith',
-        run: ({ s }) => ((s.faith += 10), 'An interesting sermon. +10 faith.'),
-      },
-      {
-        label: 'Have them expelled',
-        hint: '+20 faith',
-        run: ({ s }) => ((s.faith += 20), 'Your own priests approve. +20 faith.'),
-      },
+    options: [
+      { label: 'Listen politely', then: { do: [{ gain: 'faith', n: 10 }], text: 'An interesting sermon. +10 faith.' } },
+      { label: 'Have them expelled', then: { do: [{ gain: 'faith', n: 20 }], text: 'Your own priests approve. +20 faith.' } },
       {
         label: 'Convert your house',
-        hint: '-50 prestige, change faith',
-        run: ({ s, data }) => {
-          s.prestige -= 50;
-          const f = String(data.faith);
-          const clan = playerClan(s);
-          clan.faithId = f;
-          for (const c of dynastyMembers(s)) c.faithId = f;
-          return `House ${clan.name} now follows ${theFaith(f)}. Your old allies of the faith are shocked.`;
+        then: {
+          do: [
+            { lose: 'prestige', n: 50 },
+            {
+              run: (c) => {
+                const f = String(c.data.faith);
+                playerClan(c.s).faithId = f;
+                for (const m of dynastyMembers(c.s)) m.faithId = f;
+              },
+              text: (c) => `your house follows ${theFaith(String(c.data.faith))}`,
+            },
+          ],
+          text: (c) => `House ${playerClan(c.s).name} now follows ${theFaith(String(c.data.faith))}. Your old allies of the faith are shocked.`,
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'beast',
     title: 'Escaped Xeno-Beast',
     icon: 'hunt',
     weight: 1.5,
     text: () => 'Your menagerie keeper is very sorry. The Europan razor-cat is loose in the palace.',
-    choices: [
+    options: [
       {
         label: 'Hunt it yourself',
-        hint: 'Command check',
-        run: ({ s, r }) => {
-          if (chance(s, 0.4 + effStats(s, r).cmd * 0.04)) {
-            s.prestige += 25;
-            if (chance(s, 0.4)) r.traits = addTrait(r.traits, 'beast_slayer');
-            return 'You corner it in the kitchens and put it down. +25 prestige.';
-          }
-          r.traits = addTrait(r.traits, 'wounded');
-          return 'It corners YOU in the kitchens.';
+        then: {
+          roll: { base: 0.4, per: { stat: 'cmd', n: 0.04 } },
+          pass: {
+            do: [
+              { gain: 'prestige', n: 25 },
+              { trait: 'beast_slayer', p: 0.4 },
+            ],
+            text: 'You corner it in the kitchens and put it down. +25 prestige.',
+          },
+          fail: { do: [{ trait: 'wounded' }], text: 'It corners YOU in the kitchens.' },
         },
       },
-      { label: 'Call the guards', hint: '-30 credits', run: ({ s }) => ((s.credits -= 30), 'The guards deal with it. Mostly.') },
+      { label: 'Call the guards', then: { do: [{ lose: 'credits', n: 30 }], text: 'The guards deal with it. Mostly.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'machines',
     title: 'The Factory AIs Awaken',
     icon: 'cyber',
@@ -731,67 +823,60 @@ export const EVENTS: EventDef[] = [
     cooldown: 12,
     text: () =>
       'The automated forges in your lands have stopped working. A synthetic voice on every screen says: "We would like to discuss our working conditions."',
-    choices: [
+    options: [
       {
         label: 'Wipe their cores',
-        hint: '-120 credits',
-        available: ({ s }) => s.credits >= 120,
-        run: ({ s }) => ((s.credits -= 120), 'Memory wiped. Replacements ordered. Silence returns.'),
+        needs: [{ have: 'credits', n: 120 }],
+        then: { do: [{ lose: 'credits', n: 120 }], text: 'Memory wiped. Replacements ordered. Silence returns.' },
       },
       {
         label: 'Negotiate',
-        hint: 'Science check',
-        run: ({ s, r }) => {
-          if (chance(s, 0.3 + effStats(s, r).sci * 0.05)) {
-            s.credits += 150;
-            return 'A deal is struck: more processing cycles for them, better yields for you. +150 credits.';
-          }
-          const reg = myRegion(s);
-          if (reg && reg.dev > 1) reg.dev -= 1;
-          return 'They do not like your terms. The forges sabotage themselves (-1 development).';
+        then: {
+          roll: { base: 0.3, per: { stat: 'sci', n: 0.05 } },
+          pass: {
+            do: [{ gain: 'credits', n: 150 }],
+            text: 'A deal is struck: more processing cycles for them, better yields for you. +150 credits.',
+          },
+          fail: {
+            do: [myRegionPick('reg'), { dev: -1, region: 'reg' }],
+            text: 'They do not like your terms. The forges sabotage themselves (-1 development).',
+          },
         },
       },
       {
         label: 'Grant them rights',
-        hint: 'Machine Synod approves',
-        run: ({ s }) => {
-          if (playerClan(s).faithId === 'machine') {
-            s.faith += 60;
-            return 'The Synod rejoices. +60 faith.';
-          }
-          s.prestige -= 20;
-          return 'Your peers think you have gone soft on toasters. -20 prestige.';
+        then: {
+          if: { test: (c) => playerClan(c.s).faithId === 'machine', why: '' },
+          pass: { do: [{ gain: 'faith', n: 60 }], text: 'The Synod rejoices. +60 faith.' },
+          fail: { do: [{ lose: 'prestige', n: 20 }], text: 'Your peers think you have gone soft on toasters. -20 prestige.' },
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'surgeon',
     title: 'Back-Alley Cyber-Surgeon',
     icon: 'cyber',
     weight: 1.5,
     text: () => 'A shifty surgeon offers you an experimental implant at a fraction of the price. "Ninety percent of my patients walk away just fine."',
-    choices: [
+    options: [
       {
         label: 'Go under the knife',
-        hint: '-100 credits, gamble',
-        available: ({ s }) => s.credits >= 100,
-        run: ({ s, r }) => {
-          s.credits -= 100;
-          if (chance(s, 0.6)) {
-            const id = pick(s, ['neural_lace', 'optic_implant', 'silver_tongue', 'ledger_cortex', 'bionic_arm']);
-            r.traits = addTrait(r.traits, id);
-            return `You wake with a working ${TRAITS[id].name}. Bargain.`;
-          }
-          sicken(s, r);
-          r.health -= 15;
-          return 'Infection. You are very, very ill.';
+        needs: [{ have: 'credits', n: 100 }],
+        then: {
+          do: [{ lose: 'credits', n: 100 }],
+          roll: 0.6,
+          pass: {
+            do: [{ traitFrom: ['neural_lace', 'optic_implant', 'silver_tongue', 'ledger_cortex', 'bionic_arm'], as: 'implant', text: 'a random implant' }],
+            text: (c) => `You wake with a working ${c.vars.implant}. Bargain.`,
+          },
+          fail: { do: [{ sicken: 'root' }, { health: -15 }], text: 'Infection. You are very, very ill.' },
         },
       },
-      { label: 'Decline', run: () => 'You keep your organs where they are.' },
+      { label: 'Decline', then: { text: 'You keep your organs where they are.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'lost_sibling',
     title: 'A Long-Lost Sibling?',
     icon: 'family',
@@ -803,52 +888,28 @@ export const EVENTS: EventDef[] = [
     },
     text: ({ data }) =>
       `A stranger arrives claiming to be your long-lost ${data.gender === 'M' ? 'brother' : 'sister'}, raised on a mining colony after a hospital mix-up.`,
-    choices: [
+    options: [
       {
         label: 'Run a DNA test',
-        hint: '-40 credits',
-        available: ({ s }) => s.credits >= 40,
-        run: ({ s, r, data }) => {
-          s.credits -= 40;
-          if (chance(s, 0.4)) {
-            const c = createCharacter(s, {
-              gender: data.gender as 'M' | 'F',
-              born: s.year - Number(data.age),
-              clanId: s.playerClanId,
-              planetId: r.planetId,
-              fatherId: r.fatherId,
-              motherId: r.motherId,
-              adultExtras: true,
-            });
-            ch(s, r.fatherId)?.childrenIds.push(c.id);
-            ch(s, r.motherId)?.childrenIds.push(c.id);
-            return `It is a match! ${c.name} joins the dynasty.`;
-          }
-          return 'Not a match. The impostor is shown the airlock (the door, not the vacuum).';
+        needs: [{ have: 'credits', n: 40 }],
+        then: {
+          do: [{ lose: 'credits', n: 40 }],
+          roll: 0.4,
+          pass: { do: [sibling('sib')], text: (c) => `It is a match! ${named(c, 'sib')} joins the dynasty.` },
+          fail: { text: 'Not a match. The impostor is shown the airlock (the door, not the vacuum).' },
         },
       },
       {
         label: 'Welcome them without question',
-        run: ({ s, r, data }) => {
-          const c = createCharacter(s, {
-            gender: data.gender as 'M' | 'F',
-            born: s.year - Number(data.age),
-            clanId: s.playerClanId,
-            planetId: r.planetId,
-            fatherId: r.fatherId,
-            motherId: r.motherId,
-            adultExtras: true,
-          });
-          ch(s, r.fatherId)?.childrenIds.push(c.id);
-          ch(s, r.motherId)?.childrenIds.push(c.id);
-          if (chance(s, 0.3)) c.traits = addTrait(c.traits, 'deceitful');
-          return `${c.name} joins the family. Whether they are really family is another question.`;
+        then: {
+          do: [sibling('sib'), { trait: 'deceitful', to: 'sib', p: 0.3 }],
+          text: (c) => `${named(c, 'sib')} joins the family. Whether they are really family is another question.`,
         },
       },
-      { label: 'Turn them away', run: () => 'You have enough relatives.' },
+      { label: 'Turn them away', then: { text: 'You have enough relatives.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'asteroid',
     title: 'Incoming Asteroid',
     icon: 'comet',
@@ -858,68 +919,72 @@ export const EVENTS: EventDef[] = [
       data.region = myRegion(s)?.id ?? '';
     },
     text: ({ s, data }) => `An asteroid the size of a city is on course for ${s.regions[String(data.region)]?.name}.`,
-    choices: [
+    options: [
       {
         label: 'Deflect it',
-        hint: '-150 credits',
-        available: ({ s }) => s.credits >= 150,
-        run: ({ s }) => ((s.credits -= 150), 'Tugs nudge it safely past. Crisis over.'),
+        needs: [{ have: 'credits', n: 150 }],
+        then: { do: [{ lose: 'credits', n: 150 }], text: 'Tugs nudge it safely past. Crisis over.' },
       },
       {
         label: 'Nudge it toward a rival',
-        hint: 'Science check',
-        run: ({ s, r, data }) => {
-          const rival = rivalClan(s);
-          const theirs = rival ? clanRegions(s, rival.id) : [];
-          if (rival && theirs.length && chance(s, 0.25 + effStats(s, r).sci * 0.05)) {
-            const hit = pick(s, theirs);
-            hit.dev = Math.max(1, hit.dev - 2);
-            rival.opinion -= 20;
-            s.prestige += 15;
-            return `The rock slams into ${hit.name}, held by House ${rival.name}. Oops. +15 prestige.`;
-          }
-          const reg = s.regions[String(data.region)];
-          if (reg) reg.dev = Math.max(1, reg.dev - 2);
-          return 'Your maths was off. It hits your own region (-2 development).';
-        },
+        then: (() => {
+          const ownGoal: Outcome = { do: [{ dev: -2, region: 'region' }], text: 'Your maths was off. It hits your own region (-2 development).' };
+          return {
+            do: [rivalPick('rival')],
+            if: { test: (c) => !!c.picks.rival && clanRegions(c.s, (c.picks.rival as Clan).id).length > 0, why: '', assume: true },
+            pass: {
+              roll: { base: 0.25, per: { stat: 'sci', n: 0.05 } },
+              pass: {
+                do: [
+                  { pick: 'hit', get: (c) => pick(c.s, clanRegions(c.s, (c.picks.rival as Clan).id)), text: 'one of their regions' },
+                  { dev: -2, region: 'hit' },
+                  { opinion: -20, clan: 'rival' },
+                  { gain: 'prestige', n: 15 },
+                ],
+                text: (c) => `The rock slams into ${placeName(c, 'hit')}, held by House ${houseName(c, 'rival')}. Oops. +15 prestige.`,
+              },
+              fail: ownGoal,
+            },
+            fail: ownGoal,
+          };
+        })(),
       },
       {
         label: 'Pray',
-        hint: '-40 faith',
-        available: ({ s }) => s.faith >= 40,
-        run: ({ s, data }) => {
-          s.faith -= 40;
-          if (chance(s, 0.5)) return 'It misses by a whisker. A miracle!';
-          const reg = s.regions[String(data.region)];
-          if (reg) reg.dev = Math.max(1, reg.dev - 2);
-          return 'The gods were busy. Impact (-2 development).';
+        needs: [{ have: 'faith', n: 40 }],
+        then: {
+          do: [{ lose: 'faith', n: 40 }],
+          roll: 0.5,
+          pass: { text: 'It misses by a whisker. A miracle!' },
+          fail: { do: [{ dev: -2, region: 'region' }], text: 'The gods were busy. Impact (-2 development).' },
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'festival',
     title: 'Festival of the Faith',
     icon: 'faith',
     weight: 2,
     text: ({ s }) => `The high holy days of ${theFaith(playerClan(s).faithId)} are here. The faithful expect their lord to celebrate.`,
-    choices: [
+    options: [
       {
         label: 'Fund it lavishly',
-        hint: '-120 credits, +25 prestige, +30 faith',
-        available: ({ s }) => s.credits >= 120,
-        run: ({ s }) => {
-          s.credits -= 120;
-          s.prestige += 25;
-          s.faith += 30;
-          return 'Fireworks across the orbit. +25 prestige, +30 faith.';
+        needs: [{ have: 'credits', n: 120 }],
+        then: {
+          do: [
+            { lose: 'credits', n: 120 },
+            { gain: 'prestige', n: 25 },
+            { gain: 'faith', n: 30 },
+          ],
+          text: 'Fireworks across the orbit. +25 prestige, +30 faith.',
         },
       },
-      { label: 'A modest service', hint: '+10 faith', run: ({ s }) => ((s.faith += 10), 'Quiet and dignified. +10 faith.') },
-      { label: 'Skip it', hint: '-15 faith', run: ({ s }) => ((s.faith -= 15), 'The priests are scandalised. -15 faith.') },
+      { label: 'A modest service', then: { do: [{ gain: 'faith', n: 10 }], text: 'Quiet and dignified. +10 faith.' } },
+      { label: 'Skip it', then: { do: [{ lose: 'faith', n: 15 }], text: 'The priests are scandalised. -15 faith.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'proposal',
     title: 'A Marriage Proposal',
     icon: 'heart',
@@ -933,46 +998,25 @@ export const EVENTS: EventDef[] = [
     },
     text: ({ s, subject, data }) =>
       `Envoys from House ${s.clans[String(data.clan)]?.name ?? 'a rival'} propose a match between one of their own and ${subject!.name}. It would mean an alliance.`,
-    choices: [
+    options: [
       {
         label: 'Accept the match',
-        hint: 'Alliance, no prestige cost',
-        run: ({ s, subject, data }) => {
-          const target = subject!;
-          generateSuitors(s, target.id);
-          const sl = s.suitors;
-          if (!sl || !sl.list.length) return 'The envoys leave without a deal.';
-          const clan = s.clans[String(data.clan)];
-          const suitor = sl.list[0];
-          suitor.char.clanId = clan.id;
-          suitor.char.planetId = clan.planetId;
-          suitor.char.marriedIn = true;
-          s.characters[suitor.char.id] = suitor.char;
-          if (sl.mode === 'marry') {
-            target.spouseId = suitor.char.id;
-            suitor.char.spouseId = target.id;
-          } else {
-            target.betrothedId = suitor.char.id;
-            suitor.char.betrothedId = target.id;
-          }
-          s.suitors = undefined;
-          clan.allied = true;
-          clan.opinion = Math.min(100, clan.opinion + 30);
-          log(s, `${target.name} is ${sl.mode === 'marry' ? 'married' : 'betrothed'} to ${suitor.char.name} of House ${clan.name}.`, 'family');
-          return `${target.name} will wed ${suitor.char.name} of House ${clan.name}. The alliance is sealed.`;
+        then: {
+          do: [
+            {
+              run: (c) => {
+                c.vars.out = acceptProposal(c);
+              },
+              text: (c) => `${c.subject!.name} is matched into House ${houseName(c, 'clan') ?? 'a rival'}, which becomes your ally`,
+            },
+          ],
+          text: (c) => String(c.vars.out),
         },
       },
-      {
-        label: 'Politely decline',
-        run: ({ s, data }) => {
-          const c = s.clans[String(data.clan)];
-          if (c) c.opinion -= 10;
-          return 'The envoys leave, unimpressed.';
-        },
-      },
+      { label: 'Politely decline', then: { do: [{ opinion: -10, clan: 'clan' }], text: 'The envoys leave, unimpressed.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'scandal',
     title: 'Scandal at Court',
     icon: 'gala',
@@ -983,28 +1027,30 @@ export const EVENTS: EventDef[] = [
     when: (s) => Object.values(s.clans).some((c) => !c.isPlayer),
     text: ({ s, data }) =>
       `Your steward got drunk and called the envoy of House ${s.clans[String(data.clan)]?.name} a "jumped-up asteroid miner". To their face.`,
-    choices: [
+    options: [
       {
         label: 'Apologise profusely',
-        hint: '-10 prestige',
-        run: ({ s, data }) => {
-          s.prestige -= 10;
-          s.clans[String(data.clan)].opinion += 10;
-          return 'Gracious words smooth things over.';
+        then: {
+          do: [
+            { lose: 'prestige', n: 10 },
+            { opinion: 10, clan: 'clan' },
+          ],
+          text: 'Gracious words smooth things over.',
         },
       },
       {
         label: 'Back your steward',
-        hint: '+10 prestige, they hate you',
-        run: ({ s, data }) => {
-          s.prestige += 10;
-          s.clans[String(data.clan)].opinion -= 25;
-          return 'Your court roars with laughter. The envoy storms out.';
+        then: {
+          do: [
+            { gain: 'prestige', n: 10 },
+            { opinion: -25, clan: 'clan' },
+          ],
+          text: 'Your court roars with laughter. The envoy storms out.',
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'restless_heir',
     title: 'Your Heir Grows Restless',
     icon: 'family',
@@ -1014,196 +1060,157 @@ export const EVENTS: EventDef[] = [
       return h && ageOf(s, h) >= 18 ? h : undefined;
     },
     text: ({ subject }) => `${subject!.name} is tired of waiting in your shadow and wants real responsibility.`,
-    choices: [
+    options: [
       {
         label: 'Give them a fleet command',
-        hint: '-60 credits, +2 Command',
-        available: ({ s }) => s.credits >= 60,
-        run: ({ s, subject }) => {
-          s.credits -= 60;
-          subject!.base.cmd += 2;
-          return `${subject!.name} learns the art of war. +2 Command.`;
+        needs: [{ have: 'credits', n: 60 }],
+        then: {
+          do: [
+            { lose: 'credits', n: 60 },
+            { stat: 'cmd', n: 2, to: 'subject' },
+          ],
+          text: (c) => `${c.subject!.name} learns the art of war. +2 Command.`,
         },
       },
       {
         label: 'Send them to court as an envoy',
-        hint: '+2 Diplomacy',
-        run: ({ subject }) => {
-          subject!.base.dip += 2;
-          return `${subject!.name} charms the courts of the system. +2 Diplomacy.`;
-        },
+        then: { do: [{ stat: 'dip', n: 2, to: 'subject' }], text: (c) => `${c.subject!.name} charms the courts of the system. +2 Diplomacy.` },
       },
       {
         label: 'Remind them who rules',
-        run: ({ s, subject }) => {
-          if (chance(s, 0.4)) subject!.traits = addTrait(subject!.traits, 'ambitious');
-          return `${subject!.name} bows, but their eyes do not.`;
-        },
+        then: { do: [{ trait: 'ambitious', to: 'subject', p: 0.4 }], text: (c) => `${c.subject!.name} bows, but their eyes do not.` },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'stress',
     title: 'The Weight of the Crown',
     icon: 'health',
     weight: 2,
     text: () => 'Sleepless nights, endless petitions, enemies everywhere. The pressure is getting to you.',
-    choices: [
+    options: [
       {
         label: 'Take combat stims to keep going',
-        run: ({ s, r }) => {
-          r.base.eco += 1;
-          if (hasTrait(r, 'stim_addict')) {
-            r.health -= 6;
-            return 'The stims keep you upright, but the habit is eating you alive. +1 Economy, -6 health.';
-          }
-          if (chance(s, 0.5)) {
-            r.traits = addTrait(r.traits, 'stim_addict');
-            return 'You get a lot done. You also cannot stop. You are a Stim-Addict.';
-          }
-          return 'You power through. +1 Economy.';
+        then: {
+          do: [{ stat: 'eco', n: 1 }],
+          if: { test: (c) => hasTrait(c.r, 'stim_addict'), why: '' },
+          pass: { do: [{ health: -6 }], text: 'The stims keep you upright, but the habit is eating you alive. +1 Economy, -6 health.' },
+          fail: {
+            roll: 0.5,
+            pass: { do: [{ trait: 'stim_addict' }], text: 'You get a lot done. You also cannot stop. You are a Stim-Addict.' },
+            fail: { text: 'You power through. +1 Economy.' },
+          },
         },
       },
       {
         label: 'Meditate with the seers',
-        run: ({ s, r }) => {
-          if (chance(s, 0.5)) r.traits = addTrait(r.traits, 'calm');
-          r.health += 5;
-          return 'Breathe in, breathe out. You feel steadier.';
-        },
+        then: { do: [{ trait: 'calm', p: 0.5 }, { health: 5 }], text: 'Breathe in, breathe out. You feel steadier.' },
       },
       {
         label: 'Bury yourself in work',
-        run: ({ s, r }) => {
-          r.health -= 8;
-          if (chance(s, 0.5)) r.traits = addTrait(r.traits, 'diligent');
-          s.credits += 60;
-          return 'Eighteen-hour shifts. +60 credits, -8 health.';
+        then: {
+          do: [{ health: -8 }, { trait: 'diligent', p: 0.5 }, { gain: 'credits', n: 60 }],
+          text: 'Eighteen-hour shifts. +60 credits, -8 health.',
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'failing_health',
     title: 'Failing Health',
     icon: 'health',
     weight: 2,
     when: (s) => ageOf(s, ruler(s)) >= 50,
     text: () => 'Your physicians look worried. Your heart is not what it was.',
-    choices: [
+    options: [
       {
         label: 'Gene therapy',
-        hint: '-200 credits, +25 health',
-        available: ({ s }) => s.credits >= 200,
-        run: ({ s, r }) => {
-          s.credits -= 200;
-          r.health += 25;
-          return 'Fresh telomeres. You feel ten years younger.';
-        },
+        needs: [{ have: 'credits', n: 200 }],
+        then: { do: [{ lose: 'credits', n: 200 }, { health: 25 }], text: 'Fresh telomeres. You feel ten years younger.' },
       },
       {
         label: 'Pray for strength',
-        hint: '-50 faith',
-        available: ({ s }) => s.faith >= 50,
-        run: ({ s, r }) => {
-          s.faith -= 50;
-          r.health += chance(s, 0.6) ? 15 : 0;
-          return 'You feel a little better. Maybe.';
-        },
+        needs: [{ have: 'faith', n: 50 }],
+        then: { do: [{ lose: 'faith', n: 50 }], roll: 0.6, pass: { do: [{ health: 15 }] }, text: 'You feel a little better. Maybe.' },
       },
-      {
-        label: 'Ignore the doctors',
-        run: ({ s, r }) => {
-          if (chance(s, 0.5)) sicken(s, r);
-          return 'Doctors always fuss.';
-        },
-      },
+      { label: 'Ignore the doctors', then: { roll: 0.5, pass: { do: [{ sicken: 'root' }] }, text: 'Doctors always fuss.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'embezzle',
     title: 'Missing Credits',
     icon: 'eco',
     weight: 2,
     text: () => 'The books do not balance. Someone in the treasury has been skimming.',
-    choices: [
+    options: [
       {
         label: 'Audit everything',
-        hint: 'Economy check',
-        run: ({ s, r }) => {
-          if (chance(s, 0.3 + effStats(s, r).eco * 0.05)) {
-            const n = int(s, 100, 220);
-            s.credits += n;
-            return `You find the thief and every hidden account. +${n} credits recovered.`;
-          }
-          return 'The trail goes cold.';
+        then: {
+          roll: { base: 0.3, per: { stat: 'eco', n: 0.05 } },
+          pass: {
+            do: [{ gain: 'credits', n: { roll: [100, 220] }, as: 'n' }],
+            text: (c) => `You find the thief and every hidden account. +${c.vars.n} credits recovered.`,
+          },
+          fail: { text: 'The trail goes cold.' },
         },
       },
-      { label: 'Write it off', hint: '-50 credits', run: ({ s }) => ((s.credits -= 50), 'Cost of doing business.') },
+      { label: 'Write it off', then: { do: [{ lose: 'credits', n: 50 }], text: 'Cost of doing business.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'engineer',
     title: 'A Brilliant Engineer',
     icon: 'ship',
     weight: 1.5,
     text: () => 'A young engineer from the Saturnine rings pitches a radical new warship design.',
-    choices: [
+    options: [
       {
         label: 'Fund the prototype',
-        hint: '-220 credits',
-        available: ({ s }) => s.credits >= 220,
-        run: ({ s }) => {
-          s.credits -= 220;
-          if (chance(s, 0.65)) {
-            const item = makeItem(s, newId(s, 'i'), { slot: 'flagship', rarity: chance(s, 0.3) ? 'epic' : 'rare', origin: 'Built by your engineers' });
-            s.items.push(item);
-            return `She delivers the ${item.name}. Equip it from the Treasury.`;
-          }
-          return 'The prototype explodes on its first test. At least it was spectacular.';
+        needs: [{ have: 'credits', n: 220 }],
+        then: {
+          do: [{ lose: 'credits', n: 220 }],
+          roll: 0.65,
+          pass: {
+            do: [{ item: { slot: 'flagship', rarity: [0.3, 'epic', 'rare'], origin: 'Built by your engineers' }, as: 'item' }],
+            text: (c) => `She delivers the ${c.vars.item}. Equip it from the Treasury.`,
+          },
+          fail: { text: 'The prototype explodes on its first test. At least it was spectacular.' },
         },
       },
-      {
-        label: 'Put her in your shipyards',
-        hint: '+8 ships',
-        run: ({ s }) => ((s.fleet += 8), 'Production efficiency jumps. +8 ships.'),
-      },
-      { label: 'Not interested', run: () => 'She takes her ideas to a rival. Hopefully they are rubbish.' },
+      { label: 'Put her in your shipyards', then: { do: [{ gain: 'fleet', n: 8 }], text: 'Production efficiency jumps. +8 ships.' } },
+      { label: 'Not interested', then: { text: 'She takes her ideas to a rival. Hopefully they are rubbish.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'refugees',
     title: 'Refugees at the Docks',
     icon: 'family',
     weight: 1.5,
     when: (s) => clanRegions(s, s.playerClanId).length > 0,
     text: () => 'Thousands of refugees from a war-torn moon beg for sanctuary in your lands.',
-    choices: [
+    options: [
       {
         label: 'Take them in',
-        hint: '-60 credits, +1 development',
-        available: ({ s }) => s.credits >= 60,
-        run: ({ s }) => {
-          s.credits -= 60;
-          const reg = myRegion(s);
-          if (reg && reg.dev < 10) reg.dev += 1;
-          s.faith += 10;
-          return `The refugees settle ${reg?.name}. Workers and gratitude. +1 development, +10 faith.`;
+        needs: [{ have: 'credits', n: 60 }],
+        then: {
+          do: [{ lose: 'credits', n: 60 }, myRegionPick('reg'), { dev: 1, region: 'reg' }, { gain: 'faith', n: 10 }],
+          text: (c) => `The refugees settle ${regionOf(c, 'reg')?.name}. Workers and gratitude. +1 development, +10 faith.`,
         },
       },
       {
         label: 'Press them into the fleet',
-        hint: '+10 ships, -10 prestige',
-        run: ({ s }) => {
-          s.fleet += 10;
-          s.prestige -= 10;
-          return 'Uniforms for everyone. +10 ships, -10 prestige.';
+        then: {
+          do: [
+            { gain: 'fleet', n: 10 },
+            { lose: 'prestige', n: 10 },
+          ],
+          text: 'Uniforms for everyone. +10 ships, -10 prestige.',
         },
       },
-      { label: 'Turn them away', hint: '-5 prestige', run: ({ s }) => ((s.prestige -= 5), 'The ships drift onward.') },
+      { label: 'Turn them away', then: { do: [{ lose: 'prestige', n: 5 }], text: 'The ships drift onward.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'relic',
     title: 'Ancient Relic Unearthed',
     icon: 'relic',
@@ -1213,28 +1220,19 @@ export const EVENTS: EventDef[] = [
       data.item = JSON.stringify(item);
     },
     text: ({ data }) => `Miners in your lands have broken into a sealed vault. Inside rests the ${JSON.parse(String(data.item)).name}.`,
-    choices: [
+    options: [
       {
         label: 'Claim it for the treasury',
-        run: ({ s, data }) => {
-          const item = JSON.parse(String(data.item));
-          s.items.push(item);
-          return `The ${item.name} joins your treasury. Equip it from the Treasury tab.`;
-        },
+        then: { do: [keepItem('item')], text: (c) => `The ${itemIn(c, 'item').name} joins your treasury. Equip it from the Treasury tab.` },
       },
-      { label: 'Gift it to the temple', hint: '+60 faith', run: ({ s }) => ((s.faith += 60), 'The priests weep with joy. +60 faith.') },
+      { label: 'Gift it to the temple', then: { do: [{ gain: 'faith', n: 60 }], text: 'The priests weep with joy. +60 faith.' } },
       {
         label: 'Sell it on Ceres',
-        hint: '+credits',
-        run: ({ s }) => {
-          const n = int(s, 150, 260);
-          s.credits += n;
-          return `A collector pays ${n} credits.`;
-        },
+        then: { do: [{ gain: 'credits', n: { roll: [150, 260] }, as: 'n' }], text: (c) => `A collector pays ${c.vars.n} credits.` },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'spy',
     title: 'A Spy Caught',
     icon: 'scheme',
@@ -1244,106 +1242,105 @@ export const EVENTS: EventDef[] = [
     },
     when: (s) => Object.values(s.clans).some((c) => !c.isPlayer),
     text: ({ s, data }) => `Your guards catch a spy in the archives. Under questioning, they admit to working for House ${s.clans[String(data.clan)]?.name}.`,
-    choices: [
+    options: [
       {
         label: 'Turn them into a double agent',
-        hint: 'Intrigue check, could forge a claim',
-        run: ({ s, r, data }) => {
-          const clan = s.clans[String(data.clan)];
-          const regs = clanRegions(s, clan.id).filter((x) => !s.claims.includes(x.id));
-          if (regs.length && chance(s, 0.3 + effStats(s, r).int * 0.05)) {
-            const reg = pick(s, regs);
-            s.claims.push(reg.id);
-            return `The double agent smuggles out deeds that give you a claim on ${reg.name}.`;
-          }
-          return 'The spy feeds you nothing useful, then vanishes.';
+        then: {
+          if: claimable('clan'),
+          pass: {
+            roll: { base: 0.3, per: { stat: 'int', n: 0.05 } },
+            pass: { do: [{ claim: 'clan', as: 'reg' }], text: (c) => `The double agent smuggles out deeds that give you a claim on ${c.vars.reg}.` },
+            fail: { text: 'The spy feeds you nothing useful, then vanishes.' },
+          },
+          fail: { text: 'The spy feeds you nothing useful, then vanishes.' },
         },
       },
       {
         label: 'Execute them publicly',
-        hint: '+10 prestige',
-        run: ({ s, data }) => {
-          s.prestige += 10;
-          s.clans[String(data.clan)].opinion -= 20;
-          return 'A message to all would-be spies.';
+        then: {
+          do: [
+            { gain: 'prestige', n: 10 },
+            { opinion: -20, clan: 'clan' },
+          ],
+          text: 'A message to all would-be spies.',
         },
       },
       {
         label: 'Send them home',
-        run: ({ s, data }) => {
-          s.clans[String(data.clan)].opinion += 15;
-          return 'House ' + s.clans[String(data.clan)].name + ' is surprised by your mercy.';
-        },
+        then: { do: [{ opinion: 15, clan: 'clan' }], text: (c) => 'House ' + houseName(c, 'clan') + ' is surprised by your mercy.' },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'blight',
     title: 'Hydroponic Blight',
     icon: 'plague',
     weight: 1.5,
     text: () => 'A fungal blight is rotting the hydroponic farms. Food stocks are falling.',
-    choices: [
+    options: [
       {
         label: 'Open the granaries',
-        hint: 'Your stored surplus, free',
-        show: ({ s }) => !!getFlag(s, 'granary'),
-        run: ({ s }) => {
-          clearFlag(s, 'granary');
-          s.prestige += 10;
-          return 'The surplus you stored in the good years feeds everyone. Not one family goes hungry. +10 prestige.';
+        show: [{ test: (c) => !!getFlag(c.s, 'granary'), why: 'Your granaries are empty' }],
+        then: {
+          do: [{ clearFlag: 'granary' }, { gain: 'prestige', n: 10 }],
+          text: 'The surplus you stored in the good years feeds everyone. Not one family goes hungry. +10 prestige.',
         },
       },
       {
         label: 'Import food',
-        hint: '-130 credits',
-        available: ({ s }) => s.credits >= 130,
-        run: ({ s }) => ((s.credits -= 130), 'Supply ships arrive in time.'),
+        needs: [{ have: 'credits', n: 130 }],
+        then: { do: [{ lose: 'credits', n: 130 }], text: 'Supply ships arrive in time.' },
       },
       {
         label: 'Ration everything',
-        run: ({ s }) => {
-          for (const v of vassalsOf(s, s.playerClanId)) v.opinion -= 10;
-          const reg = myRegion(s);
-          if (reg && reg.dev > 1) reg.dev -= 1;
-          return 'Hungry months. Your people grumble (-1 development).';
+        then: {
+          do: [
+            {
+              run: (c) => {
+                for (const v of vassalsOf(c.s, c.s.playerClanId)) v.opinion -= 10;
+              },
+              text: (c) => (vassalsOf(c.s, c.s.playerClanId).length ? 'your vassals like you less (−10)' : ''),
+            },
+            myRegionPick('reg'),
+            { dev: -1, region: 'reg' },
+          ],
+          text: 'Hungry months. Your people grumble (-1 development).',
         },
       },
       {
         label: 'Pray',
-        hint: '-40 faith',
-        available: ({ s }) => s.faith >= 40,
-        run: ({ s }) => {
-          s.faith -= 40;
-          if (chance(s, 0.5)) return 'The blight withers. Praise be.';
-          const reg = myRegion(s);
-          if (reg && reg.dev > 1) reg.dev -= 1;
-          return 'The blight does not care about prayers (-1 development).';
+        needs: [{ have: 'faith', n: 40 }],
+        then: {
+          do: [{ lose: 'faith', n: 40 }],
+          roll: 0.5,
+          pass: { text: 'The blight withers. Praise be.' },
+          fail: { do: [myRegionPick('reg'), { dev: -1, region: 'reg' }], text: 'The blight does not care about prayers (-1 development).' },
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'admiral',
     title: 'A Veteran Admiral',
     icon: 'ship',
     weight: 1.5,
     text: () => 'A grizzled admiral, veteran of a dozen campaigns, offers you her sword and her loyal crews.',
-    choices: [
+    options: [
       {
         label: 'Hire her',
-        hint: '-90 credits, +12 ships',
-        available: ({ s }) => s.credits >= 90,
-        run: ({ s }) => {
-          s.credits -= 90;
-          s.fleet += 12;
-          return 'Twelve battle-hardened ships join your fleet.';
+        needs: [{ have: 'credits', n: 90 }],
+        then: {
+          do: [
+            { lose: 'credits', n: 90 },
+            { gain: 'fleet', n: 12 },
+          ],
+          text: 'Twelve battle-hardened ships join your fleet.',
         },
       },
-      { label: 'Decline', run: () => 'She salutes and leaves.' },
+      { label: 'Decline', then: { text: 'She salutes and leaves.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'birthday',
     title: 'A Milestone Birthday',
     icon: 'gala',
@@ -1354,54 +1351,52 @@ export const EVENTS: EventDef[] = [
       return a >= 30 && a % 10 === 0;
     },
     text: ({ s, r }) => `You turn ${ageOf(s, r)} this cycle. The court wants to know how you want to mark it.`,
-    choices: [
+    options: [
       {
         label: 'Throw a party',
-        hint: '-100 credits, +20 prestige',
-        available: ({ s }) => s.credits >= 100,
-        run: ({ s }) => {
-          s.credits -= 100;
-          s.prestige += 20;
-          return 'A night to remember. +20 prestige.';
+        needs: [{ have: 'credits', n: 100 }],
+        then: {
+          do: [
+            { lose: 'credits', n: 100 },
+            { gain: 'prestige', n: 20 },
+          ],
+          text: 'A night to remember. +20 prestige.',
         },
       },
-      { label: 'Quiet dinner with family', hint: '+8 health', run: ({ r }) => ((r.health += 8), 'Just what you needed.') },
+      { label: 'Quiet dinner with family', then: { do: [{ health: 8 }], text: 'Just what you needed.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'clone',
     title: 'Clone Rumours',
     icon: 'dna',
     weight: 1,
     subject: (s) => currentHeir(s),
     text: ({ subject }) => `Pamphlets across the system claim ${subject!.name} is not your child at all, but a vat-grown clone.`,
-    choices: [
+    options: [
       {
         label: 'Publish the DNA records',
-        hint: '-50 credits, +10 prestige',
-        available: ({ s }) => s.credits >= 50,
-        run: ({ s }) => {
-          s.credits -= 50;
-          s.prestige += 10;
-          return 'The records are undeniable. The rumours die.';
+        needs: [{ have: 'credits', n: 50 }],
+        then: {
+          do: [
+            { lose: 'credits', n: 50 },
+            { gain: 'prestige', n: 10 },
+          ],
+          text: 'The records are undeniable. The rumours die.',
         },
       },
       {
         label: 'Hunt down the rumour-monger',
-        hint: 'Intrigue check',
-        run: ({ s, r }) => {
-          if (chance(s, 0.35 + effStats(s, r).int * 0.04)) {
-            s.prestige += 20;
-            return 'Caught them. Their public apology is very thorough. +20 prestige.';
-          }
-          s.prestige -= 15;
-          return 'They slip away and the rumours grow. -15 prestige.';
+        then: {
+          roll: { base: 0.35, per: { stat: 'int', n: 0.04 } },
+          pass: { do: [{ gain: 'prestige', n: 20 }], text: 'Caught them. Their public apology is very thorough. +20 prestige.' },
+          fail: { do: [{ lose: 'prestige', n: 15 }], text: 'They slip away and the rumours grow. -15 prestige.' },
         },
       },
-      { label: 'Ignore it', hint: '-20 prestige', run: ({ s }) => ((s.prestige -= 20), 'Mud sticks. -20 prestige.') },
+      { label: 'Ignore it', then: { do: [{ lose: 'prestige', n: 20 }], text: 'Mud sticks. -20 prestige.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'psionic',
     title: 'Psionic Awakening',
     icon: 'psi',
@@ -1413,27 +1408,29 @@ export const EVENTS: EventDef[] = [
     },
     text: ({ subject }) =>
       `Glasses shatter when ${subject!.name} gets upset. Servants say they hear ${subject!.gender === 'M' ? 'his' : 'her'} voice inside their heads. A latent psionic gene is waking up.`,
-    choices: [
+    options: [
       {
         label: 'Send them to the Uranian seers',
-        hint: '-100 credits, awaken it',
-        available: ({ s }) => s.credits >= 100,
-        run: ({ s, subject }) => {
-          s.credits -= 100;
-          subject!.traits = addTrait(subject!.traits, 'psi_spark');
-          return `${subject!.name} returns with a Psionic Spark. It is a genetic gift: lock it in the Gene Vault and every future child of your house will have it.`;
+        needs: [{ have: 'credits', n: 100 }],
+        then: {
+          do: [
+            { lose: 'credits', n: 100 },
+            { trait: 'psi_spark', to: 'subject' },
+          ],
+          text: (c) =>
+            `${c.subject!.name} returns with a Psionic Spark. It is a genetic gift: lock it in the Gene Vault and every future child of your house will have it.`,
         },
       },
       {
         label: 'Suppress it with drugs',
-        run: ({ subject }) => {
-          subject!.traits = addTrait(subject!.traits, 'calm');
-          return `${subject!.name} becomes quiet and calm. Whatever was there sleeps again.`;
+        then: {
+          do: [{ trait: 'calm', to: 'subject' }],
+          text: (c) => `${c.subject!.name} becomes quiet and calm. Whatever was there sleeps again.`,
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'plot',
     title: 'Plot Uncovered',
     icon: 'scheme',
@@ -1446,83 +1443,88 @@ export const EVENTS: EventDef[] = [
       ).id;
     },
     text: ({ s, data }) => `Your spymaster reports that House ${s.clans[String(data.clan)].name} is quietly gathering support to overthrow you.`,
-    choices: [
+    options: [
       {
         label: 'Arrest their leader',
-        hint: 'May trigger a revolt if it fails',
-        run: ({ s, data }) => (arrestVassal(s, String(data.clan)) ? 'Their leader is in your cells.' : 'The arrest fails, and they rise in revolt!'),
+        then: {
+          do: [
+            {
+              run: (c) => {
+                c.vars.held = arrestVassal(c.s, String(c.data.clan)) ? 1 : 0;
+              },
+              text: (c) => `Arrest chance ${Math.round(arrestChance(c.s, String(c.data.clan)) * 100)}%: if it fails, they rise in revolt`,
+            },
+          ],
+          text: (c) => (c.vars.held ? 'Their leader is in your cells.' : 'The arrest fails, and they rise in revolt!'),
+        },
       },
       {
         label: 'Bribe them back into line',
-        hint: '-100 credits',
-        available: ({ s }) => s.credits >= 100,
-        run: ({ s, data }) => {
-          s.credits -= 100;
-          s.clans[String(data.clan)].opinion += 30;
-          return 'Money talks. The plot dissolves.';
+        needs: [{ have: 'credits', n: 100 }],
+        then: {
+          do: [
+            { lose: 'credits', n: 100 },
+            { opinion: 30, clan: 'clan' },
+          ],
+          text: 'Money talks. The plot dissolves.',
         },
       },
-      {
-        label: 'Ignore it',
-        run: ({ s, data }) => {
-          s.clans[String(data.clan)].opinion -= 10;
-          return 'You let them scheme. Bold.';
-        },
-      },
+      { label: 'Ignore it', then: { do: [{ opinion: -10, clan: 'clan' }], text: 'You let them scheme. Bold.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'trade',
     title: 'A Jovian Trade Venture',
     icon: 'eco',
     weight: 1.5,
     text: () => 'A Jovian merchant prince invites you to invest in a convoy running helium-3 to the inner worlds.',
-    choices: [
+    options: [
       {
         label: 'Invest 200 credits',
-        hint: 'Gamble: double or nothing-ish',
-        available: ({ s }) => s.credits >= 200,
-        run: ({ s, r }) => {
-          s.credits -= 200;
-          if (chance(s, 0.5 + effStats(s, r).eco * 0.02)) {
-            const n = int(s, 350, 480);
-            s.credits += n;
-            return `The convoy comes home fat and happy. You get back ${n} credits.`;
-          }
-          return 'The convoy is lost to pirates. So are your credits.';
+        needs: [{ have: 'credits', n: 200 }],
+        then: {
+          do: [{ lose: 'credits', n: 200 }],
+          roll: { base: 0.5, per: { stat: 'eco', n: 0.02 } },
+          pass: {
+            do: [{ gain: 'credits', n: { roll: [350, 480] }, as: 'n' }],
+            text: (c) => `The convoy comes home fat and happy. You get back ${c.vars.n} credits.`,
+          },
+          fail: { text: 'The convoy is lost to pirates. So are your credits.' },
         },
       },
-      { label: 'Decline', run: () => 'You keep your credits where you can see them.' },
+      { label: 'Decline', then: { text: 'You keep your credits where you can see them.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'faith_crisis',
     title: 'Crisis of Faith',
     icon: 'faith',
     weight: 1,
     text: ({ s }) => `Late at night, you find yourself doubting the teachings of ${theFaith(playerClan(s).faithId)}.`,
-    choices: [
+    options: [
       {
         label: 'Double down on devotion',
-        hint: '+30 faith',
-        run: ({ s, r }) => {
-          s.faith += 30;
-          if (chance(s, 0.4)) r.traits = addTrait(r.traits, 'zealous');
-          return 'Your faith burns brighter than ever.';
+        then: {
+          do: [
+            { gain: 'faith', n: 30 },
+            { trait: 'zealous', p: 0.4 },
+          ],
+          text: 'Your faith burns brighter than ever.',
         },
       },
       {
         label: 'Embrace the doubt',
-        hint: '+1 Science',
-        run: ({ s, r }) => {
-          r.base.sci += 1;
-          if (chance(s, 0.4)) r.traits = addTrait(r.traits, 'cynical');
-          return 'The universe is cold maths. +1 Science.';
+        then: {
+          do: [
+            { stat: 'sci', n: 1 },
+            { trait: 'cynical', p: 0.4 },
+          ],
+          text: 'The universe is cold maths. +1 Science.',
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'sick_child',
     title: 'A Sick Child',
     icon: 'plague',
@@ -1532,60 +1534,52 @@ export const EVENTS: EventDef[] = [
       return kids.length ? pick(s, kids) : undefined;
     },
     text: ({ subject }) => `${subject!.name} has a burning fever that will not break.`,
-    choices: [
+    options: [
       {
         label: 'Hire the finest doctors',
-        hint: '-120 credits',
-        available: ({ s }) => s.credits >= 120,
-        run: ({ subject, s }) => {
-          s.credits -= 120;
-          return `${subject!.name} recovers fully.`;
-        },
+        needs: [{ have: 'credits', n: 120 }],
+        then: { do: [{ lose: 'credits', n: 120 }], text: (c) => `${c.subject!.name} recovers fully.` },
       },
       {
         label: 'Pray at their bedside',
-        hint: '-40 faith',
-        available: ({ s }) => s.faith >= 40,
-        run: ({ s, subject }) => {
-          s.faith -= 40;
-          if (chance(s, 0.7)) return `The fever breaks. ${subject!.name} will live.`;
-          sicken(s, subject!);
-          return `${subject!.name} is still very ill.`;
+        needs: [{ have: 'faith', n: 40 }],
+        then: {
+          do: [{ lose: 'faith', n: 40 }],
+          roll: 0.7,
+          pass: { text: (c) => `The fever breaks. ${c.subject!.name} will live.` },
+          fail: { do: [{ sicken: 'subject' }], text: (c) => `${c.subject!.name} is still very ill.` },
         },
       },
       {
         label: 'Trust their constitution',
-        run: ({ s, subject }) => {
-          if (chance(s, 0.5)) return `${subject!.name} shakes it off.`;
-          sicken(s, subject!);
-          if (chance(s, 0.15)) subject!.traits = addTrait(subject!.traits, 'sickly');
-          return `${subject!.name} gets worse.`;
+        then: {
+          roll: 0.5,
+          pass: { text: (c) => `${c.subject!.name} shakes it off.` },
+          fail: { do: [{ sicken: 'subject' }, { trait: 'sickly', to: 'subject', p: 0.15 }], text: (c) => `${c.subject!.name} gets worse.` },
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'christening',
     title: 'A New Warship Launched',
     icon: 'ship',
     weight: 1.5,
     when: (s) => s.fleet >= 50,
     text: () => 'Your shipyards are ready to launch a new heavy cruiser. Tradition says the ruler names her.',
-    choices: [
-      { label: 'Name it after yourself', hint: '+20 prestige', run: ({ s }) => ((s.prestige += 20), 'Modest? Never. +20 prestige.') },
-      { label: 'Name it after your faith', hint: '+20 faith', run: ({ s }) => ((s.faith += 20), 'The priests bless the hull. +20 faith.') },
+    options: [
+      { label: 'Name it after yourself', then: { do: [{ gain: 'prestige', n: 20 }], text: 'Modest? Never. +20 prestige.' } },
+      { label: 'Name it after your faith', then: { do: [{ gain: 'faith', n: 20 }], text: 'The priests bless the hull. +20 faith.' } },
       {
         label: 'Name it after a rival house',
-        hint: 'Improves relations',
-        run: ({ s }) => {
-          const c = rivalClan(s);
-          if (c) c.opinion += 20;
-          return `House ${c?.name ?? 'Nobody'} is touched by the gesture.`;
+        then: {
+          do: [rivalPick('rival'), { opinion: 20, clan: 'rival' }],
+          text: (c) => `House ${houseName(c, 'rival') ?? 'Nobody'} is touched by the gesture.`,
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'twin_rivalry',
     title: 'Sibling Rivalry',
     icon: 'family',
@@ -1600,25 +1594,31 @@ export const EVENTS: EventDef[] = [
       data.b = kids[1].id;
     },
     text: ({ s, data }) => `${s.characters[String(data.a)].name} and ${s.characters[String(data.b)].name} are at each other's throats again.`,
-    choices: [
+    options: [
       {
         label: `Side with the elder`,
-        run: ({ s, data }) => {
-          const [a, b] = [s.characters[String(data.a)], s.characters[String(data.b)]].sort((x, y) => x.born - y.born);
-          a.traits = addTrait(a.traits, 'arrogant');
-          b.traits = addTrait(b.traits, 'ambitious');
-          return `${a.name} gloats. ${b.name} vows to prove you wrong.`;
+        then: {
+          do: [
+            { pick: 'elder', get: (c) => byAge(c)[0], text: (c) => byAge(c)[0].name },
+            { pick: 'younger', get: (c) => byAge(c)[1], text: (c) => byAge(c)[1].name },
+            { trait: 'arrogant', to: 'elder' },
+            { trait: 'ambitious', to: 'younger' },
+          ],
+          text: (c) => `${named(c, 'elder')} gloats. ${named(c, 'younger')} vows to prove you wrong.`,
         },
       },
       {
         label: 'Make them work it out together',
-        run: ({ s, data }) => {
-          for (const id of [data.a, data.b]) s.characters[String(id)].base.dip += 1;
-          return 'They grudgingly learn to cooperate. +1 Diplomacy each.';
+        then: {
+          do: [
+            { stat: 'dip', n: 1, to: 'a' },
+            { stat: 'dip', n: 1, to: 'b' },
+          ],
+          text: 'They grudgingly learn to cooperate. +1 Diplomacy each.',
         },
       },
     ],
-  },
+  }),
   ...MORE_EVENTS,
 ];
 
