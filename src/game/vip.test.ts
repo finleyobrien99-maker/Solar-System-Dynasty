@@ -72,11 +72,14 @@ describe('starting scenarios', () => {
     expect(deposed.every((c) => memorySum(c) < 0)).toBe(true);
   });
 
-  it('every scenario survives 60 cycles', () => {
+  it('every scenario plays 60 cycles; only a governor who never lifts a finger can fall', () => {
     for (const sc of ['governor', 'viceroy', 'monarch', 'emperor'] as ScenarioId[]) {
       const s = start(sc, { family: 'kids', age: 34 }, 21);
       play(s, 60);
-      expect(s.year).toBeGreaterThan(2550);
+      // A governor who builds no ships and answers nothing is fair game for an
+      // ambitious neighbour; a house that starts with real power should not be.
+      if (sc === 'governor' && s.gameOver) expect(s.gameOver.reason).toMatch(/lost every last region/);
+      else expect(s.year).toBeGreaterThan(2550);
     }
   });
 

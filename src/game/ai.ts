@@ -30,7 +30,7 @@ import { capOpinion, grudgeOpinion, isRival, opinionCeiling } from './memory';
 import { addFeeling, feelingsSum, opinionOf } from './relations';
 import { aiIntrigueTick } from './aiIntrigue';
 import { aiAmbition, ambitionHouse, AMBITION_AGGRESSION, type AmbitionKind } from './aiAmbition';
-import { aiArrests, aiMarriages, alliesAbandon, betrayPact, captivesTick, kinFleet, pactMap, takeCaptive, wouldBetray } from './aiCourt';
+import { aiAffairsTick, aiArrests, aiMarriages, alliesAbandon, betrayPact, captivesTick, kinFleet, pactMap, takeCaptive, wouldBetray } from './aiCourt';
 import { neighbourPlanets, PLANET_BY_ID } from './planets';
 import { chance, clamp, int, pick, range, weighted } from './rng';
 import type { AiWar, Clan, GameState } from './types';
@@ -345,6 +345,7 @@ function revolts(s: GameState): void {
 export function aiTick(s: GameState): void {
   resources(s);
   aiMarriages(s);
+  aiAffairsTick(s);
   opinionDrift(s);
   tickAiWars(s);
   if (chance(s, 0.3)) startAiWar(s);

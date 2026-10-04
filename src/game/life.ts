@@ -132,7 +132,7 @@ export function makeChild(s: GameState, mother: Character, father: Character, cl
   return child;
 }
 
-function birthChance(s: GameState, mother: Character, father: Character): number {
+export function birthChance(s: GameState, mother: Character, father: Character): number {
   const age = ageOf(s, mother);
   const maxAge = (s.dynasty.gestationVats || s.vip?.on) && (mother.clanId === s.playerClanId || father.clanId === s.playerClanId) ? 58 : 45;
   if (age < 16 || age > maxAge) return 0;

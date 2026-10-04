@@ -11,11 +11,11 @@
 import { aiAmbition } from './aiAmbition';
 import { createCharacter } from './character';
 import { ageOf, alive, ch, childrenOf, clanRank, clanRegions, effStats, fullName, hasTrait, log, newId, notice, ruler, vassalsOf } from './core';
-import { isCloseKin, recordDeed } from './epithets';
-import { isCloseFamily, killCharacter } from './life';
+import { breakFaithfulness, isCloseKin, recordDeed } from './epithets';
+import { birthChance, isCloseFamily, killCharacter, makeChild } from './life';
 import { isRival } from './memory';
 import { neighbourPlanets } from './planets';
-import { addFeeling, closeKin, executed, feelingNow, feelingsSum, opinionOf } from './relations';
+import { addFeeling, closeKin, executed, feelingNow, feelingsSum, opinionOf, relationOf } from './relations';
 import { chance, clamp, int, pick, weighted } from './rng';
 import type { Character, Clan, GameState } from './types';
 
@@ -396,5 +396,118 @@ export function alliesAbandon(s: GameState): void {
       portraitId: k.headId,
     });
     log(s, `House ${k.name} broke off its alliance with you.`, 'bad');
+  }
+}
+
+// ── Affairs ───────────────────────────────────────────────────────────────
+
+/**
+ * The people at the heart of each landed AI house: its lord, the lord's spouse
+ * and their grown children. Anyone married into your dynasty is left to your
+ * own events (a seducer, a jealous spouse), not to chance.
+ */
+function courtiers(s: GameState): Character[] {
+  const out: Character[] = [];
+  for (const k of landedAi(s)) {
+    const h = ch(s, k.headId);
+    if (!alive(h)) continue;
+    for (const c of [h, ch(s, h.spouseId), ...childrenOf(s, h)])
+      if (c && freeAdult(s, c, 18) && ageOf(s, c) <= 60 && c.clanId !== s.playerClanId && ch(s, c.spouseId)?.clanId !== s.playerClanId) out.push(c);
+  }
+  return out;
+}
+
+/** How tempted someone is to stray this cycle: desire and an unhappy marriage push, chastity and honesty hold back. */
+export function temptation(s: GameState, c: Character): number {
+  let p = 0.003;
+  if (hasTrait(c, 'lustful')) p += 0.012;
+  const spouse = ch(s, c.spouseId);
+  if (alive(spouse) && opinionOf(s, c, spouse) <= -20) p += 0.012;
+  if (hasTrait(c, 'chaste')) p *= 0.2;
+  if (hasTrait(c, 'honest') || hasTrait(c, 'just')) p *= 0.5;
+  return p;
+}
+
+function married(s: GameState, c: Character): boolean {
+  const sp = ch(s, c.spouseId);
+  return alive(sp) && sp.spouseId === c.id;
+}
+
+/** Two people take up with each other, in secret for now. */
+export function beginAffair(s: GameState, a: Character, b: Character): void {
+  a.loverId = b.id;
+  b.loverId = a.id;
+  for (const [x, y] of [
+    [a, b],
+    [b, a],
+  ]) {
+    breakFaithfulness(x);
+    addFeeling(s, x.id, y.id, { why: 'My lover', value: 30, decay: 1, key: 'lover' });
+    relationOf(s, x.id, y.id, true)!.kind = 'lover';
+  }
+}
+
+function endAffair(a: Character, b: Character | undefined): void {
+  if (b?.loverId === a.id) b.loverId = undefined;
+  a.loverId = undefined;
+}
+
+/** Whether a betrayed spouse already knows about this affair. */
+function exposed(s: GameState, a: Character, b: Character): boolean {
+  return [a, b].some((x) => married(s, x) && (s.relations[x.spouseId!]?.[x.id]?.feelings ?? []).some((f) => f.key === 'betrayed'));
+}
+
+/** The affair comes out: each betrayed spouse turns on their partner and on the lover. Lords make the news. */
+export function exposeAffair(s: GameState, a: Character, b: Character): void {
+  for (const [x, y] of [
+    [a, b],
+    [b, a],
+  ]) {
+    if (!married(s, x)) continue;
+    const sp = s.characters[x.spouseId!];
+    addFeeling(s, sp.id, x.id, { why: 'Betrayed me', value: -40, decay: 1, key: 'betrayed' });
+    if (sp.id !== y.id) addFeeling(s, sp.id, y.id, { why: `Seduced ${x.name}`, value: -50, decay: 0.5, key: `seduced:${x.id}` });
+  }
+  const lordly = [a, b].some((x) => s.clans[x.clanId]?.headId === x.id || (married(s, x) && s.clans[s.characters[x.spouseId!].clanId]?.headId === x.spouseId));
+  if (lordly) log(s, `Scandal: ${fullName(s, a)} and ${fullName(s, b)} have been sharing a bed.`, 'news');
+}
+
+/**
+ * AI lords, their spouses and their grown children take lovers as you can:
+ * the lustful and the unhappily married most of all, from the courts of
+ * nearby houses. Affairs come out in time, make enemies of the betrayed, and
+ * sometimes produce children the mother's house would rather not explain.
+ */
+export function aiAffairsTick(s: GameState): void {
+  const court = courtiers(s);
+  for (const c of court) {
+    const lover = ch(s, c.loverId);
+    if (lover) {
+      if (!alive(lover) || lover.loverId !== c.id) {
+        endAffair(c, lover);
+        continue;
+      }
+      if (c.gender === 'M') continue; // tend each affair once, from the woman's side
+      const child = !c.prisonerOf && !lover.prisonerOf && chance(s, birthChance(s, c, lover) * 0.35) ? makeChild(s, c, lover, c.clanId, true) : undefined;
+      // Once it's out, it's out: the betrayed know, and the news has moved on.
+      if (exposed(s, c, lover)) {
+        if (chance(s, 0.15)) endAffair(c, lover);
+      } else if (chance(s, child ? 0.35 : 0.12)) {
+        exposeAffair(s, c, lover);
+        if (chance(s, 0.5)) endAffair(c, lover);
+      } else if (chance(s, 0.08)) endAffair(c, lover);
+      continue;
+    }
+    if (!chance(s, temptation(s, c))) continue;
+    const near = new Set([c.planetId, ...neighbourPlanets(c.planetId)]);
+    const pool = court.filter(
+      (o) => o.gender !== c.gender && !o.loverId && o.clanId !== c.clanId && near.has(o.planetId) && !isCloseKin(o, c) && (married(s, c) || married(s, o)),
+    );
+    if (!pool.length) continue;
+    const other = weighted(
+      s,
+      pool.map((o) => [o, 1 + (hasTrait(o, 'lustful') ? 2 : 0) + temptation(s, o) * 50 + Math.max(0, opinionOf(s, c, o)) / 20] as const),
+    );
+    beginAffair(s, c, other);
   }
 }

@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  aiAffairsTick,
   aiArrests,
+  beginAffair,
+  exposeAffair,
+  temptation,
   aiMarriages,
   alliesAbandon,
   captiveFates,
@@ -228,5 +232,57 @@ describe('your allies', () => {
     addFeeling(s, a.headId, s.rulerId, { why: 'Murdered my wife', value: -90, decay: 0, grave: true });
     alliesAbandon(s);
     expect(a.allied).toBe(false);
+  });
+});
+
+describe('AI love lives', () => {
+  it('the lustful and the unhappily married stray most; the chaste hardly at all', () => {
+    const s = world();
+    const [a, b] = landedAi(s);
+    const [ha, hb] = [s.characters[a.headId], s.characters[b.headId]];
+    setTraits(ha, []);
+    ha.traits = ha.traits.filter((t) => t !== 'lustful' && t !== 'chaste');
+    const plain = temptation(s, ha);
+    ha.traits.push('lustful');
+    expect(temptation(s, ha)).toBeGreaterThan(plain * 3);
+    hb.traits = hb.traits.filter((t) => t !== 'lustful' && t !== 'chaste');
+    hb.traits.push('chaste');
+    expect(temptation(s, hb)).toBeLessThan(plain);
+  });
+
+  it('an exposed affair turns the betrayed spouse on both of them, and lords make the news', () => {
+    const s = world();
+    const [a, b] = landedAi(s);
+    const lord = s.characters[a.headId];
+    const wife = createCharacter(s, { gender: lord.gender === 'M' ? 'F' : 'M', born: s.year - 30, clanId: a.id, planetId: a.planetId, adultExtras: true });
+    wed(lord, wife);
+    const lover = child(s, b, lord.gender);
+    beginAffair(s, wife, lover);
+    expect(wife.loverId).toBe(lover.id);
+    expect(feelingsSum(s, lord, wife)).toBe(0);
+    exposeAffair(s, wife, lover);
+    expect(feelingsSum(s, lord, wife)).toBe(-40);
+    expect(feelingsSum(s, lord, lover)).toBe(-50);
+    expect(s.log.some((l) => l.k === 'news' && l.t.startsWith('Scandal'))).toBe(true);
+  });
+
+  it('over the years, AI courts have affairs and the odd awkward child, but never with your family', () => {
+    const s = world();
+    for (const k of landedAi(s)) {
+      const h = s.characters[k.headId];
+      if (!h.traits.includes('lustful')) h.traits.push('lustful');
+      if (!alive(ch(s, h.spouseId)))
+        wed(h, createCharacter(s, { gender: h.gender === 'M' ? 'F' : 'M', born: s.year - 30, clanId: k.id, planetId: k.planetId, adultExtras: true }));
+    }
+    const kids = Object.keys(s.characters).length;
+    for (let i = 0; i < 30; i++) {
+      s.year += 1;
+      aiAffairsTick(s);
+    }
+    const lovers = Object.values(s.characters).filter((c) => alive(c) && c.loverId);
+    expect(lovers.length + Object.values(s.characters).filter((c) => c.bastard).length).toBeGreaterThan(0);
+    expect(Object.keys(s.characters).length).toBeGreaterThanOrEqual(kids);
+    for (const c of lovers) expect(s.characters[c.loverId!].clanId).not.toBe(s.playerClanId);
+    expect(dynastyMembers(s).some((c) => c.loverId)).toBe(false);
   });
 });
