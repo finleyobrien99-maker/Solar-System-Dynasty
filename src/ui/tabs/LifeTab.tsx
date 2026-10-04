@@ -7,6 +7,7 @@ import { Icon } from '../../svg/Icons';
 import { Sigil } from '../../svg/Sigil';
 import { CharCard, Face, HealthBar, InfoDot, Section, StatBlock, TraitList } from '../components';
 import { Tabs } from '../Tabs';
+import { SpendTimeSection } from '../sections/RelationshipsSection';
 import { useGame } from '../store';
 
 const FILTERS: { id: 'all' | LogKind | 'mine'; label: string }[] = [
@@ -124,6 +125,7 @@ export function LifeTab() {
           </div>
         </div>
       </div>
+      <SpendTimeSection />
       <Section title="Getting started" icon="info">
         <div className="card flat muted" style={{ fontSize: 'var(--font-size-0_88rem)' }}>
           Press <b className="gold">Age Up</b> to live through a cycle (one year). Between cycles you can marry and raise heirs (Family), forge a perfect

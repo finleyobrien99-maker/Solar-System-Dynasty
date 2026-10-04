@@ -4,6 +4,7 @@ import { ageOf, alive, clanRank, effStats, fullName, hasTrait, log, newId, notic
 import { canAfford, pay, type Cost } from './genetics';
 import { makeItem } from './items';
 import { killCharacter } from './life';
+import { lovers } from './relations';
 import { chance, int, pick } from './rng';
 import { addTrait } from './traits';
 import type { GameState } from './types';
@@ -123,6 +124,7 @@ export function doActivity(s: GameState, kind: ActivityKind): void {
         if (guests.length) {
           const g = pick(s, guests);
           r.loverId = g.id;
+          lovers(s, r, g);
           text += ` You spent the night dancing with ${fullName(s, g)}. They are now your lover.`;
         }
       } else if (roll === 2) {
@@ -245,6 +247,7 @@ export function doActivity(s: GameState, kind: ActivityKind): void {
         if (pool.length) {
           const g = pick(s, pool);
           r.loverId = g.id;
+          lovers(s, r, g);
           text = `You woke up next to ${fullName(s, g)}. Looks like you have a lover.`;
           break;
         }

@@ -22,6 +22,7 @@ import { EduControls } from '../tabs/FamilyTab';
 import { useGame } from '../store';
 import { FoundCadetPanel } from '../sections/CadetSection';
 import { roleOf, ROLES } from '../../game/council';
+import { RelationshipsSection } from '../sections/RelationshipsSection';
 import { VipEditor } from '../vip/VipEditor';
 
 function Links({ label, people }: { label: string; people: Character[] }) {
@@ -99,6 +100,7 @@ export function CharacterModal({ id }: { id: string }) {
       <Links label="Betrothed" people={c.betrothedId && s.characters[c.betrothedId] ? [s.characters[c.betrothedId]] : []} />
       <Links label="Children" people={kids} />
       <Links label="Siblings" people={sibs} />
+      <RelationshipsSection c={c} />
 
       {living && isDynasty && c.edu && (
         <div className="card flat" style={{ marginTop: 'var(--space-8px)' }}>

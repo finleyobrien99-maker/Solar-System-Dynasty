@@ -7,6 +7,7 @@ import { ageOf, alive, childrenOf, clanRegions, log, newId, notice, playerClan, 
 import { canAfford, costText, pay, type Cost } from './genetics';
 import { currentHeir } from './life';
 import { remember } from './memory';
+import { granted } from './relations';
 import type { Character, Clan, GameState } from './types';
 import { fleetTarget } from './world';
 
@@ -78,6 +79,7 @@ export function foundCadet(s: GameState, charId: string, regionId: string, name?
   setOwner(s, reg, id);
   cadet.fleet = Math.round(fleetTarget(s, id) * 0.5);
   remember(s, id, `Granted us ${reg.name} to found our house`, 35, 0.02);
+  granted(s, founder);
   log(s, `${founder.name} founds House ${cadet.name}, a cadet branch, holding ${reg.name}.`, 'good');
   notice(
     s,

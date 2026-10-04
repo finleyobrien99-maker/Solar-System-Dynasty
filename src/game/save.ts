@@ -223,7 +223,12 @@ export class NewerSaveError extends Error {
  * step must be idempotent, since a save can meet the same step twice.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const MIGRATIONS: Record<number, (s: any) => void> = {};
+export const MIGRATIONS: Record<number, (s: any) => void> = {
+  // Relationships between characters (ROADMAP 1.1).
+  2: (s) => {
+    s.relations ??= {};
+  },
+};
 
 /** Bring any older save up to SAVE_VERSION so it keeps loading forever. */
 export function migrate(s: GameState): GameState {

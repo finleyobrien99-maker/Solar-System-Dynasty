@@ -251,6 +251,32 @@ export interface TradeRoute {
   since: number;
 }
 
+export type RelationKind = 'friend' | 'rival' | 'lover' | 'nemesis';
+
+/**
+ * Something one character remembers about another. It fades by `decay`
+ * points a cycle toward zero; 0 means it lasts until something fixes it.
+ * A later feeling with the same `key` replaces it.
+ */
+export interface Feeling {
+  why: string;
+  value: number;
+  decay: number;
+  year: number;
+  key?: string;
+  /** A death or betrayal: the stuff of nemeses. */
+  grave?: boolean;
+}
+
+/** How one character feels about another beyond the baseline (ROADMAP §1.1). Only pairs with history are stored. */
+export interface Relation {
+  kind?: RelationKind;
+  since: number;
+  feelings: Feeling[];
+  /** The last cycle they spent time together. */
+  together?: number;
+}
+
 /** A choice remembered for a follow-up event, due in a given year. */
 export interface StoryFlag {
   due: number;
@@ -290,6 +316,8 @@ export interface GameState {
   forge: ForgeState;
   routes: TradeRoute[];
   flags?: Record<string, StoryFlag>;
+  /** relations[a][b]: how a feels about b. Sparse: only pairs with history. */
+  relations: Record<string, Record<string, Relation>>;
   vip?: VipState;
   scenario?: ScenarioId;
   stats: { battlesWon: number; battlesLost: number; schemes: number; children: number; peakRank: number };

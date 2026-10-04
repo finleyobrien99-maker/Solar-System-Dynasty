@@ -6,6 +6,7 @@ import { creditLines, faithLines, prestigeLines, sum } from './economy';
 import { rollEvents } from './events';
 import { betrothalTick, birthsTick, growthTick, healthTick, matchmakingTick } from './life';
 import { refreshShop } from './realm';
+import { relationsTick } from './relations';
 import { councilTick } from './council';
 import { memoryTick } from './memory';
 import { forgeTick } from './forge';
@@ -47,6 +48,7 @@ export function ageUp(s: GameState): void {
   growthTick(s);
   betrothalTick(s);
   matchmakingTick(s);
+  relationsTick(s);
   memoryTick(s);
   councilTick(s);
   forgeTick(s);

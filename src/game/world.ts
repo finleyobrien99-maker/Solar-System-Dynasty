@@ -100,6 +100,7 @@ function emptyState(seed: number): GameState {
     council: {},
     forge: { level: 0, researched: [] },
     routes: [],
+    relations: {},
     stats: { battlesWon: 0, battlesLost: 0, schemes: 0, children: 0, peakRank: 1 },
     started: false,
   };

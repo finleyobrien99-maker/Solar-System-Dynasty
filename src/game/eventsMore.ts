@@ -9,6 +9,7 @@ import { clearFlag, dynastyKids, flagDue, getFlag, myRegion, pr, rivalClan, type
 import { makeItem } from './items';
 import { currentHeir } from './life';
 import { makeName, theFaith } from './planets';
+import { lovers } from './relations';
 import { chance, int, pick, rand } from './rng';
 import { TRAITS } from './traits';
 import type { Character, GameState, Item } from './types';
@@ -225,6 +226,7 @@ export const MORE_EVENTS: EventDef[] = [
             {
               run: (c) => {
                 c.r.loverId = other(c).id;
+                lovers(c.s, c.r, other(c));
               },
               text: (c) => `${other(c).name} becomes your lover, and affairs can produce heirs`,
             },

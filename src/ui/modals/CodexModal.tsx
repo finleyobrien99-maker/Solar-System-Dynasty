@@ -131,6 +131,20 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               Each cycle a married couple may have a child (better odds with Fecund or Lustful parents, worse after 35). From 6, children study under a tutor in
               a focus of your choice; at 16 they earn an education trait (tier 1 to 4) and their personality settles.
             </p>
+            <h3>Relationships</h3>
+            <p>
+              A character's profile shows how they feel about close family and people they have history with, from -100 to +100. Open each relationship to see
+              the reasons: personality, family, faith, looks and remembered feelings. Opinions can differ in each direction.
+            </p>
+            <p>
+              On Life, spend time with up to three different people each cycle, once each: dinner, sparring or stargazing. Their personality changes how much
+              they enjoy it (0 to 15 warmth); you gain 5 towards them. Time together fades by one point per cycle and clears neglect. Children aged 15 or under
+              feel neglected after five cycles without a visit (-15, deepening by 4 each cycle to -45).
+            </p>
+            <p>
+              Friends, rivals and nemeses settle each cycle, up to three of each: friends need +50 opinion and recent time together; rivals need -40 and a
+              hurtful memory; nemeses need -80 and a grave grievance. Taking a lover hurts your spouse, and resentful married couples have fewer children.
+            </p>
             <h3>Affairs</h3>
             <p>Lovers can give you unsanctioned children. They cannot inherit unless legitimised for 150 prestige.</p>
             <h3>Succession</h3>
