@@ -4,6 +4,7 @@ import type { GameState } from '../game/types';
 import { inApp } from '../native';
 import { Icon } from '../svg/Icons';
 import { PlanetArt } from '../svg/PlanetArt';
+import { AccessibilitySettings } from './AccessibilitySettings';
 import { CodexModal } from './modals/CodexModal';
 import { SavesPanel } from './modals/SavesModal';
 
@@ -70,6 +71,7 @@ export function TitleScreen({ onNew, onLoad }: { onNew: () => void; onLoad: (s: 
         <button className="btn block ghost" onClick={() => setPanel('codex')}>
           <Icon name="codex" size={16} /> How to play
         </button>
+        <AccessibilitySettings />
         {err && <div className="bad">{err}</div>}
       </div>
       <div className="dim" style={{ fontSize: 'var(--font-size-0_75rem)' }}>

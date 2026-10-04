@@ -24,6 +24,7 @@ import { PlanetArt } from '../svg/PlanetArt';
 import { Portrait } from '../svg/Portrait';
 import { Sigil } from '../svg/Sigil';
 import { InfoDot, TraitChip } from './components';
+import { CategoryMark } from './traitCategories';
 import { TraitPicker } from './vip/TraitPicker';
 
 const FOCUS_DESC: Record<StatKey, string> = {
@@ -229,6 +230,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <button
                 key={pl.id}
                 className={`planet-card ${planetId === pl.id ? 'sel' : ''}`}
+                aria-pressed={planetId === pl.id}
                 onClick={() => {
                   setPlanetId(pl.id);
                   setClanId('');
@@ -353,11 +355,11 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             <InfoDot text="Sprawling: no limit. Your bloodline can grow into the hundreds and spread into houses on every planet. Tight family: once the dynasty passes 30 living members, distant kin have far fewer children (none past 60), keeping the court small and focused. You can't change this mid-run." />
           </h3>
           <div className="choice-grid two">
-            <button className={`opt ${growth === 'uncapped' ? 'sel' : ''}`} onClick={() => setGrowth('uncapped')}>
+            <button className={`opt ${growth === 'uncapped' ? 'sel' : ''}`} onClick={() => setGrowth('uncapped')} aria-pressed={growth === 'uncapped'}>
               <div className="t">Sprawling</div>
               <div className="d">Uncapped. Spread your blood across the whole system.</div>
             </button>
-            <button className={`opt ${growth === 'capped' ? 'sel' : ''}`} onClick={() => setGrowth('capped')}>
+            <button className={`opt ${growth === 'capped' ? 'sel' : ''}`} onClick={() => setGrowth('capped')} aria-pressed={growth === 'capped'}>
               <div className="t">Tight family</div>
               <div className="d">Capped. A lean, focused court.</div>
             </button>
@@ -383,7 +385,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
           </p>
           <div className="grid">
             {houses.map((c) => (
-              <button key={c.id} className={`opt ${clan?.id === c.id ? 'sel' : ''}`} onClick={() => pickHouse(c.id)}>
+              <button key={c.id} className={`opt ${clan?.id === c.id ? 'sel' : ''}`} onClick={() => pickHouse(c.id)} aria-pressed={clan?.id === c.id}>
                 <div className="row">
                   <Sigil spec={c.id === clan?.id && sigil ? sigil : c.sigil} size={42} />
                   <div>
@@ -515,7 +517,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                 {vip ? (
                   <div className="vip-grid">
                     {STAT_KEYS.map((k) => (
-                      <div key={k} className="stepper">
+                      <div key={k} className="stepper" role="group" aria-label={STAT_NAMES[k]}>
                         <span className="stepper-label">{STAT_NAMES[k]}</span>
                         <button
                           type="button"
@@ -526,7 +528,9 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                         >
                           −
                         </button>
-                        <b className="stepper-value">{talents[k] + (k === focus ? 2 : 0)}</b>
+                        <b className="stepper-value" aria-live="polite" aria-atomic="true">
+                          {talents[k] + (k === focus ? 2 : 0)}
+                        </b>
                         <button
                           type="button"
                           className="btn small ghost"
@@ -557,7 +561,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                 <h4>Upbringing</h4>
                 <div className="choice-grid">
                   {STAT_KEYS.map((k) => (
-                    <button key={k} className={`opt ${focus === k ? 'sel' : ''}`} onClick={() => setFocus(k)}>
+                    <button key={k} className={`opt ${focus === k ? 'sel' : ''}`} onClick={() => setFocus(k)} aria-pressed={focus === k}>
                       <div className="t">{EDU_NAMES[k][tier - 1]}</div>
                       <div className="d">
                         {STAT_NAMES[k]}. {FOCUS_DESC[k]}
@@ -569,7 +573,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                   <div className="row wrap" style={{ gap: 'var(--space-6px)', marginTop: 'var(--space-8px)' }}>
                     <span className="muted">Schooling tier</span>
                     {[1, 2, 3, 4].map((n) => (
-                      <button key={n} className={`btn small ${eduTier === n ? 'primary' : ''}`} onClick={() => setEduTier(n)}>
+                      <button key={n} className={`btn small ${eduTier === n ? 'primary' : ''}`} onClick={() => setEduTier(n)} aria-pressed={eduTier === n}>
                         {EDU_NAMES[focus][n - 1]}
                       </button>
                     ))}
@@ -588,7 +592,10 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                   <div className="traits">
                     {PERSONALITY.map((t) => (
                       <button key={t.id} type="button" className="chip-btn" onClick={() => togglePersonality(t.id)} aria-pressed={traitsChosen.includes(t.id)}>
-                        <span className={`trait personality ${t.good === true ? 'good-t' : t.good === false ? 'bad' : ''}`}>{t.name}</span>
+                        <span className={`trait personality ${t.good === true ? 'good-t' : t.good === false ? 'bad' : ''}`}>
+                          <CategoryMark cat="personality" />
+                          {t.name}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -604,6 +611,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                       className={`opt ${family === id && (age >= 18 || id === 'single') ? 'sel' : ''}`}
                       disabled={id !== 'single' && age < 18}
                       onClick={() => setFamily(id)}
+                      aria-pressed={family === id && (age >= 18 || id === 'single')}
                     >
                       <div className="t">{label}</div>
                       <div className="d">{id !== 'single' && age < 18 ? 'Needs a ruler aged 18 or over.' : desc}</div>

@@ -27,7 +27,7 @@ function Stepper({
   steps?: number[];
 }) {
   return (
-    <div className="stepper">
+    <div className="stepper" role="group" aria-label={label}>
       <span className="stepper-label">{label}</span>
       {[...steps].reverse().map((d) => (
         <button
@@ -35,20 +35,22 @@ function Stepper({
           type="button"
           className="btn small ghost"
           disabled={value <= min}
-          onClick={() => onChange(value - d)}
+          onClick={() => onChange(Math.max(min, value - d))}
           aria-label={`${label} minus ${d}`}
         >
           −{d > 1 ? d : ''}
         </button>
       ))}
-      <b className="stepper-value">{value}</b>
+      <b className="stepper-value" aria-live="polite" aria-atomic="true">
+        {value}
+      </b>
       {steps.map((d) => (
         <button
           key={`+${d}`}
           type="button"
           className="btn small ghost"
           disabled={value >= max}
-          onClick={() => onChange(value + d)}
+          onClick={() => onChange(Math.min(max, value + d))}
           aria-label={`${label} plus ${d}`}
         >
           +{d > 1 ? d : ''}

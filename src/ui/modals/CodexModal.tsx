@@ -1,13 +1,14 @@
 // The in-game guide. The original game's biggest complaint was that nobody
 // explains what anything does, so this spells it all out.
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ACTIVITIES } from '../../game/activities';
 import { SCHEMES } from '../../game/intrigue';
 import { FAITHS, PLANETS } from '../../game/planets';
 import { STAT_HELP, STAT_NAMES, TRAIT_LIST, traitEffectText, type TraitCat } from '../../game/traits';
 import { STAT_KEYS } from '../../game/types';
 import { PlanetArt } from '../../svg/PlanetArt';
+import { Tabs } from '../Tabs';
 import { Modal, TraitChip } from '../components';
 
 type Page = 'basics' | 'starts' | 'resources' | 'family' | 'bloodline' | 'forge' | 'realm' | 'court' | 'war' | 'intrigue' | 'traits' | 'worlds';
@@ -36,17 +37,12 @@ const CATS: [TraitCat, string][] = [
 ];
 
 export function CodexModal({ onClose }: { onClose: () => void }) {
+  const panelId = useId();
   const [page, setPage] = useState<Page>('basics');
   return (
     <Modal title="Codex" onClose={onClose} wide icon="codex">
-      <div className="tabs">
-        {PAGES.map(([id, label]) => (
-          <button key={id} className={page === id ? 'on' : ''} onClick={() => setPage(id)}>
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="codex">
+      <Tabs label="Guide pages" items={PAGES.map(([id, label]) => ({ id, label }))} value={page} onChange={setPage} panelId={panelId} />
+      <div className="codex" id={panelId} role="tabpanel" aria-label={PAGES.find(([id]) => id === page)?.[1]}>
         {page === 'basics' && (
           <>
             <h3>The idea</h3>

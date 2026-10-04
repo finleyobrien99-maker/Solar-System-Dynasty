@@ -108,7 +108,18 @@ function ClanRow({ clanId }: { clanId: string }) {
   const liege = liegeOf(s, clanId);
   const regions = clanRegions(s, clanId);
   return (
-    <div className="char" onClick={() => openClan(clanId)} role="button" tabIndex={0}>
+    <div
+      className="char"
+      onClick={() => openClan(clanId)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          e.currentTarget.click();
+        }
+      }}
+    >
       <Sigil spec={clan.sigil} size={40} />
       {head && <Face c={head} size={48} />}
       <div className="meta">

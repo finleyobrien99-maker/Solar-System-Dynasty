@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { dynastyMembers, isVip } from '../../game/core';
 import {
   bloodlineScore,
@@ -21,6 +21,8 @@ import { Icon } from '../../svg/Icons';
 import { Btn, CostTag, InfoDot, Section, TraitChip } from '../components';
 import { useGame } from '../store';
 import { ForgeSection } from '../sections/ForgeSection';
+
+import { Tabs } from '../Tabs';
 
 type Filter = 'carried' | 'genetic' | 'personality' | 'vault';
 
@@ -126,6 +128,7 @@ function TraitRow({ t }: { t: TraitDef }) {
 
 export function BloodlineTab() {
   const { s, act } = useGame();
+  const panelId = useId();
   const [filter, setFilter] = useState<Filter>('carried');
   const { score, grade } = bloodlineScore(s);
   const used = vaultUsed(s);
@@ -231,21 +234,19 @@ export function BloodlineTab() {
       <ForgeSection />
 
       <Section title="Traits" icon="lock">
-        <div className="tabs">
-          {(
-            [
-              ['carried', 'In your bloodline'],
-              ['genetic', 'All genetic'],
-              ['personality', 'All personality'],
-              ['vault', 'Locked & purged'],
-            ] as [Filter, string][]
-          ).map(([id, label]) => (
-            <button key={id} className={filter === id ? 'on' : ''} onClick={() => setFilter(id)}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <div className="grid tight">
+        <Tabs
+          label="Bloodline traits"
+          value={filter}
+          onChange={setFilter}
+          panelId={panelId}
+          items={[
+            { id: 'carried', label: 'In your bloodline' },
+            { id: 'genetic', label: 'All genetic' },
+            { id: 'personality', label: 'All personality' },
+            { id: 'vault', label: 'Locked & purged' },
+          ]}
+        />
+        <div className="grid tight" id={panelId} role="tabpanel" aria-label="Traits">
           {list.map((t) => (
             <TraitRow key={t.id} t={t} />
           ))}

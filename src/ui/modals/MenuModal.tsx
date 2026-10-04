@@ -1,6 +1,7 @@
 import { isVip } from '../../game/core';
 import { writeSave } from '../../game/save';
 import { enableVip } from '../../game/vip';
+import { AccessibilitySettings } from '../AccessibilitySettings';
 import { Btn, Modal } from '../components';
 import { useGame } from '../store';
 import { downloadSave } from './SavesModal';
@@ -10,6 +11,7 @@ export function MenuModal() {
   return (
     <Modal title="Menu" onClose={() => setUi({ panel: null })} icon="menu">
       <div className="stack">
+        <AccessibilitySettings />
         <Btn block icon="save" onClick={() => setUi({ panel: 'saves' })}>
           Save / Load
         </Btn>

@@ -29,7 +29,7 @@ function PlanetMapImpl({ s, planetId, selected, onSelect }: Props) {
   const artSize = (R * 124) / 40;
 
   return (
-    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="planet-map" role="img" aria-label="Regions of this world">
+    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} className="planet-map" role="group" aria-label="Regions of this world">
       <defs>
         <clipPath id={`disc-${planetId}`}>
           <circle cx={SIZE / 2} cy={SIZE / 2} r={R} />
@@ -54,7 +54,12 @@ function PlanetMapImpl({ s, planetId, selected, onSelect }: Props) {
               onClick={() => onSelect(r.id)}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onSelect(r.id);
+                }
+              }}
               aria-label={`${r.name}, held by House ${clan?.name}`}
             >
               <path

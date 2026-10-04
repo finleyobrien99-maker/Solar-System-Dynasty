@@ -1,8 +1,11 @@
 // Tap-to-toggle trait grid used by the VIP editor and the VIP ruler builder.
 // Traits on the same ladder (or opposite personalities) replace each other.
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { TRAIT_LIST, traitEffectText, type TraitCat, type TraitDef } from '../../game/traits';
+
+import { Tabs } from '../Tabs';
+import { CategoryMark } from '../traitCategories';
 
 const CAT_LABEL: Record<TraitCat, string> = {
   genetic: 'Genes',
@@ -27,7 +30,10 @@ function Chip({ t, on, onToggle }: { t: TraitDef; on: boolean; onToggle: (id: st
   const tone = t.good === true ? 'good-t' : t.good === false ? 'bad' : '';
   return (
     <button type="button" className="chip-btn" aria-pressed={on} onClick={() => onToggle(t.id)} title={`${t.desc} ${traitEffectText(t)}`}>
-      <span className={`trait ${t.cat} ${tone}`}>{t.name}</span>
+      <span className={`trait ${t.cat} ${tone}`}>
+        <CategoryMark cat={t.cat} />
+        {t.name}
+      </span>
     </button>
   );
 }
@@ -58,6 +64,7 @@ export function TraitPicker({
   onToggle: (id: string) => void;
   cats?: TraitCat[];
 }) {
+  const panelId = useId();
   const [cat, setCat] = useState<TraitCat>(cats[0]);
   const list = TRAIT_LIST.filter((t) => t.cat === cat);
   let rows: [string, TraitDef[]][];
@@ -78,18 +85,28 @@ export function TraitPicker({
 
   return (
     <div className="stack" style={{ gap: 'var(--space-8px)' }}>
-      <div className="tabs" style={{ marginBottom: 0 }}>
-        {cats.map((c) => {
+      <Tabs
+        label="Trait categories"
+        value={cat}
+        onChange={setCat}
+        panelId={panelId}
+        compact
+        items={cats.map((c) => {
           const n = selected.filter((id) => TRAIT_LIST.some((t) => t.id === id && t.cat === c)).length;
-          return (
-            <button key={c} type="button" className={cat === c ? 'on' : ''} onClick={() => setCat(c)}>
-              {CAT_LABEL[c]}
-              {n > 0 && <span className="muted"> · {n}</span>}
-            </button>
-          );
+          return {
+            id: c,
+            label: (
+              <>
+                {CAT_LABEL[c]}
+                {n > 0 && <span className="muted"> · {n}</span>}
+              </>
+            ),
+          };
         })}
+      />
+      <div id={panelId} role="tabpanel" aria-label={CAT_LABEL[cat]}>
+        <Rows rows={rows} selected={selected} onToggle={onToggle} />
       </div>
-      <Rows rows={rows} selected={selected} onToggle={onToggle} />
       <div className="dim" style={{ fontSize: 'var(--font-size-0_74rem)' }}>
         Tap to add or remove. Traits on the same ladder, or opposite personalities, replace each other.
       </div>

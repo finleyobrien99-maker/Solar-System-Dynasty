@@ -47,7 +47,19 @@ export function GrudgeSection() {
           const sum = Math.round(memorySum(k));
           const top = (k.memories ?? []).slice().sort((a, b) => Math.abs(b.value) - Math.abs(a.value))[0];
           return (
-            <div key={k.id} className="char" onClick={() => openClan(k.id)} role="button" tabIndex={0}>
+            <div
+              key={k.id}
+              className="char"
+              onClick={() => openClan(k.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
+                  e.currentTarget.click();
+                }
+              }}
+            >
               <Sigil spec={k.sigil} size={36} />
               {head && <Face c={head} size={44} />}
               <div className="meta">

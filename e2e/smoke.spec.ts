@@ -96,7 +96,7 @@ SCENARIOS.forEach((scenario, i) => {
     if (await page.getByRole('button', { name: 'Age up one cycle' }).count()) {
       const nav = page.getByRole('navigation', { name: 'Main' });
       for (const tab of TABS) {
-        await nav.getByRole('button', { name: tab }).click();
+        await nav.getByRole('tab', { name: tab }).click();
         await healthy(page);
       }
 

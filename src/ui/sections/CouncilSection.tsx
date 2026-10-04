@@ -18,7 +18,20 @@ function Seat({ role }: { role: CouncilRole }) {
         <span className="pill">{STAT_NAMES[def.stat]}</span>
       </div>
       {c ? (
-        <div className="row" style={{ cursor: 'pointer' }} onClick={() => openChar(c.id)}>
+        <div
+          role="button"
+          tabIndex={0}
+          aria-label="Open councillor profile"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openChar(c.id);
+            }
+          }}
+          className="row"
+          style={{ cursor: 'pointer' }}
+          onClick={() => openChar(c.id)}
+        >
           <Face c={c} size={44} />
           <div className="grow" style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700 }}>{fullName(s, c)}</div>

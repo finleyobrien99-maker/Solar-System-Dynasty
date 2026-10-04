@@ -72,7 +72,7 @@ function SolarMapImpl({ s, selected, onSelect }: Props) {
   const homePos = home ? planetPos(home, s.year) : [0, 0];
 
   return (
-    <svg viewBox="-550 -300 1100 600" className="solar-map" role="img" aria-label="Map of the solar system">
+    <svg viewBox="-550 -300 1100 600" className="solar-map" role="group" aria-label="Map of the solar system">
       <defs>
         <radialGradient id="sunGlow">
           <stop offset="0%" stopColor="#fff6d5" />
@@ -154,7 +154,12 @@ function SolarMapImpl({ s, selected, onSelect }: Props) {
             onClick={() => onSelect(p.id)}
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(p.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect(p.id);
+              }
+            }}
             aria-label={`${p.name}, ruled by House ${sovClan?.name ?? 'nobody'}`}
           >
             {isSel && <circle r={size * 0.72} fill="none" stroke="#ffd166" strokeWidth={2.5} strokeDasharray="5 4" />}

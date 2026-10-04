@@ -620,6 +620,7 @@ Content is the cheapest depth there is. This phase builds the machine and then f
 - Pinch-zoom and pan on phones.
 
 ### 9.6 Accessibility `P1` `S`
+- **Status: done.** Keyboard tabs, focus rings, focus-trapped named dialogs with background isolation and focus return, keyboard character/map controls, labelled trait glyphs, announced confirmations/steppers, and local text-size/reduced-motion preferences on title and Menu. Covered on desktop and at 390px, including extra-large text and loading from nested windows.
 - Keyboard navigation, focus rings, ARIA on custom controls, colourblind-safe trait colours (currently genetic/personality/cyber are colour-only), text size setting, reduced-motion setting.
 
 ### 9.7 Sound and haptics `P3` `M`
@@ -869,7 +870,7 @@ export interface Story { id: string; def: string; stage: number; actors: Record<
 - [x] **Bundle size** over 500kB (Vite warning). React split into its own chunk (0.6).
 - [x] **No ESLint/Prettier** (0.7). Both run in CI.
 - [ ] **Single `fleet` number for the player**, separate `clan.fleet` for the AI (will be replaced by 5.1).
-- [ ] **Trait colours alone** distinguish categories (accessibility, 9.6).
+- [x] **Trait colours alone** distinguish categories (accessibility, 9.6). Category glyphs and accessible labels now identify them.
 - [ ] **The character modal on phones** gets very long with god-tier characters (about 38 trait chips push the VIP editor far down). Collapse traits by category.
 - [ ] **The name generator** sometimes makes very short names ("Dra") (1.8).
 - [ ] **Event repetition** at long play lengths. The 67 events are still a small pool (3.6).

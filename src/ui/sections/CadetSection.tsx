@@ -24,7 +24,19 @@ export function CadetSection() {
           const regions = clanRegions(s, k.id);
           const members = Object.values(s.characters).filter((c) => alive(c) && c.clanId === k.id).length;
           return (
-            <div key={k.id} className="char" onClick={() => openClan(k.id)} role="button" tabIndex={0}>
+            <div
+              key={k.id}
+              className="char"
+              onClick={() => openClan(k.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
+                  e.currentTarget.click();
+                }
+              }}
+            >
               <Sigil spec={k.sigil} size={40} />
               {head && <Face c={head} size={48} />}
               <div className="meta">

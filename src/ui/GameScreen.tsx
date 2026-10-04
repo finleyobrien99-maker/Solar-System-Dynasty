@@ -15,6 +15,8 @@ import { SuitorModal } from './modals/SuitorModal';
 import { TreeModal } from './modals/TreeModal';
 import { VipModal } from './vip/VipModal';
 import { useGame, type Tab } from './store';
+import { reducedMotion } from './preferences';
+import { tabKeys } from './Tabs';
 import { panelKey } from './panels';
 import { ActionsTab } from './tabs/ActionsTab';
 import { BloodlineTab } from './tabs/BloodlineTab';
@@ -66,7 +68,19 @@ function TopBar() {
   return (
     <header className="topbar">
       <div className="topbar-inner">
-        <div className="who" onClick={() => openChar(r.id)}>
+        <div
+          className="who"
+          role="button"
+          tabIndex={0}
+          aria-label="Open ruler profile"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              openChar(r.id);
+            }
+          }}
+          onClick={() => openChar(r.id)}
+        >
           <Face c={r} size={44} />
           <div style={{ minWidth: 0 }}>
             <div className="name">
@@ -179,13 +193,13 @@ export function GameScreen() {
   const doAgeUp = () => {
     haptic('medium');
     act((d) => ageUp(d));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: reducedMotion() ? 'instant' : 'smooth' });
   };
   const warBadge = s.wars.length;
   return (
     <div className="app">
       <TopBar />
-      <main className="main">
+      <main className="main" id="main-content" role="tabpanel" aria-labelledby={`main-tab-${ui.tab}`}>
         {ui.tab === 'life' && <LifeTab />}
         {ui.tab === 'family' && <FamilyTab />}
         {ui.tab === 'bloodline' && <BloodlineTab />}
@@ -204,13 +218,17 @@ export function GameScreen() {
         </button>
       )}
       <nav className="nav" aria-label="Main">
-        <div className="nav-inner">
+        <div className="nav-inner" role="tablist" aria-label="Main screens" onKeyDown={tabKeys}>
           {TABS.map((t) => (
             <button
               key={t.id}
               className={ui.tab === t.id ? 'active' : ''}
               onClick={() => setUi({ tab: t.id })}
-              aria-current={ui.tab === t.id}
+              role="tab"
+              id={`main-tab-${t.id}`}
+              aria-selected={ui.tab === t.id}
+              aria-controls="main-content"
+              tabIndex={ui.tab === t.id ? 0 : -1}
               data-back={t.id === 'life' && ui.tab !== 'life' ? '' : undefined}
             >
               <Icon name={t.icon} size={20} />

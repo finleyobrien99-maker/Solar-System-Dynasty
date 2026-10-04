@@ -26,6 +26,14 @@ function Node({ c, depth }: { c: Character; depth: number }) {
   return (
     <li>
       <span
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            openChar(c.id);
+          }
+        }}
         className={`node ${c.id === s.rulerId || wasRuler ? 'ruler' : ''}`}
         onClick={() => {
           openChar(c.id);
@@ -47,7 +55,13 @@ function Node({ c, depth }: { c: Character; depth: number }) {
         </span>
       </span>
       {kids.length > 0 && (
-        <button className="btn ghost small" style={{ marginLeft: 'var(--space-6px)' }} onClick={() => setOpen((o) => !o)}>
+        <button
+          aria-label={`${open ? 'Collapse' : 'Expand'} descendants of ${c.name}`}
+          aria-expanded={open}
+          className="btn ghost small"
+          style={{ marginLeft: 'var(--space-6px)' }}
+          onClick={() => setOpen((o) => !o)}
+        >
           {open ? '−' : `+${kids.length}`}
         </button>
       )}

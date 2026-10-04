@@ -1,7 +1,7 @@
 // Shared building blocks. Tooltips are everywhere on purpose: every number,
 // trait and button explains itself.
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { ageOf, alive, charTitle, clanRank, effStats, fullName, maxHealth, relationTo } from '../game/core';
 import { costText, type Cost } from '../game/genetics';
@@ -13,10 +13,13 @@ import { Icon } from '../svg/Icons';
 import { Portrait } from '../svg/Portrait';
 import { Sigil } from '../svg/Sigil';
 import { useGame } from './store';
+import { CategoryMark, CATEGORY_LABELS } from './traitCategories';
+import { lockDialogBackground } from './dialogBackground';
 
 // ── Tooltip ───────────────────────────────────────────────────────────────
 
-export function Tip({ text, children, className }: { text: ReactNode; children: ReactNode; className?: string }) {
+export function Tip({ text, children, className, label }: { text: ReactNode; children: ReactNode; className?: string; label?: string }) {
+  const id = useId();
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ left: number; top: number; below: boolean } | null>(null);
   const anchor = useRef<HTMLSpanElement>(null);
@@ -61,12 +64,27 @@ export function Tip({ text, children, className }: { text: ReactNode; children: 
         e.stopPropagation();
         setOpen((o) => !o);
       }}
+      role="button"
+      aria-label={label}
+      aria-describedby={open ? id : undefined}
+      aria-expanded={open}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          setOpen(false);
+        }
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }
+      }}
       tabIndex={0}
     >
       {children}
       {open &&
         createPortal(
-          <div ref={tip} className="tip" role="tooltip" style={pos ? { left: pos.left, top: pos.top } : { left: -9999, top: 0 }}>
+          <div ref={tip} id={id} className="tip" role="tooltip" style={pos ? { left: pos.left, top: pos.top } : { left: -9999, top: 0 }}>
             {text}
           </div>,
           document.body,
@@ -77,7 +95,7 @@ export function Tip({ text, children, className }: { text: ReactNode; children: 
 
 export function InfoDot({ text }: { text: ReactNode }) {
   return (
-    <Tip text={text} className="info-dot">
+    <Tip text={text} className="info-dot" label="More information">
       <Icon name="info" size={15} />
     </Tip>
   );
@@ -112,6 +130,7 @@ export function Btn({
   confirm?: string;
 }) {
   const [armed, setArmed] = useState(false);
+  const confirmId = useId();
   useEffect(() => {
     if (!armed) return;
     const t = window.setTimeout(() => setArmed(false), 4000);
@@ -135,11 +154,17 @@ export function Btn({
         disabled={isDisabled}
         onClick={handle}
         title={reason ?? title}
-        aria-live={confirm ? 'polite' : undefined}
+        aria-describedby={confirm ? confirmId : undefined}
+        onBlur={() => setArmed(false)}
       >
         {icon && <Icon name={icon} size={small ? 14 : 16} />}
         {armed ? confirm : children}
       </button>
+      {confirm && (
+        <span id={confirmId} className="sr-only" role="status">
+          {armed ? confirm : 'Requires a second press to confirm.'}
+        </span>
+      )}
       {showReason && reason && <span className="reason">{reason}</span>}
     </span>
   );
@@ -198,8 +223,63 @@ export function Modal({
   wide?: boolean;
   icon?: string;
 }) {
+  const titleId = useId();
+  const overlay = useRef<HTMLDivElement>(null);
+  const close = useRef(onClose);
+  useLayoutEffect(() => {
+    close.current = onClose;
+  });
+  useEffect(() => {
+    const root = overlay.current;
+    if (!root) return;
+    const opener = document.activeElement as HTMLElement | null;
+    const top = () => [...document.querySelectorAll('.overlay')].filter((el) => !el.closest('[hidden]')).at(-1) === root;
+    const focusable = () =>
+      [
+        ...root.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), a[href], summary, [tabindex]:not([tabindex="-1"])',
+        ),
+      ].filter((el) => !el.closest('[hidden]') && !el.closest('details:not([open]) > :not(summary)') && el.getClientRects().length > 0);
+    const focusFirst = () => (focusable()[0] ?? root).focus();
+    const unlock = lockDialogBackground(root);
+    if (top()) focusFirst();
+    const onKey = (event: KeyboardEvent) => {
+      if (!top()) return;
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        if (document.querySelector('.tip')) document.body.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true }));
+        else close.current?.();
+      }
+      if (event.key === 'Tab') {
+        const controls = focusable();
+        const first = controls[0],
+          last = controls.at(-1);
+        if (!first) {
+          event.preventDefault();
+          root.focus();
+        } else if (event.shiftKey && (document.activeElement === first || document.activeElement === root)) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    };
+    const onFocus = (event: FocusEvent) => {
+      if (top() && !root.contains(event.target as Node)) focusFirst();
+    };
+    document.addEventListener('keydown', onKey);
+    document.addEventListener('focusin', onFocus);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('focusin', onFocus);
+      unlock();
+      if (opener?.isConnected && !opener.closest('[hidden]')) opener.focus();
+    };
+  }, []);
   return (
-    <div className="overlay" onClick={onClose} role="dialog" aria-modal="true">
+    <div ref={overlay} tabIndex={-1} className="overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className={`modal ${wide ? 'wide' : ''}`} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
           <div className="row">
@@ -208,7 +288,7 @@ export function Modal({
                 <Icon name={icon} size={22} />
               </div>
             )}
-            <h2>{title}</h2>
+            <h2 id={titleId}>{title}</h2>
           </div>
           {onClose && (
             <button className="close-x" onClick={onClose} aria-label="Close">
@@ -240,6 +320,7 @@ export function TraitChip({ id, s }: { id: string; s?: GameState }) {
   const tone = t.good === true ? 'good-t' : t.good === false ? 'bad' : '';
   return (
     <Tip
+      label={t.name + ', ' + CATEGORY_LABELS[t.cat] + (locked ? ', locked' : '') + (purged ? ', purged' : '')}
       text={
         <div>
           <b>{t.name}</b>
@@ -252,6 +333,7 @@ export function TraitChip({ id, s }: { id: string; s?: GameState }) {
       }
     >
       <span className={`trait ${t.cat} ${tone}`}>
+        <CategoryMark cat={t.cat} />
         {locked && (
           <span className="lockmark">
             <Icon name="lock" size={11} />
@@ -374,7 +456,12 @@ export function CharCard({ c, sub, size = 56, extra, traitsMax = 4 }: { c: Chara
       onClick={() => openChar(c.id)}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => e.key === 'Enter' && openChar(c.id)}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          openChar(c.id);
+        }
+      }}
     >
       <Face c={c} size={size} />
       <div className="meta">

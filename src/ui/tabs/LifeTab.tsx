@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { ageOf, alive, ch, charTitle, clanRank, fullName, lifespan, playerClan, ruler } from '../../game/core';
 import { currentHeir, regencyActive } from '../../game/life';
 import { FAITHS, PLANET_BY_ID } from '../../game/planets';
@@ -6,6 +6,7 @@ import type { LogKind } from '../../game/types';
 import { Icon } from '../../svg/Icons';
 import { Sigil } from '../../svg/Sigil';
 import { CharCard, Face, HealthBar, InfoDot, Section, StatBlock, TraitList } from '../components';
+import { Tabs } from '../Tabs';
 import { useGame } from '../store';
 
 const FILTERS: { id: 'all' | LogKind | 'mine'; label: string }[] = [
@@ -17,6 +18,7 @@ const FILTERS: { id: 'all' | LogKind | 'mine'; label: string }[] = [
 
 export function LifeTab() {
   const { s, openChar, setUi } = useGame();
+  const panelId = useId();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]['id']>('mine');
   const r = ruler(s);
   const clan = playerClan(s);
@@ -33,7 +35,19 @@ export function LifeTab() {
     <div>
       <div className="card hl section">
         <div className="hero">
-          <div onClick={() => openChar(r.id)} style={{ cursor: 'pointer' }}>
+          <div
+            role="button"
+            tabIndex={0}
+            aria-label="Open ruler profile"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openChar(r.id);
+              }
+            }}
+            onClick={() => openChar(r.id)}
+            style={{ cursor: 'pointer' }}
+          >
             <Face c={r} size={150} />
           </div>
           <div className="stack" style={{ gap: 'var(--space-8px)' }}>
@@ -97,15 +111,9 @@ export function LifeTab() {
         <div className="card">
           <div className="spread">
             <h3 style={{ margin: 0 }}>Chronicle</h3>
-            <div className="tabs" style={{ margin: 0 }}>
-              {FILTERS.map((f) => (
-                <button key={f.id} className={filter === f.id ? 'on' : ''} onClick={() => setFilter(f.id)}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
+            <Tabs label="Chronicle" items={FILTERS} value={filter} onChange={setFilter} panelId={panelId} compact />
           </div>
-          <div className="log" style={{ marginTop: 'var(--space-8px)' }}>
+          <div id={panelId} role="tabpanel" aria-label="Chronicle entries" className="log" style={{ marginTop: 'var(--space-8px)' }}>
             {entries.map((e, i) => (
               <div key={i} className={`entry k-${e.k}`}>
                 <span className="y">{e.y}</span>
