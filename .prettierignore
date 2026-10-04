@@ -1,0 +1,8 @@
+dist
+mobile
+public
+package-lock.json
+src/game/__fixtures__
+# Hand-laid-out on purpose: one rule per line, and the roadmap tables.
+src/styles.css
+*.md

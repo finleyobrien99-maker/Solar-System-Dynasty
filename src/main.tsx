@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { inApp, initNative } from './native';
+import { ErrorBoundary } from './ui/ErrorBoundary';
 import './styles.css';
 
 initNative();
@@ -16,6 +17,8 @@ if (import.meta.env.PROD && import.meta.env.MODE !== 'app' && !inApp && 'service
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );

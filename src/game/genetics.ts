@@ -82,7 +82,7 @@ export function inheritGenetics(s: Seeded, father: Character | undefined, mother
 export function inheritPersonality(s: Seeded, father: Character | undefined, mother: Character | undefined, o: InheritOpts = {}): string[] {
   const locked = (o.locked ?? []).filter((t) => TRAITS[t]?.cat === 'personality');
   const purged = o.purged ?? [];
-  let out = locked.slice();
+  const out = locked.slice();
   for (const p of [father, mother]) {
     for (const t of p?.traits ?? []) {
       if (TRAITS[t]?.cat !== 'personality' || purged.includes(t)) continue;

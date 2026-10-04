@@ -51,9 +51,13 @@ export function TitleScreen({ onNew, onLoad }: { onNew: () => void; onLoad: (s: 
           <button
             className="btn primary block"
             onClick={() => {
-              const res = readSave('auto');
-              if (res) onLoad(res.state);
-              else setErr('The autosave could not be read.');
+              try {
+                const res = readSave('auto');
+                if (res) onLoad(res.state);
+                else setErr('The autosave could not be read.');
+              } catch (e) {
+                setErr(e instanceof Error ? e.message : String(e));
+              }
             }}
           >
             <Icon name="next" size={16} /> Continue: {auto.summary.ruler} of House {auto.summary.house} ({auto.summary.year}){auto.summary.vip ? ' · VIP' : ''}

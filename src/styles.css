@@ -503,3 +503,12 @@ table.plain th { color: var(--muted); font-weight: 600; }
 .looks-row { display: flex; justify-content: space-between; align-items: center; font-size: 0.86rem; }
 .looks-row .btn.small { min-height: 28px; min-width: 30px; padding: 0 6px; }
 input[type='range'] { width: 100%; accent-color: var(--gold); }
+
+/* ── Crash screen (ErrorBoundary) */
+.crash { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.crash > .card { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 12px; }
+.crash h2 { margin: 0; }
+.crash p { margin: 0; }
+.crash-actions { display: flex; flex-direction: column; gap: 4px; }
+.crash-actions .dim { font-size: 0.78rem; margin-bottom: 8px; }
+.crash pre { white-space: pre-wrap; word-break: break-word; font-size: 0.72rem; max-height: 200px; overflow: auto; color: var(--muted); background: var(--bg2); border-radius: 8px; padding: 8px; }

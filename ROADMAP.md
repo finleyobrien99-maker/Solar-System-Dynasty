@@ -133,6 +133,7 @@ Hold every feature up to these. If it doesn't serve at least two, it waits.
 Do these first. Everything after this phase gets cheaper because of them.
 
 ### 0.1 Save migrations framework `P0` `S`
+- **Status: done.** `MIGRATIONS` and `migrate()` in `save.ts`; saves from a newer build are refused with a clear message (the phone app embeds an older build, so this happens). Frozen v1 saves for every scenario, plus VIP and a finished game, live in `src/game/__fixtures__/`. `save.test.ts` loads each, plays 20 cycles, round-trips it and checks every migration is idempotent. After a version bump, `npm run fixtures` adds saves for the new version and never touches old ones.
 - **Why:** every later phase changes `GameState`. Right now `migrate()` just `??=` fills defaults and `SAVE_VERSION` is still 1.
 - **What:** `MIGRATIONS: Record<number, (s: any) => void>` applied in order from the save's version to `SAVE_VERSION`. Bump the version per schema change. Keep a folder of fixture saves (`src/game/__fixtures__/save-v1.json`, …) and a test that loads every fixture, migrates it, runs 20 cycles and saves again.
 - **Done when:** a v1 save from today's live build loads after every future PR (CI enforces it).
@@ -158,12 +159,14 @@ Do these first. Everything after this phase gets cheaper because of them.
 See section 17. Headless runner, bot strategies, CSV/JSON output, a summary table in CI artefacts.
 
 ### 0.6 UI foundations `P1` `M`
+- **Status: error boundary done** (`src/ui/ErrorBoundary.tsx`: Try again, Export save, Go back one save, Back to title). Tokens, panel stack and code-splitting still to do.
 - Design tokens (CSS variables) for colour, type, radius, spacing and shadow, so any of the three UI concepts can be skinned in.
 - An error boundary that catches render crashes and offers "Export save" and "Reload from backup".
 - Panel routing (`ui.panel`) is ad hoc. Make it a small typed stack so modals can push and pop (back button support for the Expo app).
 - Code-split the bundle (Vite warns the main chunk is over 500kB). Lazy-load Codex, Tree and the solar map.
 
 ### 0.7 Test and tooling upgrades `P1` `S`
+- **Status: ESLint done and in CI** (`eslint.config.js` also enforces engine purity and no `Math.random` in `src/game`). Prettier is configured (`.prettierrc.json`, width 160) but the repo-wide format pass is still to do in its own commit; put `// prettier-ignore` on the one-line-per-entry data tables (e.g. `TRAITS`) first or they balloon. Then add `npm run format:check` to CI. Playwright and RTL still to do.
 - ESLint + Prettier (the repo has neither), run in CI.
 - Playwright e2e smoke in CI: new game in each scenario, age 20 cycles, open every tab and modal, assert no console errors. (Chromium is available in CI images; use the installed one.)
 - React Testing Library for a few components (trait picker, Btn tap-twice confirm, save modal).
@@ -851,7 +854,7 @@ export interface Story { id: string; def: string; stage: number; actors: Record<
 - [ ] **Immortal VIP rulers block succession forever.** Needs the Abdicate decision (3.3).
 - [ ] **Suitors live outside `s.characters`** (in `s.suitors`). The editor handles it via `findChar`, but anything new that looks up characters must remember this.
 - [ ] **Bundle size** over 500kB (Vite warning). Code-split (0.6).
-- [ ] **No ESLint/Prettier** (0.7).
+- [x] **No ESLint/Prettier** (0.7). ESLint is in CI; the Prettier format pass is pending (see 0.7).
 - [ ] **Single `fleet` number for the player**, separate `clan.fleet` for the AI (will be replaced by 5.1).
 - [ ] **Trait colours alone** distinguish categories (accessibility, 9.6).
 - [ ] **The character modal on phones** gets very long with god-tier characters (about 38 trait chips push the VIP editor far down). Collapse traits by category.
@@ -872,9 +875,9 @@ Why this order: the DSL, relations, secrets and genotype are the multipliers. Ev
 
 ### First 15 tickets (ready to start)
 
-1. `0.1` Save migration framework, plus fixture saves (a v1 save from the live build) and a CI test. **S**
-2. `0.7` ESLint + Prettier, with the whole repo formatted in one isolated commit. **S**
-3. `0.6` Error boundary with "Export save" and "Reload backup". **S**
+1. ✅ `0.1` Save migration framework, plus fixture saves (a v1 save from the live build) and a CI test. **S**
+2. 🟡 `0.7` ESLint + Prettier, with the whole repo formatted in one isolated commit. **S** (ESLint done; format pass pending)
+3. ✅ `0.6` Error boundary with "Export save" and "Reload backup". **S**
 4. `0.5` Balance harness MVP with 3 bots and a CSV of rank, credits and dynasty size. **M**
 5. `0.4` Character archive for the dead, and a bench script. **M**
 6. `3.1` Event DSL types plus `applyEffects` and `describeEffects`, then port 10 events and prove the tooltips. **M**

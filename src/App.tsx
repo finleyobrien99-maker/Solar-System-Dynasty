@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { GameState } from './game/types';
+import { GameErrorBoundary } from './ui/ErrorBoundary';
 import { GameScreen } from './ui/GameScreen';
 import { NewGame } from './ui/NewGame';
 import { GameProvider } from './ui/store';
@@ -16,7 +17,9 @@ export default function App() {
   if (screen.kind === 'game')
     return (
       <GameProvider key={screen.key} initial={screen.state} onQuit={quit}>
-        <GameScreen />
+        <GameErrorBoundary>
+          <GameScreen />
+        </GameErrorBoundary>
       </GameProvider>
     );
   return <TitleScreen onNew={() => setScreen({ kind: 'new' })} onLoad={play} />;

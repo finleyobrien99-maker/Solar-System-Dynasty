@@ -190,6 +190,7 @@ export function PendingModal() {
   useEffect(() => {
     if (p) feel(p);
     // Only when a new item reaches the front of the queue.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uid]);
   if (!p) return null;
   switch (p.kind) {

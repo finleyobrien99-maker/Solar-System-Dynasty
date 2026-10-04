@@ -70,7 +70,7 @@ const FOCUS_BIAS: Record<StatKey, string[]> = {
 };
 
 export function randomPersonality(s: Seeded, target: number, existing: string[], focus?: StatKey, banned: string[] = []): string[] {
-  let traits = existing.slice();
+  const traits = existing.slice();
   let guard = 0;
   while (traits.filter((t) => TRAITS[t]?.cat === 'personality').length < target && guard++ < 40) {
     const pool =

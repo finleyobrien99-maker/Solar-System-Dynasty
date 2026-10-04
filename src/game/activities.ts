@@ -93,7 +93,7 @@ export function doActivity(s: GameState, kind: ActivityKind): void {
   setCooldown(s, `act:${kind}`, def.cooldown);
   const r = ruler(s);
   const st = effStats(s, r);
-  let title = def.name;
+  const title = def.name;
   let text = '';
   let tone: 'good' | 'bad' | 'neutral' = 'good';
 

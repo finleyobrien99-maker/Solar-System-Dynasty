@@ -35,6 +35,8 @@ npm run dev       # play at http://localhost:5173
 npm run build     # static build in dist/ (works on any static host, e.g. GitHub Pages)
 npm test          # long headless simulations, every starting scenario, VIP mode and genetics tests
 npm run typecheck
+npm run lint      # ESLint, including the engine-purity rules
+npm run fixtures  # after bumping SAVE_VERSION: freeze test saves for the new version
 ```
 
 ## Playing online

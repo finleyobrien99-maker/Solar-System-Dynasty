@@ -77,9 +77,13 @@ export function SavesPanel({ current, onLoad, onClose }: { current?: GameState; 
                     small
                     kind="primary"
                     onClick={() => {
-                      const res = readSave(slot);
-                      if (res) onLoad(res.state);
-                      else setMsg('That save could not be read.');
+                      try {
+                        const res = readSave(slot);
+                        if (res) onLoad(res.state);
+                        else setMsg('That save could not be read.');
+                      } catch (e) {
+                        setMsg(e instanceof Error ? e.message : String(e));
+                      }
                     }}
                   >
                     Load

@@ -92,10 +92,12 @@ function parseEnvelope(raw: string | null): (Envelope & { json: string }) | null
   }
 }
 
+/** Null if the data is unreadable. Throws NewerSaveError so the player is told why. */
 function stateFrom(env: { json: string }): GameState | null {
   try {
     return migrate(JSON.parse(env.json) as GameState);
-  } catch {
+  } catch (e) {
+    if (e instanceof NewerSaveError) throw e;
     return null;
   }
 }
@@ -154,6 +156,12 @@ export function readSave(slot: SlotId): { state: GameState; fromBackup: boolean 
   return null;
 }
 
+/** The slot's previous good save, one write behind. Used to step back past a crash. */
+export function readBackup(slot: SlotId): GameState | null {
+  const env = parseEnvelope(storage()?.getItem(`${key(slot)}.bak`) ?? null);
+  return env && stateFrom(env);
+}
+
 export function listSaves(): SaveInfo[] {
   const ls = storage();
   if (!ls) return [];
@@ -185,9 +193,37 @@ export function importSave(text: string): GameState {
   return state;
 }
 
-/** Fill in anything older saves are missing so they keep loading forever. */
+/** A save written by a newer build than this one. Loading it here could mangle it, so we refuse. */
+export class NewerSaveError extends Error {
+  constructor() {
+    super('This save comes from a newer version of Solar Dynasty. Update the game (reload the page, or update the app), then load it again.');
+    this.name = 'NewerSaveError';
+  }
+}
+
+/**
+ * Schema upgrades: `MIGRATIONS[n]` turns a version n-1 save into version n.
+ *
+ * To change GameState: bump SAVE_VERSION in core.ts, add the step here, then
+ * run `npm run fixtures` to freeze saves of the new version for the tests.
+ * Steps see old shapes that no longer match GameState, hence `any`. Every
+ * step must be idempotent, since a save can meet the same step twice.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const MIGRATIONS: Record<number, (s: any) => void> = {};
+
+/** Bring any older save up to SAVE_VERSION so it keeps loading forever. */
 export function migrate(s: GameState): GameState {
+  const from = s.version >= 1 ? s.version : 1;
+  if (from > SAVE_VERSION) throw new NewerSaveError();
+  if (from === 1) backfillV1(s);
+  for (let v = from + 1; v <= SAVE_VERSION; v++) MIGRATIONS[v](s);
   s.version = SAVE_VERSION;
+  return s;
+}
+
+/** Fields added during version 1, before versions were bumped. */
+function backfillV1(s: GameState): void {
   s.items ??= [];
   s.equipped ??= {};
   s.shop ??= { year: 0, items: [] };
@@ -213,5 +249,4 @@ export function migrate(s: GameState): GameState {
     c.childrenIds ??= [];
     c.traits ??= [];
   }
-  return s;
 }

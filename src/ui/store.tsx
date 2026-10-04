@@ -49,8 +49,8 @@ export function GameProvider({ initial, onQuit, children }: { initial: GameState
   const [ui, setUiState] = useState<UiState>({ tab: 'life', panel: null, planetId: initial.clans[initial.playerClanId]?.planetId });
   const [toasts, setToasts] = useState<Toast[]>([]);
   const saveTimer = useRef<number | undefined>(undefined);
+  // act() and replace() are the only ways state changes, and both update this before setS.
   const latest = useRef(s);
-  latest.current = s;
 
   const toast = useCallback((text: string, bad?: boolean) => {
     const id = Date.now() + Math.random();

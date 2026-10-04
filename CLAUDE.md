@@ -7,8 +7,8 @@ A space dynasty life-sim (BitLife meets Crusader Kings, set in the solar system)
 Quick facts:
 - Engine is pure TS in `src/game` (no React). UI changes state only through `act()` in `src/ui/store.tsx`.
 - All randomness goes through `src/game/rng.ts`. Region owners change only via `setOwner()`.
-- Never break old saves: migrate in `src/game/save.ts`.
+- Never break old saves. Changing `GameState`? Bump `SAVE_VERSION` (core.ts), add a `MIGRATIONS` step in `src/game/save.ts`, then run `npm run fixtures`.
 - VIP mode (`src/game/vip.ts`) only ever helps the player, never AI houses.
-- Check with `npm run typecheck`, `npm test`, `npm run build`, and drive the app in a browser for UI changes.
+- Check with `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`, and drive the app in a browser for UI changes.
 - The `mobile/` Expo app embeds the web build. See `mobile/AGENTS.md`.
 - The owner is Fin. Keep replies short, plain and British, with a bit of humour.
