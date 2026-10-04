@@ -154,9 +154,19 @@ Do these first. Everything after this phase gets cheaper because of them.
   - Time-slice AI work over cycles.
   - Add `npm run bench`, which reports tick time and save size at 500 / 2k / 10k members.
 - **Done when:** a 10k-member dynasty ages up in under 100ms on a mid phone and saves stay under 2MB compressed.
+- **Status: bench done, optimisation not started.** `npm run bench` grows a dynasty as fast as it will go and measures each checkpoint. First numbers (desktop, Oct 2026):
+
+  | Living dynasty | All characters | Age Up | act() copy per click | Save compressed | Save time |
+  |---|---|---|---|---|---|
+  | 504 | 1,071 | 7 ms | 4 ms | 131 KB | 67 ms |
+  | 2,064 | 3,515 | 23 ms | 13 ms | 320 KB | 196 ms |
+  | 10,054 | 16,314 | 145 ms | 80 ms | 1,191 KB | 1,428 ms |
+
+  What this says: at 10k we're over budget on a desktop, so well over on a phone. The **autosave** is the worst of it: it runs after every click, and `writeSave` also decompresses the previous save and the new one to verify them. The per-click `structuredClone` in `act()` comes next, then the tick's full scans of `s.characters` (`dynastyMembers` and friends filter every character on every call). Dead characters are only ~37% of the total, so the archive helps less than these. Suggested order: cheaper autosave (skip re-verifying a save we verified ourselves, compress off the main thread or less often), then indexes by clan and alive, then the archive.
 
 ### 0.5 Balance harness `P0` `M`
 See section 17. Headless runner, bot strategies, CSV/JSON output, a summary table in CI artefacts.
+- **Status: done.** `npm run balance` (`scripts/balance.ts`, engine side in `src/game/balance.ts`) plays seeded Governor starts with four bots from `src/game/bots.ts` (Passive, Builder, Warmonger, Breeder) and scores them against the section 17 targets. It writes `runs.csv`, `series.csv`, `runs.json` and `summary.md` to `balance-report/`. CI runs 8 seeds × 200 cycles per push and posts the summary on the run page. Schemer and VIP "God" bots still to add. First findings are in section 18.
 
 ### 0.6 UI foundations `P1` `M`
 - **Status: error boundary done** (`src/ui/ErrorBoundary.tsx`: Try again, Export save, Go back one save, Back to title). Tokens, panel stack and code-splitting still to do.
@@ -863,6 +873,9 @@ export interface Story { id: string; def: string; stage: number; actors: Record<
 - [ ] **AI marriages and births** are the hottest code path in huge dynasties. Profile again after Phase 1 (relations will add cost).
 - [ ] **Fonts load from Google Fonts.** Offline PWA play falls back to system fonts. Consider self-hosting Orbitron and Exo 2 in `public/`.
 - [ ] **Clan opinion is a single number** shared by every member of a house (replaced by 1.1 and 6.4).
+- [ ] **Balance: war is far too easy** (harness, 10 seeds × 250 cycles, Oct 2026). Builder and Warmonger bots win a median of about 31 battles and lose none. Every Warmonger takes a throne by cycle 9–32 and the Solar Throne by cycle 37–62; 63% of skilled runs are Solar Emperor by 250 (target ~10%). AI fleets never keep up and nothing pushes back on a snowballing house (see 5.4 threat and coalitions, 8.1 AI). Fin's call on the fix.
+- [ ] **Balance: credits inflate ~170×** from cycle 20 to 200 (target under 20×). Conquerors end on ~560k credits with nothing left to buy. Needs sinks or upkeep (4.2 buildings, 4.3 markets, fleet upkeep).
+- [ ] **Balance: the world barely bites.** 94% of dynasty deaths are old age; assassination and battle deaths are under 1%. Median bloodline grade at 50 cycles is D (target C).
 - [ ] **Monarch scenario:** the AI royal house's original household is deleted and replaced by the player's family. That's fine, but the deposed royals in the Emperor scenario keep their heads alive, and no story cycle uses them yet (great hook for 3.2).
 
 ---
@@ -878,8 +891,8 @@ Why this order: the DSL, relations, secrets and genotype are the multipliers. Ev
 1. ✅ `0.1` Save migration framework, plus fixture saves (a v1 save from the live build) and a CI test. **S**
 2. ✅ `0.7` ESLint + Prettier, with the whole repo formatted in one isolated commit. **S**
 3. ✅ `0.6` Error boundary with "Export save" and "Reload backup". **S**
-4. `0.5` Balance harness MVP with 3 bots and a CSV of rank, credits and dynasty size. **M**
-5. `0.4` Character archive for the dead, and a bench script. **M**
+4. ✅ `0.5` Balance harness MVP with 3 bots and a CSV of rank, credits and dynasty size. **M**
+5. 🟡 `0.4` Character archive for the dead, and a bench script. **M** (bench done; see 0.4 for why the autosave probably comes before the archive)
 6. `3.1` Event DSL types plus `applyEffects` and `describeEffects`, then port 10 events and prove the tooltips. **M**
 7. `3.1` Port the remaining 57 events and delete the old path. **M**
 8. `1.1` Relations data model, decay, baseline opinion, and the UI list on the character modal. **M**

@@ -6,11 +6,11 @@ import { ACTIVITIES, doActivity, type ActivityKind } from './activities';
 import { foundCadet } from './cadets';
 import { alive, clanRegions, dynastyMembers, ruler } from './core';
 import { appoint, candidates, ROLE_KEYS } from './council';
-import { EVENT_BY_ID, buildCtx, resolveEvent } from './events';
 import { acceptSuitor, augment, generateSuitors } from './family';
 import { buildForge, buildVats, cloneCharacter, growVatHeir, researchable, splice, startResearch } from './forge';
 import { buySlot, lockTrait, purgeTrait, vaultCandidates } from './genetics';
 import { runScheme, SCHEMES, type SchemeKind } from './intrigue';
+import { answerPending } from './bots';
 import { buyItem, developRegion, equip, recruitShips } from './realm';
 import { chance, pick, type Seeded } from './rng';
 import { openRoute } from './trade';
@@ -19,20 +19,7 @@ import { cbOptions, declareWar, fightBattle, warBlocker } from './war';
 
 /** Answer every pending pop-up with a random allowed choice. */
 export function drain(s: GameState, bot: Seeded): void {
-  let guard = 0;
-  while (s.pending.length && guard++ < 50) {
-    const p = s.pending[0];
-    if (p.kind === 'event') {
-      const def = EVENT_BY_ID[p.eventId];
-      const ctx = buildCtx(s, p);
-      const ok = def.choices.map((c, i) => [c, i] as const).filter(([c]) => (!c.show || c.show(ctx)) && (!c.available || c.available(ctx)));
-      if (!ok.length) {
-        s.pending.shift();
-        continue;
-      }
-      resolveEvent(s, p.uid, pick(bot, ok)[1]);
-    } else s.pending.shift();
-  }
+  answerPending(s, bot);
 }
 
 /** Fail the test if the world has stopped making sense. */

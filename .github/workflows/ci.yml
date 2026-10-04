@@ -19,3 +19,21 @@ jobs:
       - run: npm run format:check
       - run: npm test
       - run: npm run build
+
+  # Seeded bot games scored against the ROADMAP §17 targets. Informational:
+  # the report lands on the run's summary page and as an artefact.
+  balance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run balance -- --runs 8 --cycles 200
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: balance-report
+          path: balance-report

@@ -38,4 +38,8 @@ export default tseslint.config(
     files: ['**/*.test.ts', 'src/game/testkit.ts', 'scripts/**', '*.config.{js,ts}'],
     languageOptions: { globals: globals.node },
   },
+  {
+    files: ['scripts/**'],
+    rules: { 'no-console': 'off' },
+  },
 );
