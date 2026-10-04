@@ -7,6 +7,7 @@ A space dynasty life-sim (BitLife meets Crusader Kings, set in the solar system)
 Quick facts:
 - Engine is pure TS in `src/game` (no React). UI changes state only through `act()` in `src/ui/store.tsx`.
 - All randomness goes through `src/game/rng.ts`. Region owners change only via `setOwner()`.
+- Events are written with the DSL in `src/game/dsl.ts` (`defineEvent`): options declare their effects and the game writes the tooltips. Never hand-write a choice's `run`; describing must never roll dice.
 - Never break old saves. Changing `GameState`? Bump `SAVE_VERSION` (core.ts), add a `MIGRATIONS` step in `src/game/save.ts`, then run `npm run fixtures`.
 - VIP mode (`src/game/vip.ts`) only ever helps the player, never AI houses.
 - Before every commit run `npm run check` (typecheck, lint, format, unit tests); add `npm run e2e` for UI changes (look at the app yourself too). `npm run balance` and `npm run bench` measure balance and speed.

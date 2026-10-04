@@ -41,7 +41,7 @@ export interface Per {
 export type Num =
   | number
   | { base?: number; data?: string; of?: Resource; times?: number; roll?: [number, number]; per?: Per; round?: boolean; min?: number }
-  | { calc: (c: Ctx) => number; text: string };
+  | { calc: (c: Ctx) => number; text: Text };
 
 /** A chance: fixed, a stat check (base + per point), or custom odds with their own roll. */
 export type Prob = number | { base: number; per: Per } | { odds: (c: Ctx) => number; roll: (c: Ctx) => boolean; text: string };
@@ -175,7 +175,7 @@ function numRange(c: Ctx, n: Num): [number, number] | null {
 
 /** "+192–272 credits (+12 per Science)". */
 function amountText(c: Ctx, sign: '+' | '−', n: Num, what: string): string {
-  if (typeof n === 'object' && 'calc' in n) return `${sign}${n.text} ${what}`;
+  if (typeof n === 'object' && 'calc' in n) return `${sign}${render(c, n.text)} ${what}`;
   const [lo, hi] = numRange(c, n)!;
   const per = typeof n === 'object' && n.per ? ` (+${n.per.n} per ${STAT_NAMES[n.per.stat]})` : '';
   return `${sign}${lo === hi ? lo : `${lo}–${hi}`} ${what}${per}`;

@@ -42,7 +42,7 @@ function EventView({ p }: { p: Extract<Pending, { kind: 'event' }> }) {
         {def.choices.map((c, i) => {
           if (c.show && !c.show(ctx)) return null;
           const ok = !c.available || c.available(ctx);
-          const hint = c.describe ? c.describe(ctx) : c.hint;
+          const hint = c.describe(ctx);
           const why = ok ? null : (c.why?.(ctx) ?? 'Not possible right now');
           return (
             <button key={i} className={`btn choice ${i === 0 ? 'primary' : ''}`} disabled={!ok} onClick={() => act((d) => resolveEvent(d, p.uid, i))}>

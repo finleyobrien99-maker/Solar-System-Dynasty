@@ -25,11 +25,11 @@ const specOf = (c: unknown) => (c as { spec?: OptionSpec }).spec;
 const dslEvents = EVENTS.filter((e) => e.choices.some(specOf));
 
 describe('event DSL', () => {
-  it('is used by the deck', () => {
-    expect(dslEvents.length).toBeGreaterThanOrEqual(10);
+  it('builds every event in the deck', () => {
+    expect(EVENTS.filter((e) => !e.choices.every(specOf)).map((e) => e.id)).toEqual([]);
   });
 
-  it('every option does what its tooltip says, and only describing never changes anything', () => {
+  it('every option does what its tooltip says, and only describing never changes anything', { timeout: 120000 }, () => {
     let checked = 0;
     for (const def of dslEvents) {
       for (const rich of [true, false]) {

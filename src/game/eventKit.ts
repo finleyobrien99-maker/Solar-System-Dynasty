@@ -12,12 +12,11 @@ export interface EventCtx {
   data: Record<string, string | number>;
 }
 
+/** What an option does at runtime. Build these with defineEvent (dsl.ts), never by hand. */
 export interface EventChoice {
   label: string;
-  /** A hand-written hint. Events built with the DSL (dsl.ts) generate `describe` instead. */
-  hint?: string;
   /** The option's effects and odds, written from its definition. */
-  describe?: (c: EventCtx) => string;
+  describe: (c: EventCtx) => string;
   /** Why the option is greyed out, if it is. */
   why?: (c: EventCtx) => string | null;
   /** Hidden entirely unless this holds (unlike `available`, which greys it out). */
