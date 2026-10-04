@@ -84,7 +84,7 @@ export function CharacterModal({ id }: { id: string }) {
           </div>
           {living && <HealthBar s={s} c={c} />}
           <StatBlock s={s} c={c} />
-          <TraitList c={c} s={s} />
+          <TraitList c={c} s={s} collapseOnPhone />
           {isDynasty && c.traits.some((t) => TRAITS[t]?.cat === 'genetic') && (
             <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)' }}>
               Genetic traits can be locked into the bloodline from the Bloodline tab while {c.name} is alive.

@@ -3,10 +3,18 @@
 // next time you open the game online. The hashed build files never change,
 // so they are served from the cache. Saves live in localStorage, not here.
 
-const CACHE = 'solar-dynasty-v1';
+const CACHE = 'solar-dynasty-v2';
+const FONTS = [
+  './fonts/exo-2-cyrillic-ext.woff2',
+  './fonts/exo-2-cyrillic.woff2',
+  './fonts/exo-2-vietnamese.woff2',
+  './fonts/exo-2-latin-ext.woff2',
+  './fonts/exo-2-latin.woff2',
+  './fonts/orbitron-latin.woff2',
+];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.add('./')));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', ...FONTS])));
   self.skipWaiting();
 });
 
@@ -35,8 +43,7 @@ async function cacheFirst(req) {
   const hit = await cache.match(req);
   if (hit) return hit;
   const res = await fetch(req);
-  // Opaque responses (cross-origin fonts) have status 0 but are still usable.
-  if (res.ok || res.type === 'opaque') cache.put(req, res.clone());
+  if (res.ok) cache.put(req, res.clone());
   return res;
 }
 
@@ -46,7 +53,7 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(req.url);
   if (req.mode === 'navigate') {
     e.respondWith(networkFirst(req));
-  } else if (url.origin === self.location.origin || url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+  } else if (url.origin === self.location.origin) {
     e.respondWith(cacheFirst(req));
   }
 });

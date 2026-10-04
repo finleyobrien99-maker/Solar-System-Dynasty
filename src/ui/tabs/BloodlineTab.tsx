@@ -192,9 +192,23 @@ export function BloodlineTab() {
                     <CostTag cost={sc} />
                   </span>
                 </div>
+                {used > s.dynasty.slots && (
+                  <div role="status" className="card flat">
+                    <p>
+                      Your existing locks and purges still work. Release {used - s.dynasty.slots} trait{used - s.dynasty.slots === 1 ? '' : 's'}, or add slots,
+                      before choosing more.
+                    </p>
+                    <Btn small kind="ghost" onClick={() => setFilter('vault')}>
+                      Show locked & purged
+                    </Btn>
+                  </div>
+                )}
                 <div className="bar">
                   <span
-                    style={{ width: `${(used / Math.max(1, s.dynasty.slots)) * 100}%`, background: 'linear-gradient(90deg, var(--purple), var(--cyan))' }}
+                    style={{
+                      width: `${Math.min(100, (used / Math.max(1, s.dynasty.slots)) * 100)}%`,
+                      background: 'linear-gradient(90deg, var(--purple), var(--cyan))',
+                    }}
                   />
                 </div>
               </>

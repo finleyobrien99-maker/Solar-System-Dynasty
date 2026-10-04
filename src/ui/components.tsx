@@ -1,7 +1,7 @@
 // Shared building blocks. Tooltips are everywhere on purpose: every number,
 // trait and button explains itself.
 
-import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { ageOf, alive, charTitle, clanRank, effStats, fullName, maxHealth, relationTo } from '../game/core';
 import { costText, type Cost } from '../game/genetics';
@@ -350,10 +350,41 @@ export function TraitChip({ id, s }: { id: string; s?: GameState }) {
   );
 }
 
-const CAT_ORDER = ['genetic', 'personality', 'education', 'cyber', 'acquired'];
+const CAT_ORDER = ['genetic', 'personality', 'education', 'cyber', 'acquired'] as const;
+const fixedDesktop = () => false;
+const noLayoutWatch = () => () => {};
+const phoneLayout = () => window.matchMedia('(max-width: 560px)').matches;
+function watchPhoneLayout(listener: () => void) {
+  const media = window.matchMedia('(max-width: 560px)');
+  media.addEventListener('change', listener);
+  return () => media.removeEventListener('change', listener);
+}
 
-export function TraitList({ c, s, max }: { c: Character; s?: GameState; max?: number }) {
-  const sorted = c.traits.slice().sort((a, b) => CAT_ORDER.indexOf(TRAITS[a]?.cat ?? '') - CAT_ORDER.indexOf(TRAITS[b]?.cat ?? ''));
+export function TraitList({ c, s, max, collapseOnPhone }: { c: Character; s?: GameState; max?: number; collapseOnPhone?: boolean }) {
+  const compact = useSyncExternalStore(collapseOnPhone ? watchPhoneLayout : noLayoutWatch, collapseOnPhone ? phoneLayout : fixedDesktop);
+  const sorted = c.traits.slice().sort((a, b) => CAT_ORDER.findIndex((cat) => cat === TRAITS[a]?.cat) - CAT_ORDER.findIndex((cat) => cat === TRAITS[b]?.cat));
+  if (collapseOnPhone && compact && sorted.length > 8) {
+    return (
+      <div className="trait-groups">
+        {CAT_ORDER.map((cat) => {
+          const traits = sorted.filter((id) => TRAITS[id]?.cat === cat);
+          if (!traits.length) return null;
+          return (
+            <details key={cat}>
+              <summary>
+                {CATEGORY_LABELS[cat]} <span className="muted">({traits.length})</span>
+              </summary>
+              <div className="traits">
+                {traits.map((id) => (
+                  <TraitChip key={id} id={id} s={s} />
+                ))}
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    );
+  }
   const shown = max ? sorted.slice(0, max) : sorted;
   return (
     <div className="traits">

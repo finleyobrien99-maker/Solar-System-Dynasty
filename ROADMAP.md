@@ -864,18 +864,18 @@ export interface Story { id: string; def: string; stage: number; actors: Record<
 
 ## 18. Known bugs, rough edges and debt
 
-- [ ] **VIP off with an overfull vault:** turning VIP off leaves `locked + purged` above `slots`. It works (new locks are blocked) but the UI shows "7 / 2". Show a "release some" hint, or grandfather them.
+- [x] **VIP off with an overfull vault:** existing traits stay active; the Bloodline tab now explains how many to release, links to the vault filter, and caps the displayed bar at 100%.
 - [ ] **Immortal VIP rulers block succession forever.** Needs the Abdicate decision (3.3).
 - [ ] **Suitors live outside `s.characters`** (in `s.suitors`). The editor handles it via `findChar`, but anything new that looks up characters must remember this.
 - [x] **Bundle size** over 500kB (Vite warning). React split into its own chunk (0.6).
 - [x] **No ESLint/Prettier** (0.7). Both run in CI.
 - [ ] **Single `fleet` number for the player**, separate `clan.fleet` for the AI (will be replaced by 5.1).
 - [x] **Trait colours alone** distinguish categories (accessibility, 9.6). Category glyphs and accessible labels now identify them.
-- [ ] **The character modal on phones** gets very long with god-tier characters (about 38 trait chips push the VIP editor far down). Collapse traits by category.
+- [x] **The character modal on phones** groups crowded profiles into collapsible trait categories, keeping the VIP editor within reach. Desktop profiles keep all chips visible.
 - [ ] **The name generator** sometimes makes very short names ("Dra") (1.8).
 - [ ] **Event repetition** at long play lengths. The 67 events are still a small pool (3.6).
 - [ ] **AI marriages and births** are the hottest code path in huge dynasties. Profile again after Phase 1 (relations will add cost).
-- [ ] **Fonts load from Google Fonts.** Offline PWA play falls back to system fonts. Consider self-hosting Orbitron and Exo 2 in `public/`.
+- [x] **Fonts load from Google Fonts.** Orbitron and Exo 2 are bundled locally with their OFL licences, embedded in both build modes, and precached by the service worker. Offline reloads covered at both widths.
 - [ ] **Clan opinion is a single number** shared by every member of a house (replaced by 1.1 and 6.4).
 - [ ] **Balance: war is far too easy** (harness, 10 seeds × 250 cycles, Oct 2026). Builder and Warmonger bots win a median of about 31 battles and lose none. Every Warmonger takes a throne by cycle 9–32 and the Solar Throne by cycle 37–62; 63% of skilled runs are Solar Emperor by 250 (target ~10%). AI fleets never keep up and nothing pushes back on a snowballing house (see 5.4 threat and coalitions, 8.1 AI). Fin's call on the fix.
 - [ ] **Balance: credits inflate ~170×** from cycle 20 to 200 (target under 20×). Conquerors end on ~560k credits with nothing left to buy. Needs sinks or upkeep (4.2 buildings, 4.3 markets, fleet upkeep).
