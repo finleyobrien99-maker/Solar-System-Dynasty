@@ -28,6 +28,8 @@ test('VIP overflow is explained and crowded phone profiles collapse traits', asy
   }
   await expect(page.locator('.toast')).toHaveCount(0);
   await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(page.locator('.toast')).toHaveCount(0);
+  await page.mouse.move(0, 0);
   await page.screenshot({ path: info.outputPath('profile.png'), animations: 'disabled' });
   await page.getByRole('button', { name: 'Close', exact: true }).click();
   await page.getByRole('button', { name: 'Turn VIP off', exact: true }).click();
@@ -36,5 +38,7 @@ test('VIP overflow is explained and crowded phone profiles collapse traits', asy
   await expect(page.getByRole('status').filter({ hasText: 'Your existing locks and purges still work' })).toBeVisible();
   await page.getByRole('button', { name: 'Show locked & purged', exact: true }).click();
   await expect(page.getByRole('tab', { name: 'Locked & purged', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.toast')).toHaveCount(0);
+  await page.mouse.move(0, 0);
   await page.screenshot({ path: info.outputPath('vault.png'), animations: 'disabled' });
 });

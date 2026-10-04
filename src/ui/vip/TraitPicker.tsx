@@ -5,7 +5,7 @@ import { useId, useState } from 'react';
 import { TRAIT_LIST, traitEffectText, type TraitCat, type TraitDef } from '../../game/traits';
 
 import { Tabs } from '../Tabs';
-import { CategoryMark } from '../traitCategories';
+import { CategoryMark, CATEGORY_LABELS } from '../traitCategories';
 
 const CAT_LABEL: Record<TraitCat, string> = {
   genetic: 'Genes',
@@ -29,7 +29,14 @@ const LADDERS: Record<string, string> = {
 function Chip({ t, on, onToggle }: { t: TraitDef; on: boolean; onToggle: (id: string) => void }) {
   const tone = t.good === true ? 'good-t' : t.good === false ? 'bad' : '';
   return (
-    <button type="button" className="chip-btn" aria-pressed={on} onClick={() => onToggle(t.id)} title={`${t.desc} ${traitEffectText(t)}`}>
+    <button
+      type="button"
+      className="chip-btn"
+      aria-pressed={on}
+      aria-label={CATEGORY_LABELS[t.cat] + ': ' + t.name}
+      onClick={() => onToggle(t.id)}
+      title={`${t.desc} ${traitEffectText(t)}`}
+    >
       <span className={`trait ${t.cat} ${tone}`}>
         <CategoryMark cat={t.cat} />
         {t.name}
@@ -42,7 +49,7 @@ function Rows({ rows, selected, onToggle }: { rows: [string, TraitDef[]][]; sele
   return (
     <div className="pick-rows">
       {rows.map(([label, list]) => (
-        <div key={label} className="pick-row">
+        <div key={label + ':' + (list[0]?.id ?? '')} className="pick-row">
           <span className="pick-label">{label}</span>
           <div className="traits">
             {list.map((t) => (

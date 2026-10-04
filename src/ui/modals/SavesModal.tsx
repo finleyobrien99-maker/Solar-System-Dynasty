@@ -38,7 +38,7 @@ export function SavesPanel({ current, onLoad, onClose }: { current?: GameState; 
         file to keep a copy outside the browser.
       </p>
       {msg && (
-        <div className="card flat" style={{ marginBottom: 'var(--space-8px)' }}>
+        <div role="status" aria-label="Save status" className="card flat" style={{ marginBottom: 'var(--space-8px)' }}>
           {msg}
         </div>
       )}
@@ -124,6 +124,7 @@ export function SavesPanel({ current, onLoad, onClose }: { current?: GameState; 
         <input
           ref={file}
           type="file"
+          aria-label="Import save file"
           accept="application/json,.json"
           style={{ display: 'none' }}
           onChange={async (e) => {
