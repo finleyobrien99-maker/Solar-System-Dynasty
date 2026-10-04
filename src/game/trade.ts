@@ -85,7 +85,11 @@ export function openRoute(s: GameState, fromId: string, partnerId: string): Trad
   const route: TradeRoute = { id: newId(s, 't'), from: fromId, partner: partnerId, planetId: port, since: s.year };
   s.routes.push(route);
   remember(s, partnerId, 'Opened a trade route with us', 12, 0.04);
-  log(s, `Convoys begin running ${GOODS[s.regions[fromId].planetId]} from ${s.regions[fromId].name} to House ${s.clans[partnerId].name} on ${PLANET_BY_ID[port].name}.`, 'good');
+  log(
+    s,
+    `Convoys begin running ${GOODS[s.regions[fromId].planetId]} from ${s.regions[fromId].name} to House ${s.clans[partnerId].name} on ${PLANET_BY_ID[port].name}.`,
+    'good',
+  );
   return route;
 }
 

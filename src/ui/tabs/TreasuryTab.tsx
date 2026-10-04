@@ -21,13 +21,19 @@ function ItemTile({ item, children }: { item: Item; children?: ReactNode }) {
     <div className="item-tile">
       <ItemIcon item={item} size={56} />
       <div className="grow">
-        <div className="nm" style={{ color: RARITY_COLOR[item.rarity] }}>{item.name}</div>
+        <div className="nm" style={{ color: RARITY_COLOR[item.rarity] }}>
+          {item.name}
+        </div>
         <div className="muted" style={{ fontSize: '0.75rem' }}>
           {item.rarity} {SLOT_NAMES[item.slot].toLowerCase()}
           {item.origin ? ` · ${item.origin}` : ''}
         </div>
         <div style={{ fontSize: '0.8rem', color: '#a8e6c1' }}>{itemEffectText(item.fx)}</div>
-        {children && <div className="btn-row" style={{ marginTop: 6 }}>{children}</div>}
+        {children && (
+          <div className="btn-row" style={{ marginTop: 6 }}>
+            {children}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -39,7 +45,11 @@ export function TreasuryTab() {
   const unequipped = s.items.filter((i) => !isEquipped(s, i.id));
   return (
     <div>
-      <Section title="Equipped" icon="crown" info="Only your ruler benefits from equipped items. The whole treasury passes to each new heir, so relics build up over generations.">
+      <Section
+        title="Equipped"
+        icon="crown"
+        info="Only your ruler benefits from equipped items. The whole treasury passes to each new heir, so relics build up over generations."
+      >
         <div className="grid">
           {SLOTS.map((slot) => {
             const id = s.equipped[slot.id];
@@ -66,8 +76,12 @@ export function TreasuryTab() {
             <ItemTile key={item.id} item={item}>
               {item.slot === 'relic' ? (
                 <>
-                  <Btn small kind="good" onClick={() => act((d) => equip(d, item.id, 'relic'))}>Equip I</Btn>
-                  <Btn small kind="good" onClick={() => act((d) => equip(d, item.id, 'relic2'))}>Equip II</Btn>
+                  <Btn small kind="good" onClick={() => act((d) => equip(d, item.id, 'relic'))}>
+                    Equip I
+                  </Btn>
+                  <Btn small kind="good" onClick={() => act((d) => equip(d, item.id, 'relic2'))}>
+                    Equip II
+                  </Btn>
                 </>
               ) : (
                 <Btn small kind="good" onClick={() => act((d) => equip(d, item.id))}>
@@ -81,11 +95,20 @@ export function TreasuryTab() {
           ))}
         </div>
       </Section>
-      <Section title="Occator Bazaar" icon="credits" info={`New stock arrives every cycle from the Belt.${homePlanet(s) === 'ceres' ? ' As a Belter you get 20% off.' : ''}`}>
+      <Section
+        title="Occator Bazaar"
+        icon="credits"
+        info={`New stock arrives every cycle from the Belt.${homePlanet(s) === 'ceres' ? ' As a Belter you get 20% off.' : ''}`}
+      >
         <div className="grid">
           {s.shop.items.map((item) => (
             <ItemTile key={item.id} item={item}>
-              <Btn small kind="primary" reason={s.credits < priceOf(s, item) ? `Need ${priceOf(s, item)} credits` : null} onClick={() => act((d) => buyItem(d, item.id))}>
+              <Btn
+                small
+                kind="primary"
+                reason={s.credits < priceOf(s, item) ? `Need ${priceOf(s, item)} credits` : null}
+                onClick={() => act((d) => buyItem(d, item.id))}
+              >
                 Buy ({priceOf(s, item)})
               </Btn>
             </ItemTile>

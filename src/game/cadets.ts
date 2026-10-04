@@ -3,17 +3,7 @@
 // ships to your wars, and if your main line ever dies out, the strongest
 // cadet branch takes up the crown instead of the dynasty ending.
 
-import {
-  ageOf,
-  alive,
-  childrenOf,
-  clanRegions,
-  log,
-  newId,
-  notice,
-  playerClan,
-  setOwner,
-} from './core';
+import { ageOf, alive, childrenOf, clanRegions, log, newId, notice, playerClan, setOwner } from './core';
 import { canAfford, costText, pay, type Cost } from './genetics';
 import { currentHeir } from './life';
 import { remember } from './memory';

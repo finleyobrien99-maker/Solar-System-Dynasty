@@ -30,7 +30,7 @@ const FOCUS_DESC: Record<StatKey, string> = {
   dip: 'Raised at court. Charming and persuasive.',
   cmd: 'Raised on a warship. Born to command.',
   eco: 'Raised in the counting-house. Credits flow.',
-  int: 'Raised among spies. Knows everyone\'s secrets.',
+  int: "Raised among spies. Knows everyone's secrets.",
   sci: 'Raised in the archives. Brilliant and curious.',
 };
 
@@ -53,7 +53,6 @@ const FAMILY: [StartFamily, string, string][] = [
 ];
 
 const STEPS = ['1. Homeworld', '2. Start', '3. House', '4. Ruler'];
-
 
 function LooksEditor({ looks, gender, onChange }: { looks: Appearance; gender: Gender; onChange: (l: Appearance) => void }) {
   return (
@@ -109,9 +108,9 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
   const preview: RulerPreview = useMemo(() => rollRuler(rollSeed, planetId, gender), [rollSeed, planetId, gender]);
   // VIP-only overrides fall away if VIP is switched back off.
   const traitsChosen = personality && (vip || personality.length <= 3) ? personality : preview.personality;
-  const genes = vip ? genetic ?? preview.genetic : preview.genetic;
+  const genes = vip ? (genetic ?? preview.genetic) : preview.genetic;
   const face = looks ?? preview.looks;
-  const talents = vip ? base ?? preview.base : preview.base;
+  const talents = vip ? (base ?? preview.base) : preview.base;
   const rulerName = name ?? preview.name;
   const tier = vip ? eduTier : age >= 35 ? 3 : 2;
 
@@ -207,7 +206,9 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
   return (
     <div className="main" style={{ paddingBottom: 40 }}>
       <div className="spread" style={{ marginBottom: 10 }}>
-        <h1 className="gold" style={{ margin: 0 }}>Found your dynasty</h1>
+        <h1 className="gold" style={{ margin: 0 }}>
+          Found your dynasty
+        </h1>
         <button className="btn ghost small" onClick={onBack} data-back>
           <Icon name="back" size={14} /> Back
         </button>
@@ -238,8 +239,12 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                 <PlanetArt planetId={pl.id} size={64} />
                 <div>
                   <div className="nm">{pl.name}</div>
-                  <div className="gold" style={{ fontSize: '0.78rem' }}>{pl.faction}</div>
-                  <div className="muted" style={{ fontSize: '0.76rem' }}>{pl.bonus}</div>
+                  <div className="gold" style={{ fontSize: '0.78rem' }}>
+                    {pl.faction}
+                  </div>
+                  <div className="muted" style={{ fontSize: '0.76rem' }}>
+                    {pl.bonus}
+                  </div>
                 </div>
               </button>
             ))}
@@ -270,10 +275,15 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
           <h3>Starting rank</h3>
           <div className="scenario-grid">
             {SCENARIOS.map((sc, i) => (
-              <button key={sc.id} className={`opt scenario ${scenario === sc.id ? 'sel' : ''}`} onClick={() => {
+              <button
+                key={sc.id}
+                className={`opt scenario ${scenario === sc.id ? 'sel' : ''}`}
+                onClick={() => {
                   setScenario(sc.id);
                   pickHouse('');
-                }} aria-pressed={scenario === sc.id}>
+                }}
+                aria-pressed={scenario === sc.id}
+              >
                 <div className="spread">
                   <span className="t">{sc.name}</span>
                   <span className="rank-pips" aria-label={`Rank ${i + 1} of 4`}>
@@ -282,7 +292,9 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                     ))}
                   </span>
                 </div>
-                <div className="gold" style={{ fontSize: '0.8rem' }}>{sc.tagline}</div>
+                <div className="gold" style={{ fontSize: '0.8rem' }}>
+                  {sc.tagline}
+                </div>
                 <div className="d">{sc.blurb}</div>
                 {sc.id === 'monarch' && (
                   <div className="d" style={{ color: 'var(--cyan)' }}>
@@ -291,7 +303,11 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                 )}
                 {sc.id === 'emperor' && (
                   <div className="d" style={{ color: 'var(--cyan)' }}>
-                    Rules {p.name}, {emperorWorlds(planetId).map((id) => PLANET_BY_ID[id].name).join(' and ')}.
+                    Rules {p.name},{' '}
+                    {emperorWorlds(planetId)
+                      .map((id) => PLANET_BY_ID[id].name)
+                      .join(' and ')}
+                    .
                   </div>
                 )}
                 <div className="row wrap" style={{ gap: 4, marginTop: 6 }}>
@@ -461,7 +477,14 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                   <span className="muted">Age</span>
                   <b>{age}</b>
                 </span>
-                <input type="range" min={MIN_START_AGE} max={MAX_START_AGE} value={age} onChange={(e) => setAge(Number(e.target.value))} aria-label="Starting age" />
+                <input
+                  type="range"
+                  min={MIN_START_AGE}
+                  max={MAX_START_AGE}
+                  value={age}
+                  onChange={(e) => setAge(Number(e.target.value))}
+                  aria-label="Starting age"
+                />
                 <span className="dim" style={{ fontSize: '0.74rem' }}>
                   Older rulers start better educated{!vip && age >= 35 ? ' (Tier 3 schooling)' : ''} but have fewer years left.
                 </span>
@@ -475,7 +498,8 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               {!vip && (
                 <div>
                   <h4>
-                    Genome <InfoDot text="Genetic traits you were born with. They can pass to your children, and you can lock good ones into your bloodline later in the Gene Vault." />
+                    Genome{' '}
+                    <InfoDot text="Genetic traits you were born with. They can pass to your children, and you can lock good ones into your bloodline later in the Gene Vault." />
                   </h4>
                   <div className="traits">
                     {genes.map((t) => (
@@ -493,11 +517,23 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                     {STAT_KEYS.map((k) => (
                       <div key={k} className="stepper">
                         <span className="stepper-label">{STAT_NAMES[k]}</span>
-                        <button type="button" className="btn small ghost" disabled={talents[k] <= 0} onClick={() => setBase({ ...talents, [k]: Math.max(0, talents[k] - 1) })} aria-label={`${STAT_NAMES[k]} minus 1`}>
+                        <button
+                          type="button"
+                          className="btn small ghost"
+                          disabled={talents[k] <= 0}
+                          onClick={() => setBase({ ...talents, [k]: Math.max(0, talents[k] - 1) })}
+                          aria-label={`${STAT_NAMES[k]} minus 1`}
+                        >
                           −
                         </button>
                         <b className="stepper-value">{talents[k] + (k === focus ? 2 : 0)}</b>
-                        <button type="button" className="btn small ghost" disabled={talents[k] >= STAT_MAX} onClick={() => setBase({ ...talents, [k]: Math.min(STAT_MAX, talents[k] + 1) })} aria-label={`${STAT_NAMES[k]} plus 1`}>
+                        <button
+                          type="button"
+                          className="btn small ghost"
+                          disabled={talents[k] >= STAT_MAX}
+                          onClick={() => setBase({ ...talents, [k]: Math.min(STAT_MAX, talents[k] + 1) })}
+                          aria-label={`${STAT_NAMES[k]} plus 1`}
+                        >
                           +
                         </button>
                       </div>

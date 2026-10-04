@@ -41,7 +41,7 @@ const NAMES: Record<ItemSlot, { pre: string[]; noun: string[]; post: string[] }>
   },
   flagship: {
     pre: ['Dreadnought', 'Battlecruiser', 'Carrier', 'Frigate', 'Star-Galleon', 'Monitor'],
-    noun: ['Indomitable', 'Wrath of Sol', 'Red Fury', 'Silent Tide', 'Ganymede\'s Pride', 'Far Watcher', 'Iron Saint', 'Nightjar'],
+    noun: ['Indomitable', 'Wrath of Sol', 'Red Fury', 'Silent Tide', "Ganymede's Pride", 'Far Watcher', 'Iron Saint', 'Nightjar'],
     post: [''],
   },
   relic: {
@@ -100,9 +100,23 @@ function makeEffects(s: Seeded, slot: ItemSlot, rarity: Rarity): ItemEffects {
 }
 
 export function makeItem(s: Seeded, id: string, opts: { slot?: ItemSlot; rarity?: Rarity; origin?: string } = {}): Item {
-  const slot = opts.slot ?? weighted<ItemSlot>(s, [['head', 2], ['weapon', 3], ['suit', 2], ['flagship', 2], ['relic', 3]]);
+  const slot =
+    opts.slot ??
+    weighted<ItemSlot>(s, [
+      ['head', 2],
+      ['weapon', 3],
+      ['suit', 2],
+      ['flagship', 2],
+      ['relic', 3],
+    ]);
   const rarity =
-    opts.rarity ?? weighted<Rarity>(s, [['common', 50], ['rare', 32], ['epic', 14], ['legendary', 4]]);
+    opts.rarity ??
+    weighted<Rarity>(s, [
+      ['common', 50],
+      ['rare', 32],
+      ['epic', 14],
+      ['legendary', 4],
+    ]);
   return {
     id,
     name: makeName(s, slot),

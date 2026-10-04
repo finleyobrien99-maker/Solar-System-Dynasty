@@ -42,7 +42,9 @@ export function LifeTab() {
               <div className="gold">{charTitle(s, r)}</div>
               <div className="muted" style={{ fontSize: '0.85rem' }}>
                 Age {ageOf(s, r)} · {planet.adjective} · {FAITHS[r.faithId]?.name}
-                <InfoDot text={`Expected lifespan around ${lifespan(r)} years, shifted by genes and implants. Health and illness matter more than age alone.`} />
+                <InfoDot
+                  text={`Expected lifespan around ${lifespan(r)} years, shifted by genes and implants. Health and illness matter more than age alone.`}
+                />
               </div>
               {regencyActive(s) && (
                 <div className="pill red" style={{ marginTop: 4 }}>
@@ -71,12 +73,15 @@ export function LifeTab() {
               <div>
                 <div style={{ fontWeight: 700 }}>House {clan.name}</div>
                 <div className="muted" style={{ fontSize: '0.82rem' }}>
-                  {planet.faction} · {['Landless', 'Governors', 'Viceroys', 'Sovereigns', 'Emperors'][clanRank(s, clan.id)]} · {s.dynasty.rulers.length} rulers so far
+                  {planet.faction} · {['Landless', 'Governors', 'Viceroys', 'Sovereigns', 'Emperors'][clanRank(s, clan.id)]} · {s.dynasty.rulers.length} rulers
+                  so far
                 </div>
               </div>
             </div>
           </div>
-          {spouse && alive(spouse) ? <CharCard c={spouse} /> : (
+          {spouse && alive(spouse) ? (
+            <CharCard c={spouse} />
+          ) : (
             <div className="card flat">
               <div className="spread">
                 <span className="muted">You are unmarried.</span>
@@ -86,11 +91,7 @@ export function LifeTab() {
               </div>
             </div>
           )}
-          {heir ? (
-            <CharCard c={heir} sub={`Heir · age ${ageOf(s, heir)}`} />
-          ) : (
-            <div className="card flat bad">No heir! If you die now, your dynasty ends.</div>
-          )}
+          {heir ? <CharCard c={heir} sub={`Heir · age ${ageOf(s, heir)}`} /> : <div className="card flat bad">No heir! If you die now, your dynasty ends.</div>}
           {lover && alive(lover) && <CharCard c={lover} sub={`Lover · House ${s.clans[lover.clanId]?.name}`} traitsMax={2} />}
         </div>
         <div className="card">
@@ -117,9 +118,13 @@ export function LifeTab() {
       </div>
       <Section title="Getting started" icon="info">
         <div className="card flat muted" style={{ fontSize: '0.88rem' }}>
-          Press <b className="gold">Age Up</b> to live through a cycle (one year). Between cycles you can marry and raise heirs (Family), forge a perfect bloodline (Bloodline),
-          manage your fleet, wars and lands (Realm), scheme against rivals across the planets (System and Actions), and kit yourself out with relics (Treasury). When you die,
-          you carry on as your heir. Open the <button className="btn small ghost" onClick={() => setUi({ panel: 'codex' })}>Codex</button> any time for the full guide.
+          Press <b className="gold">Age Up</b> to live through a cycle (one year). Between cycles you can marry and raise heirs (Family), forge a perfect
+          bloodline (Bloodline), manage your fleet, wars and lands (Realm), scheme against rivals across the planets (System and Actions), and kit yourself out
+          with relics (Treasury). When you die, you carry on as your heir. Open the{' '}
+          <button className="btn small ghost" onClick={() => setUi({ panel: 'codex' })}>
+            Codex
+          </button>{' '}
+          any time for the full guide.
         </div>
       </Section>
     </div>

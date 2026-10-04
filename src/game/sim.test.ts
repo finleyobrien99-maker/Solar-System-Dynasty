@@ -57,7 +57,10 @@ describe('dynasty growth', () => {
         const r = ruler(s);
         if (!r.spouseId && s.year - r.born >= 18) {
           generateSuitors(s, r.id);
-          acceptSuitor(s, s.suitors!.list.findIndex((x) => x.prestigeCost <= s.prestige));
+          acceptSuitor(
+            s,
+            s.suitors!.list.findIndex((x) => x.prestigeCost <= s.prestige),
+          );
         }
         for (const kid of dynastyMembers(s)) {
           if (kid.id !== r.id && !kid.spouseId && !kid.betrothedId && s.year - kid.born >= 16 && chance(bot, 0.3)) {
@@ -81,7 +84,7 @@ describe('dynasty growth', () => {
 describe('gene vault', () => {
   it('locked traits are always inherited and purged ones never', () => {
     const s = newGame(5);
-    const mk = (traits: string[]) => ({ traits } as unknown as Character);
+    const mk = (traits: string[]) => ({ traits }) as unknown as Character;
     const rng: Seeded = { seed: 3 };
     for (let i = 0; i < 300; i++) {
       const kid = inheritGenetics(rng, mk(['slow', 'gene_rot']), mk(['gene_rot']), { locked: ['genius'], purged: ['gene_rot'] });
@@ -94,7 +97,7 @@ describe('gene vault', () => {
 
   it('two brilliant parents can produce a genius', () => {
     const rng: Seeded = { seed: 11 };
-    const mk = (traits: string[]) => ({ traits } as unknown as Character);
+    const mk = (traits: string[]) => ({ traits }) as unknown as Character;
     let genius = 0;
     for (let i = 0; i < 2000; i++) if (inheritGenetics(rng, mk(['brilliant']), mk(['brilliant'])).includes('genius')) genius++;
     expect(genius).toBeGreaterThan(100);

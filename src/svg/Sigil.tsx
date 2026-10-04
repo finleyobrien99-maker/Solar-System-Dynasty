@@ -83,9 +83,23 @@ export const CHARGES: ((fill: string, line: string) => ReactElement)[] = [
     </g>
   ),
   // Trident
-  (f, l) => <path d="M 47 86 L 47 50 L 34 46 L 34 30 L 38 40 L 46 42 L 46 26 L 50 18 L 54 26 L 54 42 L 62 40 L 66 30 L 66 46 L 53 50 L 53 86 Z" fill={f} stroke={l} strokeWidth={1.5} />,
+  (f, l) => (
+    <path
+      d="M 47 86 L 47 50 L 34 46 L 34 30 L 38 40 L 46 42 L 46 26 L 50 18 L 54 26 L 54 42 L 62 40 L 66 30 L 66 46 L 53 50 L 53 86 Z"
+      fill={f}
+      stroke={l}
+      strokeWidth={1.5}
+    />
+  ),
   // Wing
-  (f, l) => <path d="M 28 80 C 26 50, 46 32, 78 30 C 70 38, 72 40, 64 44 C 70 46, 66 50, 58 52 C 64 56, 58 60, 50 60 C 52 66, 44 70, 28 80 Z" fill={f} stroke={l} strokeWidth={2} />,
+  (f, l) => (
+    <path
+      d="M 28 80 C 26 50, 46 32, 78 30 C 70 38, 72 40, 64 44 C 70 46, 66 50, 58 52 C 64 56, 58 60, 50 60 C 52 66, 44 70, 28 80 Z"
+      fill={f}
+      stroke={l}
+      strokeWidth={2}
+    />
+  ),
   // Skull
   (f, l) => (
     <g>

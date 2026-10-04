@@ -98,7 +98,10 @@ export function GameProvider({ initial, onQuit, children }: { initial: GameState
   const openChar = useCallback((id: string | undefined) => setUiState((u) => ({ ...u, charId: id, clanId: undefined })), []);
   const openClan = useCallback((id: string | undefined) => setUiState((u) => ({ ...u, clanId: id, charId: undefined })), []);
 
-  const value = useMemo(() => ({ s, act, ui, setUi, openChar, openClan, toast, replace, quit: onQuit }), [s, act, ui, setUi, openChar, openClan, toast, replace, onQuit]);
+  const value = useMemo(
+    () => ({ s, act, ui, setUi, openChar, openClan, toast, replace, quit: onQuit }),
+    [s, act, ui, setUi, openChar, openClan, toast, replace, onQuit],
+  );
 
   return (
     <GameCtx.Provider value={value}>

@@ -197,7 +197,10 @@ export const MORE_EVENTS: EventDef[] = [
       );
       let who = pool.length ? pick(s, pool) : undefined;
       if (!who) {
-        const k = pick(s, Object.values(s.clans).filter((c) => !c.isPlayer));
+        const k = pick(
+          s,
+          Object.values(s.clans).filter((c) => !c.isPlayer),
+        );
         who = createCharacter(s, {
           gender: r.gender === 'M' ? 'F' : 'M',
           born: s.year - Math.min(50, Math.max(18, ageOf(s, r) + int(s, -8, 4))),
@@ -345,7 +348,8 @@ export const MORE_EVENTS: EventDef[] = [
     weight: 1.2,
     cooldown: 12,
     when: (s) => canAct(s),
-    text: ({ r }) => `At dinner the court's holo-jester unveils a new routine: a flickering caricature of you, ${caricature(r)}. The whole court is trying very hard not to laugh.`,
+    text: ({ r }) =>
+      `At dinner the court's holo-jester unveils a new routine: a flickering caricature of you, ${caricature(r)}. The whole court is trying very hard not to laugh.`,
     choices: [
       {
         label: 'Laugh louder than anyone',
@@ -492,7 +496,8 @@ export const MORE_EVENTS: EventDef[] = [
           s.credits -= 60;
           s.fleet += n;
           const victim = chance(s, 0.25) ? pick(s, courtMembers(s)) : undefined;
-          if (victim && sicken(s, victim)) return `${n} ships rejoin the fleet after a refit. But they brought something back with them: ${victim.name} has fallen ill.`;
+          if (victim && sicken(s, victim))
+            return `${n} ships rejoin the fleet after a refit. But they brought something back with them: ${victim.name} has fallen ill.`;
           return `${n} ships rejoin the fleet after a refit. The crews never speak of where they have been.`;
         },
       },
@@ -535,7 +540,8 @@ export const MORE_EVENTS: EventDef[] = [
     setup: ({ s, data }) => {
       data.clan = rivalClan(s)?.id ?? '';
     },
-    text: () => 'The Venusian cloud-courts are hosting a masquerade: one night when every face is hidden and every secret is for sale. An invitation in silver ink has arrived for you.',
+    text: () =>
+      'The Venusian cloud-courts are hosting a masquerade: one night when every face is hidden and every secret is for sale. An invitation in silver ink has arrived for you.',
     choices: [
       {
         label: 'Go masked and listen',
@@ -660,7 +666,8 @@ export const MORE_EVENTS: EventDef[] = [
     icon: 'hunt',
     weight: 1,
     cooldown: 20,
-    text: () => 'Something vast has drifted into orbit: a void leviathan, a living creature the size of a moon-hauler, its hide glittering with ice. Your people crowd the observation decks.',
+    text: () =>
+      'Something vast has drifted into orbit: a void leviathan, a living creature the size of a moon-hauler, its hide glittering with ice. Your people crowd the observation decks.',
     choices: [
       {
         label: 'Hunt it with the fleet',
@@ -712,7 +719,11 @@ export const MORE_EVENTS: EventDef[] = [
     text: ({ data }) =>
       `Servants refuse to enter the old east wing. They swear ${data.ghost}, the late ${data.title}, walks its halls at night, flickering blue and muttering about the family accounts.`,
     choices: [
-      { label: 'Hold a vigil for their soul', hint: '+25 faith', run: ({ s, data }) => ((s.faith += 25), `Candles burn all night. ${data.ghost} is seen no more. +25 faith.`) },
+      {
+        label: 'Hold a vigil for their soul',
+        hint: '+25 faith',
+        run: ({ s, data }) => ((s.faith += 25), `Candles burn all night. ${data.ghost} is seen no more. +25 faith.`),
+      },
       {
         label: 'Send in the engineers',
         hint: 'Science check',
@@ -778,7 +789,11 @@ export const MORE_EVENTS: EventDef[] = [
     text: ({ data }) =>
       `${data.name} sweeps into court in furs and rings. The ice venture struck a frozen sea of helium-3, and ${data.gender === 'M' ? 'he' : 'she'} has come to repay the loan, with interest.`,
     choices: [
-      { label: 'Take the money', hint: '+400 credits', run: ({ s }) => ((s.credits += 400), 'Four hundred credits, counted out on the throne-room floor. +400 credits.') },
+      {
+        label: 'Take the money',
+        hint: '+400 credits',
+        run: ({ s }) => ((s.credits += 400), 'Four hundred credits, counted out on the throne-room floor. +400 credits.'),
+      },
       {
         label: 'Tell them to keep it',
         hint: '+30 prestige, a loyal friend',
@@ -965,7 +980,8 @@ export const MORE_EVENTS: EventDef[] = [
     weight: 1.2,
     cooldown: 10,
     when: (s) => canAct(s) && s.credits >= 100,
-    text: () => 'A Cererian merchant-captain with a gold tooth challenges you to void-dice in front of the whole court. "Unless a lord of your standing is afraid of a little wager?"',
+    text: () =>
+      'A Cererian merchant-captain with a gold tooth challenges you to void-dice in front of the whole court. "Unless a lord of your standing is afraid of a little wager?"',
     choices: [
       {
         label: 'Bet 100 credits',

@@ -28,9 +28,13 @@ function Seat({ role }: { role: CouncilRole }) {
           </div>
         </div>
       ) : (
-        <div className="dim" style={{ fontSize: '0.85rem' }}>Seat empty. {def.desc}</div>
+        <div className="dim" style={{ fontSize: '0.85rem' }}>
+          Seat empty. {def.desc}
+        </div>
       )}
-      <div className="good" style={{ fontSize: '0.8rem' }}>{c ? def.effect(v) : def.desc}</div>
+      <div className="good" style={{ fontSize: '0.8rem' }}>
+        {c ? def.effect(v) : def.desc}
+      </div>
       <div className="row wrap" style={{ gap: 6 }}>
         <select
           id={`council-${role}`}

@@ -1,20 +1,7 @@
 // Family management: marriages, betrothals, tutors, cybernetics, laws.
 
 import { createCharacter, randomPersonality } from './character';
-import {
-  ageOf,
-  alive,
-  ch,
-  clanRank,
-  cooldownReady,
-  effStats,
-  fullName,
-  log,
-  notice,
-  playerClan,
-  ruler,
-  setCooldown,
-} from './core';
+import { ageOf, alive, ch, clanRank, cooldownReady, effStats, fullName, log, notice, playerClan, ruler, setCooldown } from './core';
 import { canAfford, costText, pay, type Cost } from './genetics';
 import { chance, int, pick } from './rng';
 import { addTrait, TRAITS } from './traits';

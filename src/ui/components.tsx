@@ -147,18 +147,57 @@ export function Btn({
 
 export function CostTag({ cost }: { cost: Cost }) {
   const parts: ReactNode[] = [];
-  if (cost.credits) parts.push(<span key="c" className="pill gold"><Icon name="credits" size={12} />{cost.credits}</span>);
-  if (cost.prestige) parts.push(<span key="p" className="pill" style={{ color: '#ffb4f0' }}><Icon name="prestige" size={12} />{cost.prestige}</span>);
-  if (cost.faith) parts.push(<span key="f" className="pill" style={{ color: '#ffb36b' }}><Icon name="faith" size={12} />{cost.faith}</span>);
-  if (!parts.length) parts.push(<span key="free" className="pill green">free</span>);
-  return <span className="row wrap" style={{ gap: 4 }}>{parts}</span>;
+  if (cost.credits)
+    parts.push(
+      <span key="c" className="pill gold">
+        <Icon name="credits" size={12} />
+        {cost.credits}
+      </span>,
+    );
+  if (cost.prestige)
+    parts.push(
+      <span key="p" className="pill" style={{ color: '#ffb4f0' }}>
+        <Icon name="prestige" size={12} />
+        {cost.prestige}
+      </span>,
+    );
+  if (cost.faith)
+    parts.push(
+      <span key="f" className="pill" style={{ color: '#ffb36b' }}>
+        <Icon name="faith" size={12} />
+        {cost.faith}
+      </span>,
+    );
+  if (!parts.length)
+    parts.push(
+      <span key="free" className="pill green">
+        free
+      </span>,
+    );
+  return (
+    <span className="row wrap" style={{ gap: 4 }}>
+      {parts}
+    </span>
+  );
 }
 
 export { costText };
 
 // ── Modal ─────────────────────────────────────────────────────────────────
 
-export function Modal({ title, onClose, children, wide, icon }: { title: ReactNode; onClose?: () => void; children: ReactNode; wide?: boolean; icon?: string }) {
+export function Modal({
+  title,
+  onClose,
+  children,
+  wide,
+  icon,
+}: {
+  title: ReactNode;
+  onClose?: () => void;
+  children: ReactNode;
+  wide?: boolean;
+  icon?: string;
+}) {
   return (
     <div className="overlay" onClick={onClose} role="dialog" aria-modal="true">
       <div className={`modal ${wide ? 'wide' : ''}`} onClick={(e) => e.stopPropagation()}>
@@ -254,7 +293,20 @@ export function StatBlock({ s, c }: { s: GameState; c: Character }) {
   return (
     <div className="stats">
       {STAT_KEYS.map((k) => (
-        <Tip key={k} text={<><b>{STAT_NAMES[k]}: {st[k]}</b><div>{STAT_HELP[k]}</div><div className="muted">Base {c.base[k]}, the rest comes from traits{c.id === s.rulerId ? ', items and your homeworld' : ''}.</div></>}>
+        <Tip
+          key={k}
+          text={
+            <>
+              <b>
+                {STAT_NAMES[k]}: {st[k]}
+              </b>
+              <div>{STAT_HELP[k]}</div>
+              <div className="muted">
+                Base {c.base[k]}, the rest comes from traits{c.id === s.rulerId ? ', items and your homeworld' : ''}.
+              </div>
+            </>
+          }
+        >
           <div className="stat" style={{ width: '100%' }}>
             <div className="v">{st[k]}</div>
             <div className="k">
@@ -273,10 +325,22 @@ export function HealthBar({ s, c }: { s: GameState; c: Character }) {
   const pct = Math.max(0, Math.min(100, (c.health / 100) * 100));
   const cls = c.health < 30 ? 'danger' : c.health < 60 ? 'warn' : '';
   return (
-    <Tip text={<><b>Health {Math.round(c.health)}</b> ({healthLabel(c.health)})<div>Health drifts toward a maximum of {mh}, which falls with age. Below 30 the risk of death climbs fast. Rest, gene therapy, Robust genes and Nano-Immune implants all help.</div></>}>
+    <Tip
+      text={
+        <>
+          <b>Health {Math.round(c.health)}</b> ({healthLabel(c.health)})
+          <div>
+            Health drifts toward a maximum of {mh}, which falls with age. Below 30 the risk of death climbs fast. Rest, gene therapy, Robust genes and
+            Nano-Immune implants all help.
+          </div>
+        </>
+      }
+    >
       <div style={{ width: '100%' }}>
         <div className="spread" style={{ fontSize: '0.75rem' }}>
-          <span className="muted row" style={{ gap: 4 }}><Icon name="health" size={12} /> Health</span>
+          <span className="muted row" style={{ gap: 4 }}>
+            <Icon name="health" size={12} /> Health
+          </span>
           <span>{healthLabel(c.health)}</span>
         </div>
         <div className={`bar ${cls}`}>
@@ -305,16 +369,24 @@ export function CharCard({ c, sub, size = 56, extra, traitsMax = 4 }: { c: Chara
   const rel = relationTo(s, c);
   const title = charTitle(s, c);
   return (
-    <div className={`char ${alive(c) ? '' : 'dead'}`} onClick={() => openChar(c.id)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && openChar(c.id)}>
+    <div
+      className={`char ${alive(c) ? '' : 'dead'}`}
+      onClick={() => openChar(c.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && openChar(c.id)}
+    >
       <Face c={c} size={size} />
       <div className="meta">
         <div className="nm">
           {fullName(s, c)}
-          {c.bastard && <span className="pill red" style={{ marginLeft: 6 }}>Bastard</span>}
+          {c.bastard && (
+            <span className="pill red" style={{ marginLeft: 6 }}>
+              Bastard
+            </span>
+          )}
         </div>
-        <div className="sub">
-          {sub ?? [rel, title, alive(c) ? `age ${ageOf(s, c)}` : `died ${c.died} (${c.deathCause})`].filter(Boolean).join(' · ')}
-        </div>
+        <div className="sub">{sub ?? [rel, title, alive(c) ? `age ${ageOf(s, c)}` : `died ${c.died} (${c.deathCause})`].filter(Boolean).join(' · ')}</div>
         {traitsMax > 0 && (
           <div style={{ marginTop: 4 }}>
             <TraitList c={c} s={s} max={traitsMax} />

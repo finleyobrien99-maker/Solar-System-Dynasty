@@ -32,9 +32,7 @@ export function isRival(clan: Clan | undefined): boolean {
 export function memoryTick(s: GameState): void {
   for (const clan of Object.values(s.clans)) {
     if (!clan.memories?.length) continue;
-    clan.memories = clan.memories
-      .map((m) => ({ ...m, value: m.value * (1 - m.decay) }))
-      .filter((m) => Math.abs(m.value) >= 2);
+    clan.memories = clan.memories.map((m) => ({ ...m, value: m.value * (1 - m.decay) })).filter((m) => Math.abs(m.value) >= 2);
   }
 }
 

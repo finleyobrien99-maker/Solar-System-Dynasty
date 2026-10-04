@@ -52,7 +52,11 @@ function GeneLadders() {
                 return (
                   <span key={t.id} className="row" style={{ gap: 3, opacity: n || s.dynasty.locked.includes(t.id) ? 1 : 0.4 }}>
                     <TraitChip id={t.id} s={s} />
-                    {n > 0 && <span className="muted" style={{ fontSize: '0.72rem' }}>×{n}</span>}
+                    {n > 0 && (
+                      <span className="muted" style={{ fontSize: '0.72rem' }}>
+                        ×{n}
+                      </span>
+                    )}
                   </span>
                 );
               })}
@@ -146,16 +150,18 @@ export function BloodlineTab() {
               Bloodline grade
               <InfoDot text="Average genetic tier across your living dynasty, plus a bonus for every good gene locked in. Climb from F to S by breeding, locking and purging." />
             </div>
-            <div className="dim" style={{ fontSize: '0.75rem' }}>score {score}</div>
+            <div className="dim" style={{ fontSize: '0.75rem' }}>
+              score {score}
+            </div>
           </div>
           <div className="grow stack" style={{ gap: 8 }}>
             <h2 style={{ margin: 0 }}>
               <Icon name="dna" size={18} /> The Gene Vault
             </h2>
             <div className="muted" style={{ fontSize: '0.88rem' }}>
-              Lock a trait and <b className="gold">every child born into your dynasty will have it</b>, forever, across every heir and descendant. Purge a trait and no dynasty child will
-              ever inherit it. Genetic locks are sequenced from a living carrier, so breed for a gene first, then lock it. Personality locks are drilled in through
-              conditioning, which also reshapes your kids under 16 right away.
+              Lock a trait and <b className="gold">every child born into your dynasty will have it</b>, forever, across every heir and descendant. Purge a trait
+              and no dynasty child will ever inherit it. Genetic locks are sequenced from a living carrier, so breed for a gene first, then lock it. Personality
+              locks are drilled in through conditioning, which also reshapes your kids under 16 right away.
             </div>
             {isVip(s) ? (
               <div className="spread">
@@ -172,7 +178,12 @@ export function BloodlineTab() {
                     <span className="muted"> (each lock or purge uses one)</span>
                   </span>
                   <span className="row" style={{ gap: 6 }}>
-                    <Btn small icon="plus" reason={s.dynasty.slots >= MAX_SLOTS ? 'Vault is at maximum size' : canAfford(s, sc) ? null : 'Not enough resources'} onClick={() => act((d) => buySlot(d))}>
+                    <Btn
+                      small
+                      icon="plus"
+                      reason={s.dynasty.slots >= MAX_SLOTS ? 'Vault is at maximum size' : canAfford(s, sc) ? null : 'Not enough resources'}
+                      onClick={() => act((d) => buySlot(d))}
+                    >
                       Add slot
                     </Btn>
                     <CostTag cost={sc} />
@@ -190,16 +201,28 @@ export function BloodlineTab() {
       <Section title="How genes pass on" icon="info">
         <div className="card flat muted" style={{ fontSize: '0.86rem' }}>
           <ul style={{ margin: 0, paddingLeft: 18 }}>
-            <li>One parent carries a gene: <b>40%</b> chance the child gets it. Both parents carry the same gene: <b>75%</b>.</li>
-            <li>Both parents share a tier (e.g. Brilliant + Brilliant): <b>12%</b> chance the child climbs a rung (Genius).</li>
-            <li>Every birth has a <b>5%</b> chance of a random mutation. Rare genes like Psionic Ascendant and Ageless mostly appear this way.</li>
-            <li>Personality traits pass on by upbringing (<b>15%</b> each), the rest form at 16, shaped by education.</li>
+            <li>
+              One parent carries a gene: <b>40%</b> chance the child gets it. Both parents carry the same gene: <b>75%</b>.
+            </li>
+            <li>
+              Both parents share a tier (e.g. Brilliant + Brilliant): <b>12%</b> chance the child climbs a rung (Genius).
+            </li>
+            <li>
+              Every birth has a <b>5%</b> chance of a random mutation. Rare genes like Psionic Ascendant and Ageless mostly appear this way.
+            </li>
+            <li>
+              Personality traits pass on by upbringing (<b>15%</b> each), the rest form at 16, shaped by education.
+            </li>
             <li>Locked traits override all of this for dynasty-born children. Spouses from other houses are not affected, so pick their genes carefully.</li>
           </ul>
         </div>
       </Section>
 
-      <Section title="Gene ladders" icon="dna" info="Each ladder is one gene group. Only one tier from a group can be carried at a time. Numbers show how many living dynasty members carry it.">
+      <Section
+        title="Gene ladders"
+        icon="dna"
+        info="Each ladder is one gene group. Only one tier from a group can be carried at a time. Numbers show how many living dynasty members carry it."
+      >
         <GeneLadders />
       </Section>
 

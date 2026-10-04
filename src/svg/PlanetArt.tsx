@@ -88,7 +88,16 @@ function buildArt(planetId: string, r: number): Art {
         const [x, y] = inDisk(s, r * 0.7);
         out.push(<path key={`b${i}`} d={blob(s, x, y, r * (0.2 + rand(s) * 0.25))} fill={shade(base, -0.28)} opacity={0.55} />);
       }
-      out.push(<path key="vm" d={`M ${-r * 0.6} ${r * 0.05} C ${-r * 0.2} ${-r * 0.05}, ${r * 0.1} ${r * 0.15}, ${r * 0.55} ${r * 0.02}`} stroke={shade(base, -0.4)} strokeWidth={2.2} fill="none" opacity={0.7} />);
+      out.push(
+        <path
+          key="vm"
+          d={`M ${-r * 0.6} ${r * 0.05} C ${-r * 0.2} ${-r * 0.05}, ${r * 0.1} ${r * 0.15}, ${r * 0.55} ${r * 0.02}`}
+          stroke={shade(base, -0.4)}
+          strokeWidth={2.2}
+          fill="none"
+          opacity={0.7}
+        />,
+      );
       out.push(<ellipse key="pc" cx={0} cy={-r * 0.92} rx={r * 0.45} ry={r * 0.16} fill="#f5efe8" opacity={0.9} />);
       out.push(...craters(s, r, base, 6));
       break;
@@ -99,7 +108,16 @@ function buildArt(planetId: string, r: number): Art {
       }
       for (let i = 0; i < 4; i++) {
         const [x, y] = inDisk(s, r * 0.6);
-        out.push(<path key={`sw${i}`} d={`M ${x - 12} ${y} Q ${x} ${y - 8} ${x + 12} ${y} Q ${x} ${y + 4} ${x - 6} ${y + 1}`} stroke={shade(acc, 0.3)} strokeWidth={2} fill="none" opacity={0.5} />);
+        out.push(
+          <path
+            key={`sw${i}`}
+            d={`M ${x - 12} ${y} Q ${x} ${y - 8} ${x + 12} ${y} Q ${x} ${y + 4} ${x - 6} ${y + 1}`}
+            stroke={shade(acc, 0.3)}
+            strokeWidth={2}
+            fill="none"
+            opacity={0.5}
+          />,
+        );
       }
       break;
     case 'ocean':
@@ -112,7 +130,18 @@ function buildArt(planetId: string, r: number): Art {
       out.push(<ellipse key="sp" cx={0} cy={r * 0.95} rx={r * 0.55} ry={r * 0.16} fill="#f4f8fb" />);
       for (let i = 0; i < 7; i++) {
         const [x, y] = inDisk(s, r * 0.85);
-        out.push(<ellipse key={`cl${i}`} cx={x} cy={y} rx={6 + rand(s) * 10} ry={1.6 + rand(s) * 2} fill="#ffffff" opacity={0.55} transform={`rotate(${(rand(s) - 0.5) * 30} ${x} ${y})`} />);
+        out.push(
+          <ellipse
+            key={`cl${i}`}
+            cx={x}
+            cy={y}
+            rx={6 + rand(s) * 10}
+            ry={1.6 + rand(s) * 2}
+            fill="#ffffff"
+            opacity={0.55}
+            transform={`rotate(${(rand(s) - 0.5) * 30} ${x} ${y})`}
+          />,
+        );
       }
       break;
     case 'asteroid': {
@@ -197,7 +226,17 @@ function PlanetArtImpl({ planetId, size = 80, className, ring, dim }: PlanetArtP
     rings && (
       <g transform={`rotate(${rings.tilt})`} clipPath={`url(#${half}${uid})`}>
         {[0, 1, 2, 3].map((i) => (
-          <ellipse key={i} cx={0} cy={0} rx={rings.rx - i * 4} ry={rings.ry - i * 1} fill="none" stroke={shade(rings.color, i % 2 ? -0.15 : 0.1)} strokeWidth={i === 1 ? 4 : 2.5} opacity={0.85} />
+          <ellipse
+            key={i}
+            cx={0}
+            cy={0}
+            rx={rings.rx - i * 4}
+            ry={rings.ry - i * 1}
+            fill="none"
+            stroke={shade(rings.color, i % 2 ? -0.15 : 0.1)}
+            strokeWidth={i === 1 ? 4 : 2.5}
+            opacity={0.85}
+          />
         ))}
       </g>
     );

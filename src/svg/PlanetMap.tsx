@@ -48,8 +48,22 @@ function PlanetMapImpl({ s, planetId, selected, onSelect }: Props) {
           const poly = cells[i];
           if (!poly || poly.length < 3) return null;
           return (
-            <g key={r.id} className="region" onClick={() => onSelect(r.id)} role="button" tabIndex={0} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)} aria-label={`${r.name}, held by House ${clan?.name}`}>
-              <path d={polyPath(poly)} fill={clan?.color ?? '#555'} fillOpacity={selected === r.id ? 0.7 : 0.48} stroke={shade(clan?.color ?? '#555', -0.55)} strokeWidth={1.5} />
+            <g
+              key={r.id}
+              className="region"
+              onClick={() => onSelect(r.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onSelect(r.id)}
+              aria-label={`${r.name}, held by House ${clan?.name}`}
+            >
+              <path
+                d={polyPath(poly)}
+                fill={clan?.color ?? '#555'}
+                fillOpacity={selected === r.id ? 0.7 : 0.48}
+                stroke={shade(clan?.color ?? '#555', -0.55)}
+                strokeWidth={1.5}
+              />
               {s.claims.includes(r.id) && <path d={polyPath(poly)} fill="url(#claimHatch)" />}
               {mine && <path d={polyPath(poly)} fill="none" stroke="#ffd166" strokeWidth={3} strokeDasharray="6 4" />}
               {warTargets.has(r.id) && <path d={polyPath(poly)} fill="none" stroke="#ff4d4d" strokeWidth={3} />}
@@ -64,7 +78,14 @@ function PlanetMapImpl({ s, planetId, selected, onSelect }: Props) {
         const [x, y] = centroid(poly);
         return (
           <g key={`l${r.id}`} pointerEvents="none">
-            {r.capital && <polygon points={`${x - 8},${y - 12} ${x - 9},${y - 22} ${x - 4},${y - 17} ${x},${y - 24} ${x + 4},${y - 17} ${x + 9},${y - 22} ${x + 8},${y - 12}`} fill="#ffd166" stroke="#5b4300" strokeWidth={1} />}
+            {r.capital && (
+              <polygon
+                points={`${x - 8},${y - 12} ${x - 9},${y - 22} ${x - 4},${y - 17} ${x},${y - 24} ${x + 4},${y - 17} ${x + 9},${y - 22} ${x + 8},${y - 12}`}
+                fill="#ffd166"
+                stroke="#5b4300"
+                strokeWidth={1}
+              />
+            )}
             <text x={x} y={y + 2} textAnchor="middle" className="region-label">
               {r.name}
             </text>

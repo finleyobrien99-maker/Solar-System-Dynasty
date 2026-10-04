@@ -43,9 +43,7 @@ export function TitleScreen({ onNew, onLoad }: { onNew: () => void; onLoad: (s: 
     <div className="title-screen">
       <TitleArt />
       <h1>SOLAR DYNASTY</h1>
-      <div className="tag">
-        Rule a house among the ten worlds of Sol. Marry, scheme, wage war and forge a bloodline so perfect it outlives the stars.
-      </div>
+      <div className="tag">Rule a house among the ten worlds of Sol. Marry, scheme, wage war and forge a bloodline so perfect it outlives the stars.</div>
       <div className="title-menu">
         {auto && !auto.summary.gameOver && (
           <button
@@ -75,7 +73,9 @@ export function TitleScreen({ onNew, onLoad }: { onNew: () => void; onLoad: (s: 
         {err && <div className="bad">{err}</div>}
       </div>
       <div className="dim" style={{ fontSize: '0.75rem' }}>
-        {inApp ? 'Saves are kept on this phone. Export them from the menu to back them up.' : 'Saves live in this browser. Export them from the menu to keep them safe.'}
+        {inApp
+          ? 'Saves are kept on this phone. Export them from the menu to back them up.'
+          : 'Saves live in this browser. Export them from the menu to keep them safe.'}
       </div>
       {panel === 'saves' && <SavesPanel onLoad={onLoad} onClose={() => setPanel(null)} />}
       {panel === 'codex' && <CodexModal onClose={() => setPanel(null)} />}

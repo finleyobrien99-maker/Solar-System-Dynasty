@@ -69,7 +69,7 @@ export function warBlocker(s: GameState, region: Region): string | null {
   if (s.wars.length >= 3) return 'You are already fighting three wars.';
   if (atWarWith(s, region.owner)) return 'Already at war with this clan.';
   const r = ruler(s);
-  if ((s.year - r.born) < 16) return 'A regency council cannot declare war.';
+  if (s.year - r.born < 16) return 'A regency council cannot declare war.';
   const enemy = s.clans[region.owner];
   if (!enemy) return 'Nobody holds this region.';
   return null;
@@ -156,7 +156,7 @@ export function playerSide(s: GameState, war: War, personal: boolean): Side {
   let mod = 1 + traitSum(r, 'fleetPct') + itemSum(s, 'fleetPct') + councilStat(s, 'admiral') * 0.01;
   if (homePlanet(s) === 'mars') mod += 0.15;
   if (personal) mod += 0.15;
-  if ((s.year - r.born) < 16) mod -= 0.2; // regency
+  if (s.year - r.born < 16) mod -= 0.2; // regency
   return { ships, strength: ships * (1 + cmd * 0.04) * mod, helpers };
 }
 
@@ -200,7 +200,7 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
   const war = s.wars.find((w) => w.id === warId);
   if (!war) return undefined;
   const enemy = s.clans[war.enemy];
-  const personal = !aiInitiated && s.leadPersonally && (s.year - ruler(s).born) >= 16;
+  const personal = !aiInitiated && s.leadPersonally && s.year - ruler(s).born >= 16;
   const ps = playerSide(s, war, personal);
   const es = enemySide(s, war);
   const pStr = ps.strength * range(s, 0.75, 1.25);
@@ -373,8 +373,7 @@ export function tickPlayerWars(s: GameState): void {
     const enemy = s.clans[war.enemy];
     const target = s.regions[war.target];
     const enemyGone = !enemy || clanRegions(s, enemy.id).length === 0;
-    const targetMoved =
-      target && ((war.playerAttacker && target.owner !== war.enemy) || (!war.playerAttacker && target.owner !== s.playerClanId));
+    const targetMoved = target && ((war.playerAttacker && target.owner !== war.enemy) || (!war.playerAttacker && target.owner !== s.playerClanId));
     const indepMoot = war.cb === 'independence' && liegeOf(s, s.playerClanId) !== war.enemy;
     if (enemyGone || targetMoved || indepMoot) {
       s.wars = s.wars.filter((w) => w.id !== war.id);

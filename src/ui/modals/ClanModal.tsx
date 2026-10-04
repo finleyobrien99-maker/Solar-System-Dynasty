@@ -41,7 +41,8 @@ export function ClanModal({ id }: { id: string }) {
         <div className="grow stack" style={{ gap: 4 }}>
           <div className="gold">{head ? clanTitle(s, id, head.gender) : ''}</div>
           <div className="muted" style={{ fontSize: '0.86rem' }}>
-            {PLANET_BY_ID[clan.planetId].faction} · <span style={{ color: FAITHS[clan.faithId].color }}>{FAITHS[clan.faithId].name}</span> · founded {clan.founded}
+            {PLANET_BY_ID[clan.planetId].faction} · <span style={{ color: FAITHS[clan.faithId].color }}>{FAITHS[clan.faithId].name}</span> · founded{' '}
+            {clan.founded}
           </div>
           <div className="row wrap">
             {!mine && <Opinion v={clan.opinion} />}
@@ -75,10 +76,16 @@ export function ClanModal({ id }: { id: string }) {
       {!mine && (
         <div className="card flat" style={{ marginTop: 12 }}>
           <h4>
-            Diplomacy <InfoDot text="Gifts raise opinion. Allies send 30% of their fleet to your wars. Viceroys and above can demand fealty from weaker clans. Insulting starts a blood feud: a free reason for war, both ways." />
+            Diplomacy{' '}
+            <InfoDot text="Gifts raise opinion. Allies send 30% of their fleet to your wars. Viceroys and above can demand fealty from weaker clans. Insulting starts a blood feud: a free reason for war, both ways." />
           </h4>
           <div className="btn-row">
-            <Btn small icon="gift" reason={(s.cooldowns[`gift:${id}`] ?? 0) > s.year ? 'Already sent this cycle' : s.credits < GIFT_COST ? 'Need 100 credits' : null} onClick={() => act((d) => sendGift(d, id))}>
+            <Btn
+              small
+              icon="gift"
+              reason={(s.cooldowns[`gift:${id}`] ?? 0) > s.year ? 'Already sent this cycle' : s.credits < GIFT_COST ? 'Need 100 credits' : null}
+              onClick={() => act((d) => sendGift(d, id))}
+            >
               Send gift (100)
             </Btn>
             {clan.allied ? (
@@ -86,14 +93,25 @@ export function ClanModal({ id }: { id: string }) {
                 Break alliance
               </Btn>
             ) : (
-              <Btn small icon="peace" reason={atWar ? 'At war' : (s.cooldowns[`ally:${id}`] ?? 0) > s.year ? 'Asked this cycle' : null} onClick={() => act((d) => proposeAlliance(d, id))}>
+              <Btn
+                small
+                icon="peace"
+                reason={atWar ? 'At war' : (s.cooldowns[`ally:${id}`] ?? 0) > s.year ? 'Asked this cycle' : null}
+                onClick={() => act((d) => proposeAlliance(d, id))}
+              >
                 Propose alliance ({Math.round(allianceChance(s, id) * 100)}%)
               </Btn>
             )}
             <Btn small icon="crown" reason={vassalizeBlocker(s, id)} onClick={() => act((d) => demandVassalage(d, id))}>
               Demand fealty ({Math.round(vassalizeChance(s, id) * 100)}%)
             </Btn>
-            <Btn small kind="danger" reason={s.feuds.includes(id) ? 'Already feuding' : null} confirm="Tap again to insult" onClick={() => act((d) => insult(d, id))}>
+            <Btn
+              small
+              kind="danger"
+              reason={s.feuds.includes(id) ? 'Already feuding' : null}
+              confirm="Tap again to insult"
+              onClick={() => act((d) => insult(d, id))}
+            >
               Insult
             </Btn>
           </div>

@@ -23,7 +23,7 @@ export const ROLES: Record<CouncilRole, RoleDef> = {
   admiral: {
     name: 'Admiral',
     stat: 'cmd',
-    desc: 'Runs the fleet. Commands any battle you don\'t lead in person.',
+    desc: "Runs the fleet. Commands any battle you don't lead in person.",
     effect: (v) => `+${v}% fleet strength; uses their Command when it beats yours`,
   },
   treasurer: {

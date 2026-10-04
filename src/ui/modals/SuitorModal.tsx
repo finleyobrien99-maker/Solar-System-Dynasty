@@ -55,7 +55,9 @@ export function SuitorModal() {
                     {clan && <span className="pill">rank {clanRank(s, clan.id)}</span>}
                   </div>
                   <div style={{ fontSize: '0.78rem', marginTop: 4 }}>
-                    <span className="good">{goodGenes} good gene{goodGenes === 1 ? '' : 's'}</span>
+                    <span className="good">
+                      {goodGenes} good gene{goodGenes === 1 ? '' : 's'}
+                    </span>
                     {badGenes > 0 && <span className="bad"> · {badGenes} bad</span>}
                   </div>
                 </div>

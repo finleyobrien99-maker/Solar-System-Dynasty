@@ -11,18 +11,46 @@ import { Btn } from '../components';
 import { useGame } from '../store';
 import { TraitPicker } from './TraitPicker';
 
-function Stepper({ label, value, onChange, min, max, steps = [1] }: { label: string; value: number; onChange: (v: number) => void; min: number; max: number; steps?: number[] }) {
+function Stepper({
+  label,
+  value,
+  onChange,
+  min,
+  max,
+  steps = [1],
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min: number;
+  max: number;
+  steps?: number[];
+}) {
   return (
     <div className="stepper">
       <span className="stepper-label">{label}</span>
       {[...steps].reverse().map((d) => (
-        <button key={`-${d}`} type="button" className="btn small ghost" disabled={value <= min} onClick={() => onChange(value - d)} aria-label={`${label} minus ${d}`}>
+        <button
+          key={`-${d}`}
+          type="button"
+          className="btn small ghost"
+          disabled={value <= min}
+          onClick={() => onChange(value - d)}
+          aria-label={`${label} minus ${d}`}
+        >
           −{d > 1 ? d : ''}
         </button>
       ))}
       <b className="stepper-value">{value}</b>
       {steps.map((d) => (
-        <button key={`+${d}`} type="button" className="btn small ghost" disabled={value >= max} onClick={() => onChange(value + d)} aria-label={`${label} plus ${d}`}>
+        <button
+          key={`+${d}`}
+          type="button"
+          className="btn small ghost"
+          disabled={value >= max}
+          onClick={() => onChange(value + d)}
+          aria-label={`${label} plus ${d}`}
+        >
           +{d > 1 ? d : ''}
         </button>
       ))}
@@ -38,14 +66,22 @@ export function VipEditor({ c }: { c: Character }) {
     <details className="vip-box" style={{ marginTop: 12 }}>
       <summary>
         <Icon name="relic" size={15} /> VIP editor
-        <span className="muted" style={{ fontWeight: 400 }}> · change anything about {c.name}</span>
+        <span className="muted" style={{ fontWeight: 400 }}>
+          {' '}
+          · change anything about {c.name}
+        </span>
       </summary>
       <div className="stack" style={{ gap: 12, marginTop: 10 }}>
         <div className="btn-row">
-          <Btn small kind="primary" icon="prestige" onClick={() => {
+          <Btn
+            small
+            kind="primary"
+            icon="prestige"
+            onClick={() => {
               act((d) => makeGodTier(d, c.id));
               toast(`${c.name} is now god-tier.`);
-            }}>
+            }}
+          >
             Make god-tier
           </Btn>
           {living && (
@@ -83,10 +119,20 @@ export function VipEditor({ c }: { c: Character }) {
             <Stepper label="Age" value={ageOf(s, c)} min={minAge(s, c)} max={MAX_AGE} steps={[1, 10]} onChange={(v) => act((d) => setAge(d, c.id, v))} />
           )}
           {STAT_KEYS.map((k) => (
-            <Stepper key={k} label={STAT_NAMES[k]} value={c.base[k]} min={0} max={STAT_MAX} steps={[1, 5]} onChange={(v) => act((d) => setStat(d, c.id, k, v))} />
+            <Stepper
+              key={k}
+              label={STAT_NAMES[k]}
+              value={c.base[k]}
+              min={0}
+              max={STAT_MAX}
+              steps={[1, 5]}
+              onChange={(v) => act((d) => setStat(d, c.id, k, v))}
+            />
           ))}
         </div>
-        <div className="dim" style={{ fontSize: '0.74rem' }}>Stats here are natural talent (0 to {STAT_MAX}). Traits, education and items add on top.</div>
+        <div className="dim" style={{ fontSize: '0.74rem' }}>
+          Stats here are natural talent (0 to {STAT_MAX}). Traits, education and items add on top.
+        </div>
 
         <TraitPicker selected={c.traits} onToggle={(id) => act((d) => toggleTrait(d, c.id, id))} />
       </div>

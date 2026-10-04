@@ -71,9 +71,7 @@ export function inheritGenetics(s: Seeded, father: Character | undefined, mother
 
   // Random mutation keeps the gene pool interesting.
   if (chance(s, 0.05)) {
-    const options = GENETIC.filter((t) => !purged.includes(t.id) && !out.some((x) => conflicts(x, t.id))).map(
-      (t) => [t.id, t.mutation ?? 1] as const,
-    );
+    const options = GENETIC.filter((t) => !purged.includes(t.id) && !out.some((x) => conflicts(x, t.id))).map((t) => [t.id, t.mutation ?? 1] as const);
     if (options.length) out = addTrait(out, weighted(s, options));
   }
   return out;
@@ -260,7 +258,9 @@ export function vaultCandidates(s: GameState): string[] {
 
 /** Rogue gene-splice: grant a random good genetic trait (used by events). */
 export function randomGoodGene(s: Seeded, existing: string[]): string | undefined {
-  const opts = GENETIC.filter((t) => t.good && !existing.includes(t.id) && !existing.some((x) => conflicts(x, t.id) && (TRAITS[x].level ?? 0) >= (t.level ?? 0)));
+  const opts = GENETIC.filter(
+    (t) => t.good && !existing.includes(t.id) && !existing.some((x) => conflicts(x, t.id) && (TRAITS[x].level ?? 0) >= (t.level ?? 0)),
+  );
   if (!opts.length) return undefined;
   return pick(s, opts).id;
 }

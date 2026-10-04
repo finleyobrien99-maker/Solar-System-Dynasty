@@ -77,7 +77,14 @@ export const ACTIVITIES: Record<ActivityKind, ActivityDef> = {
   },
 };
 
-const SHRINES = ['the Dead Star Shrine of Vulcanoid', 'the Olympus Basilica', 'the Europan Abyss', 'the Machine-Saint\'s Tomb on Titan', 'the Far Dark Obelisk of Charon', 'the First Landing Site on Luna'];
+const SHRINES = [
+  'the Dead Star Shrine of Vulcanoid',
+  'the Olympus Basilica',
+  'the Europan Abyss',
+  "the Machine-Saint's Tomb on Titan",
+  'the Far Dark Obelisk of Charon',
+  'the First Landing Site on Luna',
+];
 
 export function activityBlocker(s: GameState, kind: ActivityKind): string | null {
   if (ageOf(s, ruler(s)) < 16) return 'Regency: the council forbids it.';
@@ -110,7 +117,9 @@ export function doActivity(s: GameState, kind: ActivityKind): void {
         text += ' Someone slipped toxin into your wine. You survive, but barely.';
         tone = 'bad';
       } else if (roll === 1 && !r.loverId) {
-        const guests = Object.values(s.characters).filter((c) => alive(c) && c.gender !== r.gender && ageOf(s, c) >= 18 && ageOf(s, c) < 50 && c.clanId !== s.playerClanId && !c.spouseId);
+        const guests = Object.values(s.characters).filter(
+          (c) => alive(c) && c.gender !== r.gender && ageOf(s, c) >= 18 && ageOf(s, c) < 50 && c.clanId !== s.playerClanId && !c.spouseId,
+        );
         if (guests.length) {
           const g = pick(s, guests);
           r.loverId = g.id;
@@ -203,7 +212,7 @@ export function doActivity(s: GameState, kind: ActivityKind): void {
     case 'study': {
       const k = pick(s, ['dip', 'cmd', 'eco', 'int', 'sci'] as const);
       r.base[k] += 1;
-      text = `Months among the archives sharpened your mind. +1 ${({ dip: 'Diplomacy', cmd: 'Command', eco: 'Economy', int: 'Intrigue', sci: 'Science' })[k]}.`;
+      text = `Months among the archives sharpened your mind. +1 ${{ dip: 'Diplomacy', cmd: 'Command', eco: 'Economy', int: 'Intrigue', sci: 'Science' }[k]}.`;
       if (chance(s, 0.2)) {
         r.base.sci += 1;
         text += ' You also picked up some proper science. +1 Science.';
@@ -230,7 +239,9 @@ export function doActivity(s: GameState, kind: ActivityKind): void {
     case 'carouse': {
       const roll = int(s, 0, 5);
       if (roll <= 1 && !r.loverId) {
-        const pool = Object.values(s.characters).filter((c) => alive(c) && c.gender !== r.gender && ageOf(s, c) >= 18 && ageOf(s, c) < 45 && c.clanId !== s.playerClanId);
+        const pool = Object.values(s.characters).filter(
+          (c) => alive(c) && c.gender !== r.gender && ageOf(s, c) >= 18 && ageOf(s, c) < 45 && c.clanId !== s.playerClanId,
+        );
         if (pool.length) {
           const g = pick(s, pool);
           r.loverId = g.id;

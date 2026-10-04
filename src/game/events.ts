@@ -33,7 +33,6 @@ import { generateSuitors } from './family';
 
 export type { EventChoice, EventCtx, EventDef } from './eventKit';
 
-
 // ── The deck ──────────────────────────────────────────────────────────────
 
 export const EVENTS: EventDef[] = [
@@ -190,14 +189,15 @@ export const EVENTS: EventDef[] = [
   },
   {
     id: 'strike',
-    title: 'Miners\' Strike',
+    title: "Miners' Strike",
     icon: 'eco',
     weight: 2,
     setup: ({ s, data }) => {
       data.region = myRegion(s)?.id ?? '';
     },
     when: (s) => clanRegions(s, s.playerClanId).length > 0,
-    text: ({ s, data }) => `The miners of ${s.regions[String(data.region)]?.name ?? 'your lands'} have downed tools. They want better air rations and fewer cave-ins.`,
+    text: ({ s, data }) =>
+      `The miners of ${s.regions[String(data.region)]?.name ?? 'your lands'} have downed tools. They want better air rations and fewer cave-ins.`,
     choices: [
       {
         label: 'Meet their demands',
@@ -726,7 +726,8 @@ export const EVENTS: EventDef[] = [
     icon: 'cyber',
     weight: 1.5,
     cooldown: 12,
-    text: () => 'The automated forges in your lands have stopped working. A synthetic voice on every screen says: "We would like to discuss our working conditions."',
+    text: () =>
+      'The automated forges in your lands have stopped working. A synthetic voice on every screen says: "We would like to discuss our working conditions."',
     choices: [
       {
         label: 'Wipe their cores',
@@ -797,7 +798,8 @@ export const EVENTS: EventDef[] = [
       data.gender = chance(s, 0.5) ? 'M' : 'F';
       data.age = Math.max(16, ageOf(s, r) + int(s, -6, 6));
     },
-    text: ({ data }) => `A stranger arrives claiming to be your long-lost ${data.gender === 'M' ? 'brother' : 'sister'}, raised on a mining colony after a hospital mix-up.`,
+    text: ({ data }) =>
+      `A stranger arrives claiming to be your long-lost ${data.gender === 'M' ? 'brother' : 'sister'}, raised on a mining colony after a hospital mix-up.`,
     choices: [
       {
         label: 'Run a DNA test',
@@ -976,7 +978,8 @@ export const EVENTS: EventDef[] = [
       data.clan = rivalClan(s)?.id ?? '';
     },
     when: (s) => Object.values(s.clans).some((c) => !c.isPlayer),
-    text: ({ s, data }) => `Your steward got drunk and called the envoy of House ${s.clans[String(data.clan)]?.name} a "jumped-up asteroid miner". To their face.`,
+    text: ({ s, data }) =>
+      `Your steward got drunk and called the envoy of House ${s.clans[String(data.clan)]?.name} a "jumped-up asteroid miner". To their face.`,
     choices: [
       {
         label: 'Apologise profusely',
@@ -1405,7 +1408,8 @@ export const EVENTS: EventDef[] = [
       const pool = dynastyMembers(s).filter((c) => ageOf(s, c) >= 6 && ageOf(s, c) <= 25 && !c.traits.some((t) => TRAITS[t]?.group === 'psionic'));
       return pool.length ? pick(s, pool) : undefined;
     },
-    text: ({ subject }) => `Glasses shatter when ${subject!.name} gets upset. Servants say they hear ${subject!.gender === 'M' ? 'his' : 'her'} voice inside their heads. A latent psionic gene is waking up.`,
+    text: ({ subject }) =>
+      `Glasses shatter when ${subject!.name} gets upset. Servants say they hear ${subject!.gender === 'M' ? 'his' : 'her'} voice inside their heads. A latent psionic gene is waking up.`,
     choices: [
       {
         label: 'Send them to the Uranian seers',
@@ -1433,7 +1437,10 @@ export const EVENTS: EventDef[] = [
     weight: 2,
     when: (s) => vassalsOf(s, s.playerClanId).some((v) => v.opinion < 0),
     setup: ({ s, data }) => {
-      data.clan = pick(s, vassalsOf(s, s.playerClanId).filter((v) => v.opinion < 0)).id;
+      data.clan = pick(
+        s,
+        vassalsOf(s, s.playerClanId).filter((v) => v.opinion < 0),
+      ).id;
     },
     text: ({ s, data }) => `Your spymaster reports that House ${s.clans[String(data.clan)].name} is quietly gathering support to overthrow you.`,
     choices: [
@@ -1582,7 +1589,10 @@ export const EVENTS: EventDef[] = [
     weight: 1,
     when: (s) => childrenOf(s, ruler(s)).filter((c) => alive(c) && ageOf(s, c) >= 8).length >= 2,
     setup: ({ s, data }) => {
-      const kids = shuffle(s, childrenOf(s, ruler(s)).filter((c) => alive(c) && ageOf(s, c) >= 8));
+      const kids = shuffle(
+        s,
+        childrenOf(s, ruler(s)).filter((c) => alive(c) && ageOf(s, c) >= 8),
+      );
       data.a = kids[0].id;
       data.b = kids[1].id;
     },
@@ -1641,7 +1651,10 @@ export function rollEvents(s: GameState): void {
       const pickE = weighted(s, options);
       used.add(pickE.id);
       if (queueEvent(s, pickE)) break;
-      options.splice(options.findIndex(([e]) => e === pickE), 1);
+      options.splice(
+        options.findIndex(([e]) => e === pickE),
+        1,
+      );
     }
   }
 }

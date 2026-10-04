@@ -1,17 +1,6 @@
 // Realm management: ships, development, titles, the bazaar and the treasury.
 
-import {
-  clanRank,
-  clanRegions,
-  effStats,
-  homePlanet,
-  log,
-  newId,
-  notice,
-  playerClan,
-  ruler,
-  sovereignPlanets,
-} from './core';
+import { clanRank, clanRegions, effStats, homePlanet, log, newId, notice, playerClan, ruler, sovereignPlanets } from './core';
 import { fleetCap, SHIP_COST } from './economy';
 import { canAfford, pay, type Cost } from './genetics';
 import { makeItem } from './items';

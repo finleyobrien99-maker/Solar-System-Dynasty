@@ -24,7 +24,9 @@ function EventView({ p }: { p: Extract<Pending, { kind: 'event' }> }) {
   if (!def) {
     return (
       <Modal title="Nothing happens" onClose={() => act(dismiss(p.uid))}>
-        <Btn kind="primary" block onClick={() => act(dismiss(p.uid))}>Continue</Btn>
+        <Btn kind="primary" block onClick={() => act(dismiss(p.uid))}>
+          Continue
+        </Btn>
       </Modal>
     );
   }
@@ -43,7 +45,12 @@ function EventView({ p }: { p: Extract<Pending, { kind: 'event' }> }) {
           return (
             <button key={i} className={`btn choice ${i === 0 ? 'primary' : ''}`} disabled={!ok} onClick={() => act((d) => resolveEvent(d, p.uid, i))}>
               <span>{c.label}</span>
-              {c.hint && <span className="hint">{c.hint}{!ok ? ' (cannot afford)' : ''}</span>}
+              {c.hint && (
+                <span className="hint">
+                  {c.hint}
+                  {!ok ? ' (cannot afford)' : ''}
+                </span>
+              )}
             </button>
           );
         })}
@@ -117,7 +124,11 @@ function BattleView({ p }: { p: { uid: string; report: BattleReport } }) {
         {r.scoreChange} → {r.newScore}
       </p>
       <WarBar score={r.newScore} />
-      {r.personal && <p className="muted" style={{ marginTop: 8 }}>You led the fleet in person.</p>}
+      {r.personal && (
+        <p className="muted" style={{ marginTop: 8 }}>
+          You led the fleet in person.
+        </p>
+      )}
       {r.note && <p className="gold">{r.note}</p>}
       <div style={{ marginTop: 12 }}>
         <Btn kind="primary" block onClick={() => act(dismiss(p.uid))}>
@@ -135,7 +146,9 @@ function SuccessionView({ p }: { p: Extract<Pending, { kind: 'succession' }> }) 
   if (!heir) {
     return (
       <Modal title="Succession" onClose={() => act(dismiss(p.uid))}>
-        <Btn kind="primary" block onClick={() => act(dismiss(p.uid))}>Continue</Btn>
+        <Btn kind="primary" block onClick={() => act(dismiss(p.uid))}>
+          Continue
+        </Btn>
       </Modal>
     );
   }
@@ -155,7 +168,9 @@ function SuccessionView({ p }: { p: Extract<Pending, { kind: 'succession' }> }) 
         <Icon name="arrow" size={28} />
         <div style={{ textAlign: 'center' }}>
           <Face c={heir} size={130} />
-          <div className="gold" style={{ fontWeight: 700 }}>{fullName(s, heir)}</div>
+          <div className="gold" style={{ fontWeight: 700 }}>
+            {fullName(s, heir)}
+          </div>
           <div className="muted" style={{ fontSize: '0.8rem' }}>
             {clanTitle(s, s.playerClanId, heir.gender)} · age {ageOf(s, heir)}
           </div>
@@ -163,7 +178,9 @@ function SuccessionView({ p }: { p: Extract<Pending, { kind: 'succession' }> }) 
       </div>
       <p style={{ marginTop: 12 }}>
         You now play as <b>{heir.name}</b>. Titles, treasury, wars and claims all pass to them. Vassals are wary of a new ruler.
-        {ageOf(s, heir) < 16 && <span className="bad"> {heir.name} is a minor: a regency council rules until they turn 16 (no wars, schemes or activities).</span>}
+        {ageOf(s, heir) < 16 && (
+          <span className="bad"> {heir.name} is a minor: a regency council rules until they turn 16 (no wars, schemes or activities).</span>
+        )}
       </p>
       {locked.length > 0 && <p className="gold">Bloodline traits carried on: {locked.map((t) => TRAITS[t]?.name).join(', ')}.</p>}
       <TraitList c={heir} s={s} />

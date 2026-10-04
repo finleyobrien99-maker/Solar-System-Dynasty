@@ -18,12 +18,7 @@ export function log(s: GameState, t: string, k: LogKind = 'info'): void {
   if (s.log.length > 500) s.log.splice(0, s.log.length - 500);
 }
 
-export function notice(
-  s: GameState,
-  title: string,
-  text: string,
-  opts: { icon?: string; tone?: 'good' | 'bad' | 'neutral'; portraitId?: string } = {},
-): void {
+export function notice(s: GameState, title: string, text: string, opts: { icon?: string; tone?: 'good' | 'bad' | 'neutral'; portraitId?: string } = {}): void {
   s.pending.push({ kind: 'notice', uid: newId(s, 'n'), title, text, ...opts });
 }
 
@@ -319,9 +314,7 @@ export function childrenOf(s: GameState, c: Character): Character[] {
 export function siblingsOf(s: GameState, c: Character): Character[] {
   const parentIds = [c.fatherId, c.motherId].filter(Boolean) as string[];
   if (!parentIds.length) return [];
-  return Object.values(s.characters).filter(
-    (o) => o.id !== c.id && ((c.fatherId && o.fatherId === c.fatherId) || (c.motherId && o.motherId === c.motherId)),
-  );
+  return Object.values(s.characters).filter((o) => o.id !== c.id && ((c.fatherId && o.fatherId === c.fatherId) || (c.motherId && o.motherId === c.motherId)));
 }
 
 export function isCloseKin(a: Character, b: Character): boolean {
@@ -352,7 +345,7 @@ export function relationTo(s: GameState, c: Character): string {
 }
 
 export function clanStrength(s: GameState, clanId: string): number {
-  return clanId === s.playerClanId ? s.fleet : s.clans[clanId]?.fleet ?? 0;
+  return clanId === s.playerClanId ? s.fleet : (s.clans[clanId]?.fleet ?? 0);
 }
 
 export function regionIncome(_s: GameState, r: Region): number {

@@ -1,5 +1,17 @@
 import { ageOf, alive, ch, charTitle, childrenOf, fullName, isVip, lifespan, relationTo, ruler, siblingsOf } from '../../game/core';
-import { augment, augmentBlocker, augmentCost, augmentRisk, AUGMENTS, canSeekSpouse, designateHeir, generateSuitors, legitimize, LEGITIMIZE_COST, suitorMode } from '../../game/family';
+import {
+  augment,
+  augmentBlocker,
+  augmentCost,
+  augmentRisk,
+  AUGMENTS,
+  canSeekSpouse,
+  designateHeir,
+  generateSuitors,
+  legitimize,
+  LEGITIMIZE_COST,
+  suitorMode,
+} from '../../game/family';
 import { canAfford } from '../../game/genetics';
 import { runScheme, schemeBlocker, schemeChance } from '../../game/intrigue';
 import { FAITHS, PLANET_BY_ID } from '../../game/planets';
@@ -57,7 +69,8 @@ export function CharacterModal({ id }: { id: string }) {
           <div>
             <div className="gold">{[rel, title].filter(Boolean).join(' · ')}</div>
             <div className="muted" style={{ fontSize: '0.86rem' }}>
-              {living ? `Age ${ageOf(s, c)}` : `${c.born}–${c.died}, ${c.deathCause}`} · {c.gender === 'M' ? 'Male' : 'Female'} · {PLANET_BY_ID[c.planetId]?.adjective} · {FAITHS[c.faithId]?.name}
+              {living ? `Age ${ageOf(s, c)}` : `${c.born}–${c.died}, ${c.deathCause}`} · {c.gender === 'M' ? 'Male' : 'Female'} ·{' '}
+              {PLANET_BY_ID[c.planetId]?.adjective} · {FAITHS[c.faithId]?.name}
               {living && <InfoDot text={`Expected lifespan around ${lifespan(c)}.`} />}
             </div>
             <div className="row wrap" style={{ marginTop: 6 }}>
@@ -152,7 +165,9 @@ export function CharacterModal({ id }: { id: string }) {
               return (
                 <div key={a.id} className="card flat" style={{ padding: 8 }}>
                   <b>{t.name}</b>
-                  <div className="muted" style={{ fontSize: '0.75rem' }}>{t.desc}</div>
+                  <div className="muted" style={{ fontSize: '0.75rem' }}>
+                    {t.desc}
+                  </div>
                   <div className="spread" style={{ marginTop: 4 }}>
                     <span className="pill gold">{augmentCost(s, a.id)}</span>
                     <Btn small reason={block} onClick={() => act((d) => augment(d, c.id, a.id))}>
@@ -191,7 +206,11 @@ export function CharacterModal({ id }: { id: string }) {
           </div>
         </div>
       )}
-      {spouse && !alive(spouse) && <div className="dim" style={{ marginTop: 8 }}>Widowed.</div>}
+      {spouse && !alive(spouse) && (
+        <div className="dim" style={{ marginTop: 8 }}>
+          Widowed.
+        </div>
+      )}
       {isRuler && kids.length > 0 && (
         <div style={{ marginTop: 12 }}>
           <h4>Children</h4>

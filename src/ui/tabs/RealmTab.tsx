@@ -1,6 +1,17 @@
 import { ch, clanRank, clanRegions, clanTitle, fmt, liegeOf, playerClan, regionIncome, ruler, sovereignPlanets, vassalsOf } from '../../game/core';
 import { fleetCap } from '../../game/economy';
-import { arrestChance, arrestVassal, executePrisoner, prisoners, ransomPrisoner, ransomValue, releasePrisoner, releaseVassal, sendGift, GIFT_COST } from '../../game/intrigue';
+import {
+  arrestChance,
+  arrestVassal,
+  executePrisoner,
+  prisoners,
+  ransomPrisoner,
+  ransomValue,
+  releasePrisoner,
+  releaseVassal,
+  sendGift,
+  GIFT_COST,
+} from '../../game/intrigue';
 import { regencyActive } from '../../game/life';
 import { FAITHS, PLANET_BY_ID } from '../../game/planets';
 import {
@@ -53,8 +64,12 @@ export function RealmTab() {
         <div className="card hl">
           <div className="spread">
             <div>
-              <div className="gold" style={{ fontFamily: 'var(--head)', fontSize: '1.1rem' }}>{clanTitle(s, clan.id, r.gender)}</div>
-              <div className="muted">Rank {rank}: {RANKS[rank]}</div>
+              <div className="gold" style={{ fontFamily: 'var(--head)', fontSize: '1.1rem' }}>
+                {clanTitle(s, clan.id, r.gender)}
+              </div>
+              <div className="muted">
+                Rank {rank}: {RANKS[rank]}
+              </div>
             </div>
             <div className="row wrap" style={{ gap: 4 }}>
               {RANKS.slice(1).map((n, i) => (
@@ -69,7 +84,9 @@ export function RealmTab() {
             {!clan.titles.viceroy && (
               <div className="stack" style={{ gap: 6 }}>
                 <b>Create Viceroyalty</b>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>Hold 3+ regions. Unlocks demanding vassalage from lesser clans.</span>
+                <span className="muted" style={{ fontSize: '0.82rem' }}>
+                  Hold 3+ regions. Unlocks demanding vassalage from lesser clans.
+                </span>
                 <div className="spread">
                   <Btn kind="primary" small reason={viceroyBlocker(s)} showReason onClick={() => act((d) => createViceroy(d))}>
                     Create title
@@ -99,8 +116,16 @@ export function RealmTab() {
                   <ClanBadge clanId={liege} />
                   <Opinion v={s.clans[liege].opinion} />
                 </div>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>You pay them 15% of your region income. They may summon you to war.</span>
-                <Btn small kind="danger" icon="war" reason={regency ? 'Regency' : s.wars.some((w) => w.enemy === liege) ? 'Already at war' : null} onClick={() => act((d) => declareIndependence(d)) && toast('You declare independence!')}>
+                <span className="muted" style={{ fontSize: '0.82rem' }}>
+                  You pay them 15% of your region income. They may summon you to war.
+                </span>
+                <Btn
+                  small
+                  kind="danger"
+                  icon="war"
+                  reason={regency ? 'Regency' : s.wars.some((w) => w.enemy === liege) ? 'Already at war' : null}
+                  onClick={() => act((d) => declareIndependence(d)) && toast('You declare independence!')}
+                >
                   Declare independence
                 </Btn>
               </div>
@@ -111,7 +136,11 @@ export function RealmTab() {
 
       <CouncilSection />
 
-      <Section title={`Wars (${s.wars.length})`} icon="war" info="Win battles to push the war score to +100 and take your prize. At -100 you lose. The enemy also attacks once every cycle. Wars that drag on 7 cycles end in a white peace.">
+      <Section
+        title={`Wars (${s.wars.length})`}
+        icon="war"
+        info="Win battles to push the war score to +100 and take your prize. At -100 you lose. The enemy also attacks once every cycle. Wars that drag on 7 cycles end in a white peace."
+      >
         {s.wars.length === 0 && <div className="empty">At peace. Declare war from the System tab by picking a region.</div>}
         <div className="stack">
           {s.wars.map((w) => {
@@ -131,7 +160,10 @@ export function RealmTab() {
                       </div>
                     </div>
                   </div>
-                  <span className={`pill ${w.score >= 0 ? 'green' : 'red'}`}>Score {w.score > 0 ? '+' : ''}{w.score}</span>
+                  <span className={`pill ${w.score >= 0 ? 'green' : 'red'}`}>
+                    Score {w.score > 0 ? '+' : ''}
+                    {w.score}
+                  </span>
                 </div>
                 <div style={{ margin: '10px 0' }}>
                   <WarBar score={w.score} />
@@ -147,10 +179,19 @@ export function RealmTab() {
                   </div>
                 </div>
                 <div className="btn-row" style={{ marginTop: 10 }}>
-                  <Btn kind="primary" icon="war" reason={canFightBattle(s, w) ? null : s.fleet <= 0 ? 'No ships!' : 'Already fought this cycle'} onClick={() => act((d) => fightBattle(d, w.id))}>
+                  <Btn
+                    kind="primary"
+                    icon="war"
+                    reason={canFightBattle(s, w) ? null : s.fleet <= 0 ? 'No ships!' : 'Already fought this cycle'}
+                    onClick={() => act((d) => fightBattle(d, w.id))}
+                  >
                     Launch battle
                   </Btn>
-                  <Btn icon="peace" reason={s.cooldowns[`peace:${w.id}`] === s.year ? 'Envoy already sent this cycle' : null} onClick={() => act((d) => offerPeace(d, w.id))}>
+                  <Btn
+                    icon="peace"
+                    reason={s.cooldowns[`peace:${w.id}`] === s.year ? 'Envoy already sent this cycle' : null}
+                    onClick={() => act((d) => offerPeace(d, w.id))}
+                  >
                     Offer peace ({Math.round(pc * 100)}%)
                   </Btn>
                   <Btn kind="danger" small confirm="Tap again to surrender" onClick={() => act((d) => surrender(d, w.id))}>
@@ -172,17 +213,28 @@ export function RealmTab() {
           <div className="spread">
             <div>
               <div style={{ fontFamily: 'var(--head)', fontSize: '1.4rem' }} className="row">
-                <Icon name="fleet" size={22} /> {s.fleet} <span className="muted" style={{ fontSize: '0.9rem' }}>/ {cap} ships</span>
+                <Icon name="fleet" size={22} /> {s.fleet}{' '}
+                <span className="muted" style={{ fontSize: '0.9rem' }}>
+                  / {cap} ships
+                </span>
               </div>
               <div className="muted" style={{ fontSize: '0.8rem' }}>
                 {sc} credits per new ship · upkeep {Math.round(s.fleet * 0.8)}/cycle
               </div>
             </div>
             <div className="btn-row">
-              <Btn small reason={s.fleet >= cap ? 'At capacity' : s.credits < sc * 10 ? 'Not enough credits' : null} onClick={() => toast(`Recruited ${act((d) => recruitShips(d, 10))} ships.`)}>
+              <Btn
+                small
+                reason={s.fleet >= cap ? 'At capacity' : s.credits < sc * 10 ? 'Not enough credits' : null}
+                onClick={() => toast(`Recruited ${act((d) => recruitShips(d, 10))} ships.`)}
+              >
                 +10 ({sc * 10})
               </Btn>
-              <Btn small reason={s.fleet >= cap ? 'At capacity' : s.credits < sc ? 'Not enough credits' : null} onClick={() => toast(`Recruited ${act((d) => recruitShips(d, 50))} ships.`)}>
+              <Btn
+                small
+                reason={s.fleet >= cap ? 'At capacity' : s.credits < sc ? 'Not enough credits' : null}
+                onClick={() => toast(`Recruited ${act((d) => recruitShips(d, 50))} ships.`)}
+              >
                 +50
               </Btn>
               <Btn small kind="ghost" reason={s.fleet < 10 ? 'Too few ships' : null} onClick={() => act((d) => scrapShips(d, 10))}>
@@ -203,7 +255,11 @@ export function RealmTab() {
 
       <TradeSection />
 
-      <Section title={`Regions (${regions.length})`} icon="planet" info="Each region pays 20 + 12 × development credits per cycle, boosted by Economy. Developing costs 70 × current level, once per region per cycle.">
+      <Section
+        title={`Regions (${regions.length})`}
+        icon="planet"
+        info="Each region pays 20 + 12 × development credits per cycle, boosted by Economy. Developing costs 70 × current level, once per region per cycle."
+      >
         <div className="grid tight">
           {regions.map((reg) => (
             <div key={reg.id} className="card flat" style={{ padding: 10 }}>
@@ -239,7 +295,11 @@ export function RealmTab() {
         )}
       </Section>
 
-      <Section title={`Vassals (${vassals.length})`} icon="users" info="Vassals pay you 15% of their income (half if they dislike you, nothing below -50) and send 20% of their fleet to your wars if they like you. Below -40 opinion they may revolt.">
+      <Section
+        title={`Vassals (${vassals.length})`}
+        icon="users"
+        info="Vassals pay you 15% of their income (half if they dislike you, nothing below -50) and send 20% of their fleet to your wars if they like you. Below -40 opinion they may revolt."
+      >
         {!vassals.length && <div className="empty">No vassals. Become a Sovereign or demand fealty as a Viceroy.</div>}
         <div className="grid">
           {vassals.map((v) => {
@@ -254,10 +314,21 @@ export function RealmTab() {
                   {head?.name} · {v.fleet} ships · {clanRegions(s, v.id).length} regions
                 </div>
                 <div className="btn-row">
-                  <Btn small icon="gift" reason={(s.cooldowns[`gift:${v.id}`] ?? 0) > s.year ? 'Sent this cycle' : s.credits < GIFT_COST ? 'Need 100 credits' : null} onClick={() => act((d) => sendGift(d, v.id))}>
+                  <Btn
+                    small
+                    icon="gift"
+                    reason={(s.cooldowns[`gift:${v.id}`] ?? 0) > s.year ? 'Sent this cycle' : s.credits < GIFT_COST ? 'Need 100 credits' : null}
+                    onClick={() => act((d) => sendGift(d, v.id))}
+                  >
                     Gift
                   </Btn>
-                  <Btn small kind="danger" reason={regency ? 'Regency' : head?.prisonerOf ? 'Already jailed' : null} onClick={() => act((d) => arrestVassal(d, v.id))} title="If it fails, they revolt">
+                  <Btn
+                    small
+                    kind="danger"
+                    reason={regency ? 'Regency' : head?.prisonerOf ? 'Already jailed' : null}
+                    onClick={() => act((d) => arrestVassal(d, v.id))}
+                    title="If it fails, they revolt"
+                  >
                     Arrest ({Math.round(arrestChance(s, v.id) * 100)}%)
                   </Btn>
                   <Btn small kind="ghost" onClick={() => act((d) => releaseVassal(d, v.id))}>
@@ -282,7 +353,9 @@ export function RealmTab() {
                     <Btn small kind="danger" confirm="Everyone will hear. Sure?" onClick={() => act((d) => executePrisoner(d, p.id))}>
                       Execute
                     </Btn>
-                    <Btn small onClick={() => act((d) => ransomPrisoner(d, p.id))}>Ransom ({ransomValue(s, p.id)})</Btn>
+                    <Btn small onClick={() => act((d) => ransomPrisoner(d, p.id))}>
+                      Ransom ({ransomValue(s, p.id)})
+                    </Btn>
                     <Btn small kind="good" onClick={() => act((d) => releasePrisoner(d, p.id))}>
                       Release
                     </Btn>
@@ -294,13 +367,19 @@ export function RealmTab() {
         </Section>
       )}
 
-      <Section title="Faith" icon="faith" info="Your house's faith. Clans of the same faith like you more; different faiths can be attacked with a Holy War. Converting costs 200 faith and 100 prestige.">
+      <Section
+        title="Faith"
+        icon="faith"
+        info="Your house's faith. Clans of the same faith like you more; different faiths can be attacked with a Holy War. Converting costs 200 faith and 100 prestige."
+      >
         <div className="card">
           <div className="row" style={{ marginBottom: 8 }}>
             <span className="pill" style={{ color: FAITHS[clan.faithId].color }}>
               {FAITHS[clan.faithId].name}
             </span>
-            <span className="muted" style={{ fontSize: '0.85rem' }}>{FAITHS[clan.faithId].blurb}</span>
+            <span className="muted" style={{ fontSize: '0.85rem' }}>
+              {FAITHS[clan.faithId].blurb}
+            </span>
           </div>
           <div className="muted" style={{ fontSize: '0.8rem' }}>
             Virtues: {FAITHS[clan.faithId].virtues.join(', ')} · Sins: {FAITHS[clan.faithId].sins.join(', ')}
@@ -313,8 +392,15 @@ export function RealmTab() {
                 .map((f) => (
                   <div key={f.id} className="card flat" style={{ padding: 10 }}>
                     <b style={{ color: f.color }}>{f.name}</b>
-                    <div className="muted" style={{ fontSize: '0.78rem' }}>{f.blurb}</div>
-                    <Btn small reason={canAfford(s, { faith: 200, prestige: 100 }) ? null : 'Need 200 faith + 100 prestige'} confirm="Tap again to convert" onClick={() => act((d) => convertFaith(d, f.id))}>
+                    <div className="muted" style={{ fontSize: '0.78rem' }}>
+                      {f.blurb}
+                    </div>
+                    <Btn
+                      small
+                      reason={canAfford(s, { faith: 200, prestige: 100 }) ? null : 'Need 200 faith + 100 prestige'}
+                      confirm="Tap again to convert"
+                      onClick={() => act((d) => convertFaith(d, f.id))}
+                    >
                       Convert
                     </Btn>
                   </div>

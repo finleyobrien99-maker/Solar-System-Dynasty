@@ -88,7 +88,11 @@ function ChildActions({ c }: { c: Character }) {
       )}
       {married && <span className="pill">Married to {ch(s, c.spouseId)!.name}</span>}
       {c.bastard && (
-        <Btn small reason={canAfford(s, LEGITIMIZE_COST) ? null : 'Need 150 prestige'} onClick={() => act((d) => legitimize(d, c.id)) && toast(`${c.name} is legitimised.`)}>
+        <Btn
+          small
+          reason={canAfford(s, LEGITIMIZE_COST) ? null : 'Need 150 prestige'}
+          onClick={() => act((d) => legitimize(d, c.id)) && toast(`${c.name} is legitimised.`)}
+        >
           Legitimise (150 prestige)
         </Btn>
       )}
@@ -122,13 +126,22 @@ export function FamilyTab() {
 
   return (
     <div>
-      <Section title="Spouse" icon="heart" info="Marrying brings your spouse into your house: your children belong to your dynasty. A highborn match (a clan head's child) costs prestige but seals an alliance; allies fight beside you in wars.">
+      <Section
+        title="Spouse"
+        icon="heart"
+        info="Marrying brings your spouse into your house: your children belong to your dynasty. A highborn match (a clan head's child) costs prestige but seals an alliance; allies fight beside you in wars."
+      >
         {spouse && alive(spouse) ? (
           <CharCard
             c={spouse}
             extra={
               <div className="btn-row" style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
-                <Btn small kind="danger" reason={canAfford(s, divorceCost()) ? null : 'Need 100 faith and 50 prestige'} onClick={() => act((d) => divorce(d, r.id)) && toast('Divorced.')}>
+                <Btn
+                  small
+                  kind="danger"
+                  reason={canAfford(s, divorceCost()) ? null : 'Need 100 faith and 50 prestige'}
+                  onClick={() => act((d) => divorce(d, r.id)) && toast('Divorced.')}
+                >
                   Divorce
                 </Btn>
                 <CostTag cost={divorceCost()} />
@@ -181,13 +194,29 @@ export function FamilyTab() {
       >
         <div className="grid">
           {kids.map((k) => (
-            <CharCard key={k.id} c={k} traitsMax={5} extra={alive(k) ? <>{k.edu && <EduControls c={k} />}<ChildActions c={k} /></> : undefined} />
+            <CharCard
+              key={k.id}
+              c={k}
+              traitsMax={5}
+              extra={
+                alive(k) ? (
+                  <>
+                    {k.edu && <EduControls c={k} />}
+                    <ChildActions c={k} />
+                  </>
+                ) : undefined
+              }
+            />
           ))}
           {!kids.length && <div className="empty">No children yet.</div>}
         </div>
       </Section>
 
-      <Section title="Succession" icon="crown" info="When you die you continue as your heir. If there is no living, legitimate member of your dynasty to inherit, the game ends.">
+      <Section
+        title="Succession"
+        icon="crown"
+        info="When you die you continue as your heir. If there is no living, legitimate member of your dynasty to inherit, the game ends."
+      >
         <div className="cols">
           <div className="card stack">
             <div>
@@ -224,7 +253,9 @@ export function FamilyTab() {
                   </button>
                 ))}
               </div>
-              <div className="muted" style={{ fontSize: '0.78rem', marginTop: 4 }}>Changing costs 150 prestige. Also decides which kin bring spouses home when they marry themselves off.</div>
+              <div className="muted" style={{ fontSize: '0.78rem', marginTop: 4 }}>
+                Changing costs 150 prestige. Also decides which kin bring spouses home when they marry themselves off.
+              </div>
             </div>
           </div>
           <div className="card">
@@ -242,7 +273,12 @@ export function FamilyTab() {
       <Section title="Parents & siblings" icon="family">
         <div className="grid">
           {[...parents, ...sibs].map((c) => (
-            <CharCard key={c.id} c={c} traitsMax={3} extra={alive(c) && c.clanId === s.playerClanId && c.id !== r.id && ageOf(s, c) < 40 ? <ChildActions c={c} /> : undefined} />
+            <CharCard
+              key={c.id}
+              c={c}
+              traitsMax={3}
+              extra={alive(c) && c.clanId === s.playerClanId && c.id !== r.id && ageOf(s, c) < 40 ? <ChildActions c={c} /> : undefined}
+            />
           ))}
         </div>
       </Section>
@@ -283,13 +319,25 @@ export function FamilyTab() {
             )}
           </div>
         </div>
-        {kin.length > 8 && <input placeholder="Search kin by name" value={kinFilter} onChange={(e) => setKinFilter(e.target.value)} style={{ marginBottom: 8, width: 260 }} />}
+        {kin.length > 8 && (
+          <input placeholder="Search kin by name" value={kinFilter} onChange={(e) => setKinFilter(e.target.value)} style={{ marginBottom: 8, width: 260 }} />
+        )}
         <div className="grid tight">
           {kinShown.map((c) => (
-            <CharCard key={c.id} c={c} size={44} traitsMax={3} sub={`${ageOf(s, c)} yrs${c.marriedIn && c.spouseId ? ` · wed into House ${s.clans[ch(s, c.spouseId)?.clanId ?? '']?.name ?? '?'}` : ''}`} />
+            <CharCard
+              key={c.id}
+              c={c}
+              size={44}
+              traitsMax={3}
+              sub={`${ageOf(s, c)} yrs${c.marriedIn && c.spouseId ? ` · wed into House ${s.clans[ch(s, c.spouseId)?.clanId ?? '']?.name ?? '?'}` : ''}`}
+            />
           ))}
         </div>
-        {kin.length > kinShown.length && <div className="muted" style={{ marginTop: 6 }}>Showing {kinShown.length} of {kin.length}. Use search or the family tree.</div>}
+        {kin.length > kinShown.length && (
+          <div className="muted" style={{ marginTop: 6 }}>
+            Showing {kinShown.length} of {kin.length}. Use search or the family tree.
+          </div>
+        )}
       </Section>
     </div>
   );

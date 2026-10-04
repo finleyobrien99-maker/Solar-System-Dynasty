@@ -62,7 +62,11 @@ export function botTurn(s: GameState, bot: Seeded): void {
   const r = ruler(s);
   if (!r.spouseId && s.year - r.born >= 18) {
     generateSuitors(s, r.id);
-    if (s.suitors?.list.length) acceptSuitor(s, s.suitors.list.findIndex((x) => x.prestigeCost <= s.prestige));
+    if (s.suitors?.list.length)
+      acceptSuitor(
+        s,
+        s.suitors.list.findIndex((x) => x.prestigeCost <= s.prestige),
+      );
   }
   for (const kid of dynastyMembers(s)) {
     if (kid.id !== r.id && !kid.spouseId && !kid.betrothedId && s.year - kid.born >= 16 && chance(bot, 0.1)) {
@@ -83,12 +87,7 @@ export function botTurn(s: GameState, bot: Seeded): void {
   const others = Object.values(s.clans).filter((c) => !c.isPlayer && clanRegions(s, c.id).length);
   if (others.length) {
     const clan = pick(bot, others);
-    const target =
-      SCHEMES[kind].target === 'clan'
-        ? clan.id
-        : SCHEMES[kind].target === 'region'
-          ? clanRegions(s, clan.id)[0].id
-          : clan.headId;
+    const target = SCHEMES[kind].target === 'clan' ? clan.id : SCHEMES[kind].target === 'region' ? clanRegions(s, clan.id)[0].id : clan.headId;
     runScheme(s, kind, target);
   }
   if (chance(bot, 0.15) && s.wars.length === 0 && others.length) {
@@ -106,10 +105,11 @@ export function botTurn(s: GameState, bot: Seeded): void {
   if (chance(bot, 0.05)) buySlot(s);
   if (chance(bot, 0.05)) augment(s, r.id, 'neural_lace');
   // New systems: council, cadets, gene-forge, trade.
-  for (const role of ROLE_KEYS) if (!s.council[role] && chance(bot, 0.3)) {
-    const c = candidates(s, role)[0];
-    if (c) appoint(s, role, c.id);
-  }
+  for (const role of ROLE_KEYS)
+    if (!s.council[role] && chance(bot, 0.3)) {
+      const c = candidates(s, role)[0];
+      if (c) appoint(s, role, c.id);
+    }
   if (chance(bot, 0.05)) {
     const kin = dynastyMembers(s).find((c) => c.id !== r.id && s.year - c.born >= 20);
     const reg = clanRegions(s, s.playerClanId).find((x) => !x.capital);

@@ -62,7 +62,9 @@ export function TraitPicker({
   const list = TRAIT_LIST.filter((t) => t.cat === cat);
   let rows: [string, TraitDef[]][];
   if (cat === 'genetic') {
-    const ladders = Object.entries(LADDERS).map(([g, label]) => [label, list.filter((t) => t.group === g).sort((a, b) => (a.level ?? 0) - (b.level ?? 0))] as [string, TraitDef[]]);
+    const ladders = Object.entries(LADDERS).map(
+      ([g, label]) => [label, list.filter((t) => t.group === g).sort((a, b) => (a.level ?? 0) - (b.level ?? 0))] as [string, TraitDef[]],
+    );
     rows = [...ladders, ['Rare', list.filter((t) => !t.group || !LADDERS[t.group])]];
   } else if (cat === 'personality') {
     // Pairs sit next to each other, so one pair per row.

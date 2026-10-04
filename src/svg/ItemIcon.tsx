@@ -37,7 +37,12 @@ function ItemIconImpl({ item, size = 56 }: { item: Item; size?: number }) {
       case 'suit':
         return (
           <g>
-            <path d="M 26 30 L 40 24 Q 50 34 60 24 L 74 30 L 80 52 L 70 54 L 68 80 L 32 80 L 30 54 L 20 52 Z" fill={shade(metal, -0.2)} stroke={shade(metal, -0.5)} strokeWidth={2} />
+            <path
+              d="M 26 30 L 40 24 Q 50 34 60 24 L 74 30 L 80 52 L 70 54 L 68 80 L 32 80 L 30 54 L 20 52 Z"
+              fill={shade(metal, -0.2)}
+              stroke={shade(metal, -0.5)}
+              strokeWidth={2}
+            />
             <path d="M 40 40 L 60 40 L 58 62 L 50 68 L 42 62 Z" fill={hue} opacity={0.7} />
           </g>
         );
@@ -61,7 +66,12 @@ function ItemIconImpl({ item, size = 56 }: { item: Item; size?: number }) {
         if (v === 1)
           return (
             <g>
-              <path d="M 30 50 C 30 26, 70 26, 70 50 C 70 60, 64 62, 62 66 L 62 76 L 38 76 L 38 66 C 36 62, 30 60, 30 50 Z" fill="#e9e4d4" stroke="#8a826e" strokeWidth={2} />
+              <path
+                d="M 30 50 C 30 26, 70 26, 70 50 C 70 60, 64 62, 62 66 L 62 76 L 38 76 L 38 66 C 36 62, 30 60, 30 50 Z"
+                fill="#e9e4d4"
+                stroke="#8a826e"
+                strokeWidth={2}
+              />
               <circle cx={41} cy={50} r={6} fill={hue} filter={`url(#gl${uid})`} />
               <circle cx={59} cy={50} r={6} fill={hue} filter={`url(#gl${uid})`} />
             </g>

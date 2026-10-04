@@ -14,8 +14,8 @@ export function GameOverModal() {
         <div>
           <p>{s.gameOver?.reason}</p>
           <p className="muted">
-            House {clan.name} endured {years} cycles under {s.dynasty.rulers.length} rulers. {s.stats.children} heirs born to rulers, {s.stats.battlesWon} battles won,{' '}
-            {s.stats.schemes} schemes hatched. {dynastyMembers(s, true).length} souls carried the name.
+            House {clan.name} endured {years} cycles under {s.dynasty.rulers.length} rulers. {s.stats.children} heirs born to rulers, {s.stats.battlesWon}{' '}
+            battles won, {s.stats.schemes} schemes hatched. {dynastyMembers(s, true).length} souls carried the name.
           </p>
         </div>
       </div>

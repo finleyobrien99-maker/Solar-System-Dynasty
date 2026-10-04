@@ -2,7 +2,21 @@
 // and the player's starting house.
 
 import { createCharacter, eduTrait, inheritLooks, randomGenetic, randomLooks, randomPersonality } from './character';
-import { ageOf, capitalOf, clanRank, clanRegions, clanTitle, log, newId, planetRegions, planetSovereign, rankName, SAVE_VERSION, setOwner, vassalsOf } from './core';
+import {
+  ageOf,
+  capitalOf,
+  clanRank,
+  clanRegions,
+  clanTitle,
+  log,
+  newId,
+  planetRegions,
+  planetSovereign,
+  rankName,
+  SAVE_VERSION,
+  setOwner,
+  vassalsOf,
+} from './core';
 import { inheritGenetics, inheritPersonality } from './genetics';
 import { makeItem } from './items';
 import { remember } from './memory';
@@ -15,8 +29,22 @@ import { STAT_KEYS, type Appearance, type Character, type Clan, type GameState, 
 export const START_YEAR = 2500;
 
 export const SIGIL_COLORS = [
-  '#c8102e', '#1f4fbf', '#d4a017', '#2e8b57', '#6a2dbd', '#e8e8e8', '#1b1f2e', '#e07a1f',
-  '#0e9aa7', '#b5179e', '#7f1d1d', '#14532d', '#3b82f6', '#9ca3af', '#f472b6', '#84cc16',
+  '#c8102e',
+  '#1f4fbf',
+  '#d4a017',
+  '#2e8b57',
+  '#6a2dbd',
+  '#e8e8e8',
+  '#1b1f2e',
+  '#e07a1f',
+  '#0e9aa7',
+  '#b5179e',
+  '#7f1d1d',
+  '#14532d',
+  '#3b82f6',
+  '#9ca3af',
+  '#f472b6',
+  '#84cc16',
 ];
 
 export const SIGIL_CHARGES = 16;
@@ -203,7 +231,7 @@ export const SCENARIOS: ScenarioDef[] = [
     id: 'governor',
     name: 'Governor',
     tagline: 'Start at the bottom',
-    blurb: 'A minor house with a region or two, sworn to the planet\'s monarch. The classic climb.',
+    blurb: "A minor house with a region or two, sworn to the planet's monarch. The classic climb.",
     credits: 350,
     prestige: 120,
     faith: 60,
@@ -212,7 +240,7 @@ export const SCENARIOS: ScenarioDef[] = [
     id: 'viceroy',
     name: 'Viceroy',
     tagline: 'A great house',
-    blurb: 'Three regions, the viceroy\'s title and two lesser houses sworn to you. Still kneels to the monarch.',
+    blurb: "Three regions, the viceroy's title and two lesser houses sworn to you. Still kneels to the monarch.",
     credits: 900,
     prestige: 400,
     faith: 150,
@@ -487,7 +515,14 @@ export function startGame(s: GameState, o: StartOpts): GameState {
     log(s, `The ${PLANET_BY_ID[p].faction} watches the ${age < 30 ? 'young ' : ''}${ruler.gender === 'M' ? 'lord' : 'lady'} closely.`, 'info');
   } else {
     log(s, `${ruler.name} of House ${clan.name} inherits their late father's titles, aged ${age}: ${clanTitle(s, clan.id, ruler.gender)}.`, 'info');
-    if (scenario === 'emperor') log(s, `The deposed royal houses of ${emperorWorlds(p).map((id) => PLANET_BY_ID[id].name).join(' and ')} swear fealty through gritted teeth.`, 'war');
+    if (scenario === 'emperor')
+      log(
+        s,
+        `The deposed royal houses of ${emperorWorlds(p)
+          .map((id) => PLANET_BY_ID[id].name)
+          .join(' and ')} swear fealty through gritted teeth.`,
+        'war',
+      );
   }
   if (o.vip) log(s, 'VIP mode is on: edit anyone, any time, and the Gene-Forge is yours without limit.', 'info');
   return s;

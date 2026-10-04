@@ -3,7 +3,19 @@
 
 import { bloodlineMembers, fmt, ruler } from '../../game/core';
 import { fleetCap } from '../../game/economy';
-import { cleanseBloodline, disableVip, fillFleet, give, godTierBloodline, healBloodline, lockGodGenes, makeGodTier, rejuvenate, setImmortal, type Resource } from '../../game/vip';
+import {
+  cleanseBloodline,
+  disableVip,
+  fillFleet,
+  give,
+  godTierBloodline,
+  healBloodline,
+  lockGodGenes,
+  makeGodTier,
+  rejuvenate,
+  setImmortal,
+  type Resource,
+} from '../../game/vip';
 import { Icon } from '../../svg/Icons';
 import { Btn, Modal } from '../components';
 import { useGame } from '../store';
@@ -22,8 +34,9 @@ export function VipModal() {
   return (
     <Modal title="VIP console" onClose={() => setUi({ panel: null })} icon="relic" wide>
       <div className="card flat vip-banner" style={{ marginBottom: 12 }}>
-        <b className="gold">VIP mode is on.</b> Edit anyone's traits, stats and age from their profile. The Gene-Forge is fully built, every good gene is sequenced, and every
-        procedure is free, always works, and upsets no one. The Gene Vault has no slot limit and needs no carriers. None of it ever helps an AI house.
+        <b className="gold">VIP mode is on.</b> Edit anyone's traits, stats and age from their profile. The Gene-Forge is fully built, every good gene is
+        sequenced, and every procedure is free, always works, and upsets no one. The Gene Vault has no slot limit and needs no carriers. None of it ever helps
+        an AI house.
       </div>
 
       <h3>Resources</h3>
@@ -90,10 +103,14 @@ export function VipModal() {
 
       <h3 style={{ marginTop: 14 }}>The bloodline ({fmt(kin)} living)</h3>
       <div className="btn-row">
-        <Btn kind="good" icon="lock" onClick={() => {
+        <Btn
+          kind="good"
+          icon="lock"
+          onClick={() => {
             act((d) => lockGodGenes(d));
             toast('Every top-rung gene is locked in. Every child is born with them.');
-          }}>
+          }}
+        >
           Lock every top gene
         </Btn>
         <Btn icon="purge" onClick={() => toast(`Cleansed ${act((d) => cleanseBloodline(d))} relatives of bad genes.`)}>
@@ -109,7 +126,9 @@ export function VipModal() {
 
       <hr className="divider" />
       <div className="spread">
-        <span className="muted" style={{ fontSize: '0.82rem' }}>Switch it off to play by the normal rules again. You can turn it back on from the menu any time.</span>
+        <span className="muted" style={{ fontSize: '0.82rem' }}>
+          Switch it off to play by the normal rules again. You can turn it back on from the menu any time.
+        </span>
         <Btn
           kind="danger"
           confirm="Tap again to switch off"

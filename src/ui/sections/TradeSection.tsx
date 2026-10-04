@@ -54,7 +54,9 @@ export function TradeSection() {
           <b>Open a new route</b>
           <div className="row wrap" style={{ gap: 8 }}>
             <label className="stack" style={{ gap: 2, flex: '1 1 160px', minWidth: 0 }}>
-              <span className="muted" style={{ fontSize: '0.78rem' }}>Home port</span>
+              <span className="muted" style={{ fontSize: '0.78rem' }}>
+                Home port
+              </span>
               <select id="trade-from" value={fromId} onChange={(e) => setFrom(e.target.value)}>
                 {mine.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -64,7 +66,9 @@ export function TradeSection() {
               </select>
             </label>
             <label className="stack" style={{ gap: 2, flex: '2 1 220px', minWidth: 0 }}>
-              <span className="muted" style={{ fontSize: '0.78rem' }}>Partner house</span>
+              <span className="muted" style={{ fontSize: '0.78rem' }}>
+                Partner house
+              </span>
               <select id="trade-partner" value={partner} onChange={(e) => setPartner(e.target.value)}>
                 <option value="">Choose…</option>
                 {PLANETS.map((pl) => {
@@ -85,7 +89,8 @@ export function TradeSection() {
           </div>
           <div className="spread">
             <span className="muted" style={{ fontSize: '0.82rem' }}>
-              {port ? `Worth about ${routeValue(s, fromId, partner, port)} credits a cycle. ` : ''}Pirate risk per route: {Math.round(raidRisk(s) * 100)}% a cycle.
+              {port ? `Worth about ${routeValue(s, fromId, partner, port)} credits a cycle. ` : ''}Pirate risk per route: {Math.round(raidRisk(s) * 100)}% a
+              cycle.
             </span>
             <span className="row" style={{ gap: 6 }}>
               {port && <CostTag cost={openCost(s, fromId, port)} />}

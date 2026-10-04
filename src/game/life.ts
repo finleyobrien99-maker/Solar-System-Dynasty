@@ -313,7 +313,13 @@ export function matchmakingTick(s: GameState): void {
     spouse.spouseId = c.id;
     clan.opinion = Math.min(100, clan.opinion + 4);
     if (isCloseFamily(s, c)) {
-      log(s, stays ? `${c.name} married ${fullName(s, spouse)}, who joins your house.` : `${c.name} married into House ${clan.name} of ${clan.planetId[0].toUpperCase() + clan.planetId.slice(1)}.`, 'family');
+      log(
+        s,
+        stays
+          ? `${c.name} married ${fullName(s, spouse)}, who joins your house.`
+          : `${c.name} married into House ${clan.name} of ${clan.planetId[0].toUpperCase() + clan.planetId.slice(1)}.`,
+        'family',
+      );
     } else if (stays) home++;
     else away++;
   }
@@ -345,8 +351,7 @@ export function lineOfSuccession(s: GameState): Character[] {
     else if (law === 'merit') {
       const score = new Map(l.map((c) => [c.id, statTotal(s, c) * (ageOf(s, c) >= 16 ? 1 : 0.6)]));
       l.sort((a, b) => score.get(b.id)! - score.get(a.id)!);
-    }
-    else l.sort((a, b) => a.born - b.born);
+    } else l.sort((a, b) => a.born - b.born);
     if (g !== 'equal') {
       const pref = g === 'male' ? 'M' : 'F';
       l.sort((a, b) => Number(b.gender === pref) - Number(a.gender === pref));

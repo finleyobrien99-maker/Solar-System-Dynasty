@@ -51,7 +51,7 @@ export function FoundCadetPanel({ c }: { c: Character }) {
   const regions = clanRegions(s, s.playerClanId).filter((r) => !r.capital);
   const [regionId, setRegionId] = useState(regions[0]?.id ?? '');
   const [name, setName] = useState('');
-  const block = regionId ? cadetBlocker(s, c.id, regionId) : 'You have no region to spare (throne-regions can\'t be granted).';
+  const block = regionId ? cadetBlocker(s, c.id, regionId) : "You have no region to spare (throne-regions can't be granted).";
   return (
     <details style={{ marginTop: 12 }}>
       <summary className="gold">Found a cadet branch</summary>
@@ -60,7 +60,13 @@ export function FoundCadetPanel({ c }: { c: Character }) {
           Grant {c.name} a region. They, and their descendants still in your house, become a new house of your bloodline, sworn to you.
         </div>
         <div className="row wrap" style={{ gap: 8 }}>
-          <select id="cadet-region" value={regionId} onChange={(e) => setRegionId(e.target.value)} aria-label="Region to grant" style={{ flex: '1 1 180px', minWidth: 0 }}>
+          <select
+            id="cadet-region"
+            value={regionId}
+            onChange={(e) => setRegionId(e.target.value)}
+            aria-label="Region to grant"
+            style={{ flex: '1 1 180px', minWidth: 0 }}
+          >
             {regions.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name} ({PLANET_BY_ID[r.planetId].name}, dev {r.dev})

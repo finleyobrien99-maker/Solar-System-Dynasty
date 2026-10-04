@@ -76,7 +76,14 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
   const mouthY = cy + ry * 0.52;
   const noseY = eyeY + 2;
 
-  const expression = has(c, 'kind') || has(c, 'gregarious') ? 'smile' : has(c, 'wrathful') || has(c, 'cruel') || has(c, 'depressed') ? 'frown' : has(c, 'arrogant') || has(c, 'deceitful') ? 'smirk' : 'neutral';
+  const expression =
+    has(c, 'kind') || has(c, 'gregarious')
+      ? 'smile'
+      : has(c, 'wrathful') || has(c, 'cruel') || has(c, 'depressed')
+        ? 'frown'
+        : has(c, 'arrogant') || has(c, 'deceitful')
+          ? 'smirk'
+          : 'neutral';
   const browAngle = has(c, 'wrathful') || has(c, 'cruel') ? 1.4 : has(c, 'kind') || has(c, 'trusting') ? -0.8 : 0;
 
   const style = L.hairStyle;
@@ -91,8 +98,7 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
   const hs = longHair ? ry * 0.1 : -ry * 0.12;
   const capPath = (() => {
     const top = cy - ry * 1.38;
-    if (style === 4)
-      return `M ${cx - 4} ${cy - ry * 0.55} C ${cx - 5} ${top - 6}, ${cx + 5} ${top - 6}, ${cx + 4} ${cy - ry * 0.55} Z`;
+    if (style === 4) return `M ${cx - 4} ${cy - ry * 0.55} C ${cx - 5} ${top - 6}, ${cx + 5} ${top - 6}, ${cx + 4} ${cy - ry * 0.55} Z`;
     if (style === 7)
       return `M ${cx - rx + 1} ${cy - ry * 0.35} C ${cx - rx} ${top + 1}, ${cx + rx} ${top + 1}, ${cx + rx - 1} ${cy - ry * 0.35} C ${cx + rx * 0.5} ${cy - ry * 0.7}, ${cx - rx * 0.5} ${cy - ry * 0.7}, ${cx - rx + 1} ${cy - ry * 0.35} Z`;
     const part = style === 1 ? 4 : style === 6 ? 0 : -1;
@@ -161,7 +167,16 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
     const x = cx + side * eyeDX;
     const cyber = side === 1 && (has(c, 'optic_implant') || has(c, 'full_conversion'));
     if (baby) {
-      return <path key={`eye${side}`} d={`M ${x - 2.5} ${eyeY} Q ${x} ${eyeY + 1.6} ${x + 2.5} ${eyeY}`} stroke={skinDeep} strokeWidth={0.9} fill="none" strokeLinecap="round" />;
+      return (
+        <path
+          key={`eye${side}`}
+          d={`M ${x - 2.5} ${eyeY} Q ${x} ${eyeY + 1.6} ${x + 2.5} ${eyeY}`}
+          stroke={skinDeep}
+          strokeWidth={0.9}
+          fill="none"
+          strokeLinecap="round"
+        />
+      );
     }
     if (cyber) {
       return (
@@ -178,7 +193,12 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
         <circle cx={x} cy={eyeY} r={child ? 2 : 1.55} fill={iris} filter={psionic ? `url(#glow${uid})` : undefined} />
         <circle cx={x} cy={eyeY} r={pupil} fill="#111" />
         <circle cx={x + 0.55} cy={eyeY - 0.55} r={0.45} fill="#fff" />
-        <path d={`M ${x - eyeRX - 0.3} ${eyeY + 0.2} Q ${x} ${eyeY - eyeRY * 1.9} ${x + eyeRX + 0.3} ${eyeY + 0.2}`} stroke={shade(skin, -0.55)} strokeWidth={male ? 0.7 : 1.05} fill="none" />
+        <path
+          d={`M ${x - eyeRX - 0.3} ${eyeY + 0.2} Q ${x} ${eyeY - eyeRY * 1.9} ${x + eyeRX + 0.3} ${eyeY + 0.2}`}
+          stroke={shade(skin, -0.55)}
+          strokeWidth={male ? 0.7 : 1.05}
+          fill="none"
+        />
         {(old || has(c, 'ill') || has(c, 'stim_addict')) && (
           <path d={`M ${x - 2.4} ${eyeY + 2.6} Q ${x} ${eyeY + 3.6} ${x + 2.4} ${eyeY + 2.6}`} stroke={skinDeep} strokeWidth={0.5} fill="none" opacity={0.7} />
         )}
@@ -210,13 +230,45 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
     const k = noseScale * (child ? 0.8 : 1);
     switch (L.nose) {
       case 1:
-        return <path d={`M ${cx - 1.6 * k} ${noseY + 6.6 * k} Q ${cx} ${noseY + 7.8 * k} ${cx + 1.6 * k} ${noseY + 6.6 * k}`} stroke={skinDeep} strokeWidth={0.8} fill="none" strokeLinecap="round" />;
+        return (
+          <path
+            d={`M ${cx - 1.6 * k} ${noseY + 6.6 * k} Q ${cx} ${noseY + 7.8 * k} ${cx + 1.6 * k} ${noseY + 6.6 * k}`}
+            stroke={skinDeep}
+            strokeWidth={0.8}
+            fill="none"
+            strokeLinecap="round"
+          />
+        );
       case 2:
-        return <path d={`M ${cx - 0.3} ${noseY} L ${cx - 1.4 * k} ${noseY + 8 * k} Q ${cx} ${noseY + 9 * k} ${cx + 1.6 * k} ${noseY + 8 * k}`} stroke={skinDeep} strokeWidth={0.8} fill="none" strokeLinecap="round" />;
+        return (
+          <path
+            d={`M ${cx - 0.3} ${noseY} L ${cx - 1.4 * k} ${noseY + 8 * k} Q ${cx} ${noseY + 9 * k} ${cx + 1.6 * k} ${noseY + 8 * k}`}
+            stroke={skinDeep}
+            strokeWidth={0.8}
+            fill="none"
+            strokeLinecap="round"
+          />
+        );
       case 3:
-        return <path d={`M ${cx - 2.6 * k} ${noseY + 7 * k} Q ${cx - 3 * k} ${noseY + 8.8 * k} ${cx} ${noseY + 8.6 * k} Q ${cx + 3 * k} ${noseY + 8.8 * k} ${cx + 2.6 * k} ${noseY + 7 * k}`} stroke={skinDeep} strokeWidth={0.85} fill="none" strokeLinecap="round" />;
+        return (
+          <path
+            d={`M ${cx - 2.6 * k} ${noseY + 7 * k} Q ${cx - 3 * k} ${noseY + 8.8 * k} ${cx} ${noseY + 8.6 * k} Q ${cx + 3 * k} ${noseY + 8.8 * k} ${cx + 2.6 * k} ${noseY + 7 * k}`}
+            stroke={skinDeep}
+            strokeWidth={0.85}
+            fill="none"
+            strokeLinecap="round"
+          />
+        );
       default:
-        return <path d={`M ${cx - 0.4} ${noseY + 1} Q ${cx - 2.2 * k} ${noseY + 7.6 * k} ${cx - 0.6} ${noseY + 8.2 * k} Q ${cx + 0.9} ${noseY + 8.8 * k} ${cx + 2} ${noseY + 7.8 * k}`} stroke={skinDeep} strokeWidth={0.8} fill="none" strokeLinecap="round" />;
+        return (
+          <path
+            d={`M ${cx - 0.4} ${noseY + 1} Q ${cx - 2.2 * k} ${noseY + 7.6 * k} ${cx - 0.6} ${noseY + 8.2 * k} Q ${cx + 0.9} ${noseY + 8.8 * k} ${cx + 2} ${noseY + 7.8 * k}`}
+            stroke={skinDeep}
+            strokeWidth={0.8}
+            fill="none"
+            strokeLinecap="round"
+          />
+        );
     }
   })();
 
@@ -225,12 +277,32 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
     const lip = mix(skin, '#c2454b', male ? 0.18 : 0.42);
     const curve = expression === 'smile' ? 2.4 : expression === 'frown' ? -1.8 : 0.5;
     if (expression === 'smirk') {
-      return <path d={`M ${cx - w} ${mouthY + 0.4} Q ${cx} ${mouthY + 1} ${cx + w} ${mouthY - 1.2}`} stroke={shade(lip, -0.3)} strokeWidth={1} fill="none" strokeLinecap="round" />;
+      return (
+        <path
+          d={`M ${cx - w} ${mouthY + 0.4} Q ${cx} ${mouthY + 1} ${cx + w} ${mouthY - 1.2}`}
+          stroke={shade(lip, -0.3)}
+          strokeWidth={1}
+          fill="none"
+          strokeLinecap="round"
+        />
+      );
     }
     return (
       <g>
-        {!male && !child && <path d={`M ${cx - w} ${mouthY} Q ${cx} ${mouthY - 1.6} ${cx + w} ${mouthY} Q ${cx} ${mouthY + 2.4 + curve * 0.3} ${cx - w} ${mouthY} Z`} fill={lip} opacity={0.85} />}
-        <path d={`M ${cx - w} ${mouthY} Q ${cx} ${mouthY + curve} ${cx + w} ${mouthY}`} stroke={shade(lip, -0.35)} strokeWidth={0.95} fill="none" strokeLinecap="round" />
+        {!male && !child && (
+          <path
+            d={`M ${cx - w} ${mouthY} Q ${cx} ${mouthY - 1.6} ${cx + w} ${mouthY} Q ${cx} ${mouthY + 2.4 + curve * 0.3} ${cx - w} ${mouthY} Z`}
+            fill={lip}
+            opacity={0.85}
+          />
+        )}
+        <path
+          d={`M ${cx - w} ${mouthY} Q ${cx} ${mouthY + curve} ${cx + w} ${mouthY}`}
+          stroke={shade(lip, -0.35)}
+          strokeWidth={0.95}
+          fill="none"
+          strokeLinecap="round"
+        />
       </g>
     );
   })();
@@ -239,13 +311,21 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
     if (!beardType) return null;
     const col = hair;
     if (beardType === 1) {
-      return <path d={`M ${cx - rx + 1} ${cy + 3} C ${cx - rx + 1} ${cy + ry * 0.75}, ${cx - jaw} ${cy + ry}, ${cx} ${cy + ry} C ${cx + jaw} ${cy + ry}, ${cx + rx - 1} ${cy + ry * 0.75}, ${cx + rx - 1} ${cy + 3} C ${cx + rx - 4} ${cy + ry * 0.55}, ${cx - rx + 4} ${cy + ry * 0.55}, ${cx - rx + 1} ${cy + 3} Z`} fill={col} opacity={0.32} />;
+      return (
+        <path
+          d={`M ${cx - rx + 1} ${cy + 3} C ${cx - rx + 1} ${cy + ry * 0.75}, ${cx - jaw} ${cy + ry}, ${cx} ${cy + ry} C ${cx + jaw} ${cy + ry}, ${cx + rx - 1} ${cy + ry * 0.75}, ${cx + rx - 1} ${cy + 3} C ${cx + rx - 4} ${cy + ry * 0.55}, ${cx - rx + 4} ${cy + ry * 0.55}, ${cx - rx + 1} ${cy + 3} Z`}
+          fill={col}
+          opacity={0.32}
+        />
+      );
     }
     if (beardType === 2) {
       return (
         <g fill={col}>
           <path d={`M ${cx - 4.5} ${mouthY - 1.6} Q ${cx} ${mouthY - 3.4} ${cx + 4.5} ${mouthY - 1.6} Q ${cx} ${mouthY - 1.8} ${cx - 4.5} ${mouthY - 1.6} Z`} />
-          <path d={`M ${cx - 3} ${mouthY + 2.2} Q ${cx} ${mouthY + 1.6} ${cx + 3} ${mouthY + 2.2} L ${cx + 1.8} ${cy + ry + 2.5} Q ${cx} ${cy + ry + 3.5} ${cx - 1.8} ${cy + ry + 2.5} Z`} />
+          <path
+            d={`M ${cx - 3} ${mouthY + 2.2} Q ${cx} ${mouthY + 1.6} ${cx + 3} ${mouthY + 2.2} L ${cx + 1.8} ${cy + ry + 2.5} Q ${cx} ${cy + ry + 3.5} ${cx - 1.8} ${cy + ry + 2.5} Z`}
+          />
         </g>
       );
     }
@@ -267,14 +347,24 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
         {/* collar */}
         {focus === 'cmd' ? (
           <>
-            <path d={`M 50 ${bodyTop + 1} L ${50 - 9} ${bodyTop} L ${50 - 7} ${bodyTop + 9} Z M 50 ${bodyTop + 1} L ${50 + 9} ${bodyTop} L ${50 + 7} ${bodyTop + 9} Z`} fill={trim} />
+            <path
+              d={`M 50 ${bodyTop + 1} L ${50 - 9} ${bodyTop} L ${50 - 7} ${bodyTop + 9} Z M 50 ${bodyTop + 1} L ${50 + 9} ${bodyTop} L ${50 + 7} ${bodyTop + 9} Z`}
+              fill={trim}
+            />
             <rect x={50 - sw + 2} y={bodyTop + 4} width={10} height={3} rx={1} fill={trim} />
             <rect x={50 + sw - 12} y={bodyTop + 4} width={10} height={3} rx={1} fill={trim} />
           </>
         ) : focus === 'sci' ? (
-          <path d={`M ${50 - 14} ${bodyTop} Q 50 ${bodyTop + 22} ${50 + 14} ${bodyTop} L ${50 + 11} ${bodyTop + 2} Q 50 ${bodyTop + 16} ${50 - 11} ${bodyTop + 2} Z`} fill={trim} opacity={0.9} />
+          <path
+            d={`M ${50 - 14} ${bodyTop} Q 50 ${bodyTop + 22} ${50 + 14} ${bodyTop} L ${50 + 11} ${bodyTop + 2} Q 50 ${bodyTop + 16} ${50 - 11} ${bodyTop + 2} Z`}
+            fill={trim}
+            opacity={0.9}
+          />
         ) : focus === 'int' ? (
-          <path d={`M ${50 - 13} ${bodyTop - 4} L ${50 - 5} ${bodyTop + 14} L 50 ${bodyTop + 4} L ${50 + 5} ${bodyTop + 14} L ${50 + 13} ${bodyTop - 4} L ${50 + 15} ${bodyTop + 2} L 50 ${bodyTop + 22} L ${50 - 15} ${bodyTop + 2} Z`} fill={clothDark} />
+          <path
+            d={`M ${50 - 13} ${bodyTop - 4} L ${50 - 5} ${bodyTop + 14} L 50 ${bodyTop + 4} L ${50 + 5} ${bodyTop + 14} L ${50 + 13} ${bodyTop - 4} L ${50 + 15} ${bodyTop + 2} L 50 ${bodyTop + 22} L ${50 - 15} ${bodyTop + 2} Z`}
+            fill={clothDark}
+          />
         ) : focus === 'dip' ? (
           <path d={`M ${50 - sw + 4} ${bodyTop + 6} L ${50 - sw + 9} ${bodyTop + 3} L ${50 + sw - 3} 101 L ${50 + sw - 10} 101 Z`} fill={trim} opacity={0.9} />
         ) : focus === 'eco' ? (
@@ -286,7 +376,13 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
           <path d={`M ${50 - 8} ${bodyTop} L 50 ${bodyTop + 9} L ${50 + 8} ${bodyTop}`} stroke={trim} strokeWidth={1.4} fill="none" />
         )}
         {has(c, 'bionic_arm') && <circle cx={50 + sw - 4} cy={bodyTop + 10} r={3.4} fill="#8a96a3" stroke="#3b444d" strokeWidth={0.6} />}
-        {rank >= 3 && <path d={`M ${50 - sw} ${bodyTop + 14} Q ${50 - sw + 3} ${bodyTop + 4} ${50 - 13} ${bodyTop} L ${50 - 13} ${bodyTop + 4} Q ${50 - sw + 6} ${bodyTop + 8} ${50 - sw + 2} 101 L ${50 - sw} 101 Z`} fill="#7a1022" opacity={0.85} />}
+        {rank >= 3 && (
+          <path
+            d={`M ${50 - sw} ${bodyTop + 14} Q ${50 - sw + 3} ${bodyTop + 4} ${50 - 13} ${bodyTop} L ${50 - 13} ${bodyTop + 4} Q ${50 - sw + 6} ${bodyTop + 8} ${50 - sw + 2} 101 L ${50 - sw} 101 Z`}
+            fill="#7a1022"
+            opacity={0.85}
+          />
+        )}
       </g>
     );
   })();
@@ -340,15 +436,28 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
           </>
         )}
         {clothes}
-        {!baby && <path d={`M ${cx - 5.5} ${cy + ry * 0.6} L ${cx - 5.5} ${bodyTop + 3} Q ${cx} ${bodyTop + 7} ${cx + 5.5} ${bodyTop + 3} L ${cx + 5.5} ${cy + ry * 0.6} Z`} fill={skinDark} />}
+        {!baby && (
+          <path
+            d={`M ${cx - 5.5} ${cy + ry * 0.6} L ${cx - 5.5} ${bodyTop + 3} Q ${cx} ${bodyTop + 7} ${cx + 5.5} ${bodyTop + 3} L ${cx + 5.5} ${cy + ry * 0.6} Z`}
+            fill={skinDark}
+          />
+        )}
         <ellipse cx={cx - rx + 0.3} cy={eyeY + 2.5} rx={2.3} ry={3.6} fill={skinDark} />
         <ellipse cx={cx + rx - 0.3} cy={eyeY + 2.5} rx={2.3} ry={3.6} fill={skinDark} />
         <path d={headPath} fill={`url(#face${uid})`} />
-        {(child || !male) && <>
-          <ellipse cx={cx - eyeDX - 1} cy={mouthY - 3} rx={3} ry={1.8} fill="#e0727a" opacity={0.16} />
-          <ellipse cx={cx + eyeDX + 1} cy={mouthY - 3} rx={3} ry={1.8} fill="#e0727a" opacity={0.16} />
-        </>}
-        {has(c, 'full_conversion') && <path d={`M ${cx} ${cy - ry * 0.9} L ${cx + rx} ${cy - ry * 0.3} L ${cx + rx} ${cy + ry * 0.5} L ${cx + 2} ${cy + ry * 0.95} Z`} fill="#7d8894" opacity={0.85} />}
+        {(child || !male) && (
+          <>
+            <ellipse cx={cx - eyeDX - 1} cy={mouthY - 3} rx={3} ry={1.8} fill="#e0727a" opacity={0.16} />
+            <ellipse cx={cx + eyeDX + 1} cy={mouthY - 3} rx={3} ry={1.8} fill="#e0727a" opacity={0.16} />
+          </>
+        )}
+        {has(c, 'full_conversion') && (
+          <path
+            d={`M ${cx} ${cy - ry * 0.9} L ${cx + rx} ${cy - ry * 0.3} L ${cx + rx} ${cy + ry * 0.5} L ${cx + 2} ${cy + ry * 0.95} Z`}
+            fill="#7d8894"
+            opacity={0.85}
+          />
+        )}
         {old && !baby && (
           <g stroke={skinDeep} strokeWidth={0.45} fill="none" opacity={0.55}>
             <path d={`M ${cx - 6} ${cy - ry * 0.5} Q ${cx} ${cy - ry * 0.56} ${cx + 6} ${cy - ry * 0.5}`} />
@@ -382,7 +491,9 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
             <circle cx={cx - rx + 5} cy={eyeY - 9} r={0.7} fill="#4cf2ff" />
           </g>
         )}
-        {has(c, 'scarred') && <path d={`M ${cx - eyeDX - 3} ${eyeY - 5} L ${cx - eyeDX + 2} ${eyeY + 6}`} stroke="#9e4b4b" strokeWidth={1} strokeLinecap="round" opacity={0.85} />}
+        {has(c, 'scarred') && (
+          <path d={`M ${cx - eyeDX - 3} ${eyeY - 5} L ${cx - eyeDX + 2} ${eyeY + 6}`} stroke="#9e4b4b" strokeWidth={1} strokeLinecap="round" opacity={0.85} />
+        )}
         {!baby && !bald && <path d={capPath} fill={hair} />}
         {bald && (
           <>
@@ -394,7 +505,10 @@ function PortraitImpl({ c, year, rank = 0, clanColor = '#4a5677', trim = '#d4af3
         {baby && <path d={`M ${cx - 2} ${cy - ry + 1} q 2 -4 4 0`} stroke={hair} strokeWidth={1.2} fill="none" />}
         {has(c, 'wounded') && (
           <g>
-            <path d={`M ${cx - rx} ${cy - ry * 0.45} Q ${cx} ${cy - ry * 0.7} ${cx + rx} ${cy - ry * 0.45} L ${cx + rx} ${cy - ry * 0.3} Q ${cx} ${cy - ry * 0.55} ${cx - rx} ${cy - ry * 0.3} Z`} fill="#eee" />
+            <path
+              d={`M ${cx - rx} ${cy - ry * 0.45} Q ${cx} ${cy - ry * 0.7} ${cx + rx} ${cy - ry * 0.45} L ${cx + rx} ${cy - ry * 0.3} Q ${cx} ${cy - ry * 0.55} ${cx - rx} ${cy - ry * 0.3} Z`}
+              fill="#eee"
+            />
             <circle cx={cx + 5} cy={cy - ry * 0.5} r={1.2} fill="#c0392b" />
           </g>
         )}

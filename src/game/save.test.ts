@@ -20,7 +20,11 @@ const DIR = new URL('./__fixtures__/', import.meta.url);
 const WRITE = import.meta.env.MODE === 'fixtures';
 
 function fixtures(): string[] {
-  return existsSync(DIR) ? readdirSync(DIR).filter((f) => /^save-v\d+-.+\.json$/.test(f)).sort() : [];
+  return existsSync(DIR)
+    ? readdirSync(DIR)
+        .filter((f) => /^save-v\d+-.+\.json$/.test(f))
+        .sort()
+    : [];
 }
 
 /** The raw state inside a fixture, before any migration runs. */
@@ -77,7 +81,11 @@ describe('save migrations', () => {
 
   it('has frozen saves for every version (run `npm run fixtures` after a bump)', () => {
     const files = fixtures();
-    for (let v = 1; v <= SAVE_VERSION; v++) expect(files.some((f) => f.startsWith(`save-v${v}-`)), `fixtures for v${v}`).toBe(true);
+    for (let v = 1; v <= SAVE_VERSION; v++)
+      expect(
+        files.some((f) => f.startsWith(`save-v${v}-`)),
+        `fixtures for v${v}`,
+      ).toBe(true);
   });
 
   for (const file of fixtures()) {
@@ -101,7 +109,8 @@ describe('save migrations', () => {
   it('fills in fields that early version 1 saves never had', () => {
     type Loose = Record<string, unknown> & { dynasty: Record<string, unknown>; characters: Record<string, Record<string, unknown>> };
     const s = rawState('save-v1-governor.json') as unknown as Loose;
-    for (const k of ['items', 'equipped', 'shop', 'wars', 'aiWars', 'claims', 'feuds', 'cooldowns', 'eventCooldowns', 'stats', 'council', 'forge', 'routes']) delete s[k];
+    for (const k of ['items', 'equipped', 'shop', 'wars', 'aiWars', 'claims', 'feuds', 'cooldowns', 'eventCooldowns', 'stats', 'council', 'forge', 'routes'])
+      delete s[k];
     for (const k of ['locked', 'purged', 'slots', 'rulers', 'growth', 'autoMatch']) delete s.dynasty[k];
     for (const c of Object.values(s.characters)) delete c.childrenIds;
     const m = migrate(s as unknown as GameState);

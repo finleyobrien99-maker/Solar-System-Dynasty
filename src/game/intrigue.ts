@@ -1,22 +1,6 @@
 // Schemes, diplomacy and prisoners.
 
-import {
-  ageOf,
-  alive,
-  ch,
-  clanRank,
-  effStats,
-  fullName,
-  homePlanet,
-  itemSum,
-  liegeOf,
-  log,
-  notice,
-  playerClan,
-  ruler,
-  traitSum,
-  vassalsOf,
-} from './core';
+import { ageOf, alive, ch, clanRank, effStats, fullName, homePlanet, itemSum, liegeOf, log, notice, playerClan, ruler, traitSum, vassalsOf } from './core';
 import { canAfford, pay, type Cost } from './genetics';
 import { killCharacter } from './life';
 import { chance, clamp, int } from './rng';
@@ -29,10 +13,20 @@ import { remember } from './memory';
 export type SchemeKind = 'assassinate' | 'sabotage' | 'blackmail' | 'fabricate' | 'sway' | 'seduce';
 
 export const SCHEMES: Record<SchemeKind, { name: string; desc: string; cost: Cost; target: 'char' | 'clan' | 'region' }> = {
-  assassinate: { name: 'Assassin Drone', desc: 'Send a silent drone after a target. If it works, they die. If you are caught, expect war.', cost: { credits: 150 }, target: 'char' },
-  sabotage: { name: 'Sabotage Shipyards', desc: 'Wreck a rival clan\'s fleet in dock. Destroys 20-35% of their ships.', cost: { credits: 90 }, target: 'clan' },
+  assassinate: {
+    name: 'Assassin Drone',
+    desc: 'Send a silent drone after a target. If it works, they die. If you are caught, expect war.',
+    cost: { credits: 150 },
+    target: 'char',
+  },
+  sabotage: { name: 'Sabotage Shipyards', desc: "Wreck a rival clan's fleet in dock. Destroys 20-35% of their ships.", cost: { credits: 90 }, target: 'clan' },
   blackmail: { name: 'Blackmail', desc: 'Dig up dirt on a clan head and make them pay for your silence.', cost: { credits: 20 }, target: 'clan' },
-  fabricate: { name: 'Forge a Claim', desc: 'Forge old records proving a region is rightfully yours. Gives a war justification.', cost: { credits: 80 }, target: 'region' },
+  fabricate: {
+    name: 'Forge a Claim',
+    desc: 'Forge old records proving a region is rightfully yours. Gives a war justification.',
+    cost: { credits: 80 },
+    target: 'region',
+  },
   sway: { name: 'Sway', desc: 'Charm, gifts and flattery to make a clan like you.', cost: { credits: 50 }, target: 'clan' },
   seduce: { name: 'Seduce', desc: 'Start an affair. Lovers can give you children, and secrets.', cost: { credits: 30 }, target: 'char' },
 };
@@ -131,11 +125,7 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
   const r = ruler(s);
 
   const victimClanId =
-    SCHEMES[kind].target === 'char'
-      ? s.characters[targetId]?.clanId
-      : SCHEMES[kind].target === 'clan'
-        ? targetId
-        : s.regions[targetId]?.owner;
+    SCHEMES[kind].target === 'char' ? s.characters[targetId]?.clanId : SCHEMES[kind].target === 'clan' ? targetId : s.regions[targetId]?.owner;
   const victimClan = victimClanId ? s.clans[victimClanId] : undefined;
   const caughtText = caught && victimClan && !victimClan.isPlayer ? ` Worse, House ${victimClan.name} found out it was you.` : '';
 
@@ -307,7 +297,7 @@ export function vassalizeChance(s: GameState, clanId: string): number {
   const clan = s.clans[clanId];
   const dip = effStats(s, ruler(s)).dip;
   const ratio = s.fleet / Math.max(1, clan.fleet);
-  return clamp(0.1 + (clan.opinion / 200) + dip * 0.02 + (ratio - 1) * 0.25, 0, 0.9);
+  return clamp(0.1 + clan.opinion / 200 + dip * 0.02 + (ratio - 1) * 0.25, 0, 0.9);
 }
 
 export function vassalizeBlocker(s: GameState, clanId: string): string | null {

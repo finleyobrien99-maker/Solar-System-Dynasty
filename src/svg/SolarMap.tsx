@@ -66,9 +66,7 @@ function SolarMapImpl({ s, selected, onSelect }: Props) {
   }, []);
 
   const myPlanets = new Set(clanRegions(s, s.playerClanId).map((r) => r.planetId));
-  const warPlanets = new Set(
-    s.wars.flatMap((w) => clanRegions(s, w.enemy).map((r) => r.planetId)),
-  );
+  const warPlanets = new Set(s.wars.flatMap((w) => clanRegions(s, w.enemy).map((r) => r.planetId)));
   const ordered = PLANETS.map((p) => ({ p, pos: planetPos(p, s.year) })).sort((a, b) => a.pos[1] - b.pos[1]);
   const home = PLANETS.find((p) => p.id === s.clans[s.playerClanId]?.planetId);
   const homePos = home ? planetPos(home, s.year) : [0, 0];
@@ -87,7 +85,16 @@ function SolarMapImpl({ s, selected, onSelect }: Props) {
         <circle key={i} cx={x} cy={y} r={r} fill="#fff" opacity={0.5} />
       ))}
       {PLANETS.map((p) => (
-        <ellipse key={p.id} cx={0} cy={0} rx={ORBIT_R[p.orbit]} ry={ORBIT_R[p.orbit] * FLAT} fill="none" stroke={myPlanets.has(p.id) ? '#ffd16655' : '#ffffff1c'} strokeWidth={myPlanets.has(p.id) ? 1.6 : 1} />
+        <ellipse
+          key={p.id}
+          cx={0}
+          cy={0}
+          rx={ORBIT_R[p.orbit]}
+          ry={ORBIT_R[p.orbit] * FLAT}
+          fill="none"
+          stroke={myPlanets.has(p.id) ? '#ffd16655' : '#ffffff1c'}
+          strokeWidth={myPlanets.has(p.id) ? 1.6 : 1}
+        />
       ))}
       {belt.map(([x, y, r], i) => (
         <circle key={`b${i}`} cx={x} cy={y} r={r} fill="#a59f92" opacity={0.55} />
@@ -103,12 +110,35 @@ function SolarMapImpl({ s, selected, onSelect }: Props) {
         if (!from || !to) return null;
         const a = planetPos(from, s.year);
         const b = planetPos(to, s.year);
-        return <line key={`trade${r.id}`} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="#ffd166" strokeWidth={1.6} strokeDasharray="2 6" strokeLinecap="round" opacity={0.75} />;
+        return (
+          <line
+            key={`trade${r.id}`}
+            x1={a[0]}
+            y1={a[1]}
+            x2={b[0]}
+            y2={b[1]}
+            stroke="#ffd166"
+            strokeWidth={1.6}
+            strokeDasharray="2 6"
+            strokeLinecap="round"
+            opacity={0.75}
+          />
+        );
       })}
       {ordered
         .filter(({ p }) => warPlanets.has(p.id))
         .map(({ p, pos }) => (
-          <line key={`war${p.id}`} x1={homePos[0]} y1={homePos[1]} x2={pos[0]} y2={pos[1]} stroke="#ff4d4d" strokeWidth={2} strokeDasharray="8 6" opacity={0.8} />
+          <line
+            key={`war${p.id}`}
+            x1={homePos[0]}
+            y1={homePos[1]}
+            x2={pos[0]}
+            y2={pos[1]}
+            stroke="#ff4d4d"
+            strokeWidth={2}
+            strokeDasharray="8 6"
+            opacity={0.8}
+          />
         ))}
       {ordered.map(({ p, pos }) => {
         const size = planetSize(p);
@@ -138,7 +168,15 @@ function SolarMapImpl({ s, selected, onSelect }: Props) {
             <text y={size * 0.62 + 27} textAnchor="middle" className="map-sublabel">
               {sovClan ? `House ${sovClan.name}${sovClan.isPlayer ? ' (you)' : ''}` : ''}
             </text>
-            {mine && <polygon points="0,-6 1.8,-1.8 6,-1.5 2.8,1.3 3.7,5.5 0,3.3 -3.7,5.5 -2.8,1.3 -6,-1.5 -1.8,-1.8" transform={`translate(${size * 0.45} ${-size * 0.45}) scale(1.4)`} fill="#ffd166" stroke="#7a5b00" strokeWidth={0.6} />}
+            {mine && (
+              <polygon
+                points="0,-6 1.8,-1.8 6,-1.5 2.8,1.3 3.7,5.5 0,3.3 -3.7,5.5 -2.8,1.3 -6,-1.5 -1.8,-1.8"
+                transform={`translate(${size * 0.45} ${-size * 0.45}) scale(1.4)`}
+                fill="#ffd166"
+                stroke="#7a5b00"
+                strokeWidth={0.6}
+              />
+            )}
           </g>
         );
       })}

@@ -67,12 +67,19 @@ function Research() {
           </div>
         </div>
       ) : (
-        <div className="muted" style={{ fontSize: '0.85rem' }}>No project running. Pick a gene to sequence:</div>
+        <div className="muted" style={{ fontSize: '0.85rem' }}>
+          No project running. Pick a gene to sequence:
+        </div>
       )}
       {!p && (
         <div className="traits">
           {researchable(s).map((id) => (
-            <button key={id} className="btn small" onClick={() => act((d) => startResearch(d, id))} title={`About ${Math.ceil(researchNeeded(id) / rate)} cycles`}>
+            <button
+              key={id}
+              className="btn small"
+              onClick={() => act((d) => startResearch(d, id))}
+              title={`About ${Math.ceil(researchNeeded(id) / rate)} cycles`}
+            >
               {TRAITS[id].name} <span className="muted">~{Math.ceil(researchNeeded(id) / rate)}c</span>
             </button>
           ))}
@@ -86,7 +93,9 @@ function Research() {
               <TraitChip key={id} id={id} s={s} />
             ))}
           </div>
-          <div className="muted" style={{ fontSize: '0.78rem', marginTop: 4 }}>These can be locked in the Gene Vault without a living carrier.</div>
+          <div className="muted" style={{ fontSize: '0.78rem', marginTop: 4 }}>
+            These can be locked in the Gene Vault without a living carrier.
+          </div>
         </div>
       )}
     </div>
@@ -104,7 +113,9 @@ function Therapy() {
   return (
     <div className="card stack" style={{ gap: 8 }}>
       <b>Gene therapy</b>
-      <div className="muted" style={{ fontSize: '0.84rem' }}>Rewrite a living relative's genome. Works best on the very young; a rejected splice can leave lasting damage.</div>
+      <div className="muted" style={{ fontSize: '0.84rem' }}>
+        Rewrite a living relative's genome. Works best on the very young; a rejected splice can leave lasting damage.
+      </div>
       <div className="row wrap" style={{ gap: 8 }}>
         <select id="splice-who" value={who} onChange={(e) => setWho(e.target.value)} style={{ flex: '1 1 180px', minWidth: 0 }} aria-label="Patient">
           {members.slice(0, 60).map((c) => (
@@ -123,7 +134,9 @@ function Therapy() {
         </select>
       </div>
       <div className="spread">
-        <span className="muted" style={{ fontSize: '0.82rem' }}>{target ? `${Math.round(spliceChance(s, target) * 100)}% chance it takes` : ''}</span>
+        <span className="muted" style={{ fontSize: '0.82rem' }}>
+          {target ? `${Math.round(spliceChance(s, target) * 100)}% chance it takes` : ''}
+        </span>
         <span className="row" style={{ gap: 6 }}>
           {gene && <CostTag cost={spliceCost(s, gene)} />}
           <Btn small kind="primary" icon="dna" reason={block} onClick={() => act((d) => splice(d, who, gene))}>
@@ -157,7 +170,8 @@ function Vats() {
       <div className="card stack" style={{ gap: 8 }}>
         <b>Grow a designer heir</b>
         <div className="muted" style={{ fontSize: '0.84rem' }}>
-          A child grown from one parent's genome, with {max === Infinity ? 'any number of' : `up to ${max}`} researched genes designed in (one per ladder), plus everything locked in your vault.
+          A child grown from one parent's genome, with {max === Infinity ? 'any number of' : `up to ${max}`} researched genes designed in (one per ladder), plus
+          everything locked in your vault.
         </div>
         <select id="vat-parent" value={parent} onChange={(e) => setParent(e.target.value)} aria-label="Genome donor">
           {adults.map((c) => (
@@ -168,7 +182,12 @@ function Vats() {
         </select>
         <div className="traits">
           {options.map((id) => (
-            <button key={id} onClick={() => toggle(id)} aria-pressed={genes.includes(id)} style={{ background: 'none', border: 0, padding: 0, opacity: genes.includes(id) ? 1 : 0.4 }}>
+            <button
+              key={id}
+              onClick={() => toggle(id)}
+              aria-pressed={genes.includes(id)}
+              style={{ background: 'none', border: 0, padding: 0, opacity: genes.includes(id) ? 1 : 0.4 }}
+            >
               <span className="trait genetic good-t">{TRAITS[id].name}</span>
             </button>
           ))}
@@ -194,7 +213,9 @@ function Vats() {
       </div>
       <div className="card stack" style={{ gap: 8 }}>
         <b>Clone a member of the bloodline</b>
-        <div className="muted" style={{ fontSize: '0.84rem' }}>An exact genetic copy, raised as your own child. The dead work too: the vault keeps every ruler's DNA.</div>
+        <div className="muted" style={{ fontSize: '0.84rem' }}>
+          An exact genetic copy, raised as your own child. The dead work too: the vault keeps every ruler's DNA.
+        </div>
         <select id="clone-src" value={src} onChange={(e) => setSrc(e.target.value)} aria-label="Clone source">
           {sources.slice(0, 80).map((c) => (
             <option key={c.id} value={c.id}>
@@ -234,12 +255,13 @@ export function ForgeSection() {
     >
       {isVip(s) ? (
         <div className="card flat vip-banner" style={{ marginBottom: 10, fontSize: '0.86rem' }}>
-          <Icon name="relic" size={14} /> <b className="gold">VIP: unlimited Gene-Forge.</b> Fully built, every good gene already sequenced, every procedure free and certain to work,
-          and no faith will ever hear about it.
+          <Icon name="relic" size={14} /> <b className="gold">VIP: unlimited Gene-Forge.</b> Fully built, every good gene already sequenced, every procedure
+          free and certain to work, and no faith will ever hear about it.
         </div>
       ) : (
         <div className="card flat" style={{ marginBottom: 10, fontSize: '0.86rem' }}>
-          <Icon name="faith" size={14} /> Your faith, {faithName(s)}, <b className={st === 'condemn' ? 'bad' : st === 'embrace' ? 'good' : ''}>{STANCE_TEXT[st]}</b>.
+          <Icon name="faith" size={14} /> Your faith, {faithName(s)},{' '}
+          <b className={st === 'condemn' ? 'bad' : st === 'embrace' ? 'good' : ''}>{STANCE_TEXT[st]}</b>.
           <span className="muted"> Houses of the Solar Orthodoxy and the Abyssal Choir resent every procedure.</span>
         </div>
       )}
@@ -259,7 +281,9 @@ export function ForgeSection() {
           <Therapy />
           {forgeLevel(s) < 2 ? (
             <div className="card spread">
-              <span className="muted">The Vat Complex lets you grow designer heirs, clone the dead, and lets mothers bear children into their late fifties.</span>
+              <span className="muted">
+                The Vat Complex lets you grow designer heirs, clone the dead, and lets mothers bear children into their late fifties.
+              </span>
               <span className="row" style={{ gap: 6 }}>
                 <CostTag cost={VAT_COST} />
                 <Btn kind="primary" reason={vatBlocker(s)} onClick={() => act((d) => buildVats(d))}>

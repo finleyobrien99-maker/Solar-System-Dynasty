@@ -166,11 +166,7 @@ function startAiWar(s: GameState): void {
   const target = pick(s, targets);
   const war: AiWar = { id: newId(s, 'aw'), attacker: attacker.id, defender: target.owner, target: target.id, started: s.year, progress: 0 };
   s.aiWars.push(war);
-  log(
-    s,
-    `House ${attacker.name} (${PLANET_BY_ID[attacker.planetId].name}) declares war on House ${s.clans[target.owner].name} over ${target.name}.`,
-    'news',
-  );
+  log(s, `House ${attacker.name} (${PLANET_BY_ID[attacker.planetId].name}) declares war on House ${s.clans[target.owner].name} over ${target.name}.`, 'news');
 }
 
 function tickAiWars(s: GameState): void {
@@ -255,11 +251,16 @@ function rivalPlots(s: GameState): void {
       notice(s, 'Assassination!', `${fullName(s, target)} was found dead this morning.${blame}`, { icon: 'death', tone: 'bad', portraitId: target.id });
       killCharacter(s, target.id, `assassinated by agents of House ${rival.name}`);
     } else {
-      notice(s, 'Assassin Foiled', `An assassin from House ${rival.name} was caught creeping toward ${target.name}'s chambers. You have a Blood Feud against them.`, {
-        icon: 'scheme',
-        tone: 'good',
-        portraitId: target.id,
-      });
+      notice(
+        s,
+        'Assassin Foiled',
+        `An assassin from House ${rival.name} was caught creeping toward ${target.name}'s chambers. You have a Blood Feud against them.`,
+        {
+          icon: 'scheme',
+          tone: 'good',
+          portraitId: target.id,
+        },
+      );
     }
   } else if (kind === 'sabotage' && success) {
     const lost = Math.round(s.fleet * range(s, 0.08, 0.18));
@@ -270,7 +271,10 @@ function rivalPlots(s: GameState): void {
     s.credits -= stolen;
     notice(s, 'Treasury Robbed', `${stolen} credits have vanished from your vaults.${blame}`, { icon: 'credits', tone: 'bad' });
   } else {
-    notice(s, 'Plot Foiled', `Your guards stopped agents of House ${rival.name} before they could strike. You have a Blood Feud against them.`, { icon: 'scheme', tone: 'good' });
+    notice(s, 'Plot Foiled', `Your guards stopped agents of House ${rival.name} before they could strike. You have a Blood Feud against them.`, {
+      icon: 'scheme',
+      tone: 'good',
+    });
   }
   log(s, `House ${rival.name} plotted against you (${kind}${success ? ', succeeded' : ', failed'}).`, success ? 'bad' : 'war');
 }

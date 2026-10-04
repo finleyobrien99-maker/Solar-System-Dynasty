@@ -34,10 +34,14 @@ export function SavesPanel({ current, onLoad, onClose }: { current?: GameState; 
   return (
     <Modal title="Saves" onClose={onClose} icon="save">
       <p className="muted" style={{ fontSize: '0.84rem' }}>
-        Your game autosaves after every action. Each slot keeps a verified backup of the previous save, so a corrupted write never costs you a run. Export a file to keep a
-        copy outside the browser.
+        Your game autosaves after every action. Each slot keeps a verified backup of the previous save, so a corrupted write never costs you a run. Export a
+        file to keep a copy outside the browser.
       </p>
-      {msg && <div className="card flat" style={{ marginBottom: 8 }}>{msg}</div>}
+      {msg && (
+        <div className="card flat" style={{ marginBottom: 8 }}>
+          {msg}
+        </div>
+      )}
       <div className="stack">
         {(['auto', 'slot1', 'slot2', 'slot3'] as SlotId[]).map((slot) => {
           const info = bySlot.get(slot);

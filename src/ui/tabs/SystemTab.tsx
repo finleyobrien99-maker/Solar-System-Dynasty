@@ -39,12 +39,15 @@ function RegionPanel({ regionId }: { regionId: string }) {
         </button>
       </div>
       {mine ? (
-        <div className="good" style={{ marginTop: 8 }}>This region is yours.</div>
+        <div className="good" style={{ marginTop: 8 }}>
+          This region is yours.
+        </div>
       ) : (
         <>
           <hr className="divider" />
           <h4>
-            Declare war <InfoDot text="Pick a justification (casus belli). A claim or blood feud is free. A holy war needs a different faith and costs faith. Naked conquest needs no excuse but costs prestige and makes everyone like you less." />
+            Declare war{' '}
+            <InfoDot text="Pick a justification (casus belli). A claim or blood feud is free. A holy war needs a different faith and costs faith. Naked conquest needs no excuse but costs prestige and makes everyone like you less." />
           </h4>
           {block ? (
             <div className="muted">{block}</div>
@@ -53,7 +56,10 @@ function RegionPanel({ regionId }: { regionId: string }) {
               {opts.map((o) => (
                 <div key={o.cb} className="spread">
                   <span>
-                    <b>{CB_INFO[o.cb].name}</b> <span className="muted" style={{ fontSize: '0.8rem' }}>{CB_INFO[o.cb].desc}</span>
+                    <b>{CB_INFO[o.cb].name}</b>{' '}
+                    <span className="muted" style={{ fontSize: '0.8rem' }}>
+                      {CB_INFO[o.cb].desc}
+                    </span>
                   </span>
                   <span className="row" style={{ gap: 6 }}>
                     <CostTag cost={o.cost} />
@@ -84,7 +90,11 @@ function RegionPanel({ regionId }: { regionId: string }) {
               </Btn>
             </div>
           )}
-          {s.claims.includes(reg.id) && <div className="pill gold" style={{ marginTop: 8 }}>You hold a claim here</div>}
+          {s.claims.includes(reg.id) && (
+            <div className="pill gold" style={{ marginTop: 8 }}>
+              You hold a claim here
+            </div>
+          )}
         </>
       )}
     </div>
@@ -104,13 +114,30 @@ function ClanRow({ clanId }: { clanId: string }) {
       <div className="meta">
         <div className="nm">
           House {clan.name} {clan.isPlayer && <span className="pill gold">You</span>}
-          {clan.allied && <span className="pill green" style={{ marginLeft: 4 }}>Ally</span>}
-          {liege === s.playerClanId && <span className="pill cyan" style={{ marginLeft: 4 }}>{clan.cadetOf === s.playerClanId ? 'Cadet' : 'Vassal'}</span>}
-          {isRival(clan) && <span className="pill red" style={{ marginLeft: 4 }}>Sworn rival</span>}
-          {s.wars.some((w) => w.enemy === clanId) && <span className="pill red" style={{ marginLeft: 4 }}>At war</span>}
+          {clan.allied && (
+            <span className="pill green" style={{ marginLeft: 4 }}>
+              Ally
+            </span>
+          )}
+          {liege === s.playerClanId && (
+            <span className="pill cyan" style={{ marginLeft: 4 }}>
+              {clan.cadetOf === s.playerClanId ? 'Cadet' : 'Vassal'}
+            </span>
+          )}
+          {isRival(clan) && (
+            <span className="pill red" style={{ marginLeft: 4 }}>
+              Sworn rival
+            </span>
+          )}
+          {s.wars.some((w) => w.enemy === clanId) && (
+            <span className="pill red" style={{ marginLeft: 4 }}>
+              At war
+            </span>
+          )}
         </div>
         <div className="sub">
-          {clanPower(s, clanId)} · {regions.length} region{regions.length === 1 ? '' : 's'} · {clan.fleet} ships{liege ? ` · vassal of ${s.clans[liege].name}` : ''}
+          {clanPower(s, clanId)} · {regions.length} region{regions.length === 1 ? '' : 's'} · {clan.fleet} ships
+          {liege ? ` · vassal of ${s.clans[liege].name}` : ''}
         </div>
         {!clan.isPlayer && (
           <div style={{ marginTop: 4 }}>
@@ -136,7 +163,11 @@ export function SystemTab() {
 
   return (
     <div>
-      <Section title="The Sol System" icon="map" info="Tap a world to inspect it. The coloured ring around each planet is its ruling house. Gold stars mark worlds where you hold land, gold dots are your trade lanes and red dashes are your wars. Planets move along their orbits each cycle.">
+      <Section
+        title="The Sol System"
+        icon="map"
+        info="Tap a world to inspect it. The coloured ring around each planet is its ruling house. Gold stars mark worlds where you hold land, gold dots are your trade lanes and red dashes are your wars. Planets move along their orbits each cycle."
+      >
         <SolarMap s={s} selected={planetId} onSelect={(id) => setUi({ planetId: id, regionId: undefined })} />
       </Section>
       <div className="cols section">
@@ -145,8 +176,12 @@ export function SystemTab() {
             <PlanetArt planetId={planetId} size={84} />
             <div className="grow">
               <h2 style={{ marginBottom: 2 }}>{p.name}</h2>
-              <div className="gold" style={{ fontSize: '0.88rem' }}>{p.faction}</div>
-              <div className="muted" style={{ fontSize: '0.84rem', marginTop: 4 }}>{p.blurb}</div>
+              <div className="gold" style={{ fontSize: '0.88rem' }}>
+                {p.faction}
+              </div>
+              <div className="muted" style={{ fontSize: '0.84rem', marginTop: 4 }}>
+                {p.blurb}
+              </div>
               <div style={{ fontSize: '0.82rem', marginTop: 4 }}>
                 <b>Bonus for natives:</b> {p.bonus}
               </div>
@@ -164,7 +199,11 @@ export function SystemTab() {
           </div>
         </div>
         <div className="stack">
-          {regionId ? <RegionPanel regionId={regionId} /> : <div className="card flat muted">Select a region on the map to see who holds it, forge claims or declare war.</div>}
+          {regionId ? (
+            <RegionPanel regionId={regionId} />
+          ) : (
+            <div className="card flat muted">Select a region on the map to see who holds it, forge claims or declare war.</div>
+          )}
           <h3 style={{ marginTop: 6 }}>Houses of {p.name}</h3>
           {clansHere.map((c) => (
             <ClanRow key={c.id} clanId={c.id} />

@@ -73,10 +73,7 @@ export function randomPersonality(s: Seeded, target: number, existing: string[],
   const traits = existing.slice();
   let guard = 0;
   while (traits.filter((t) => TRAITS[t]?.cat === 'personality').length < target && guard++ < 40) {
-    const pool =
-      focus && rand(s) < 0.45
-        ? FOCUS_BIAS[focus]
-        : PERSONALITY.map((t) => t.id);
+    const pool = focus && rand(s) < 0.45 ? FOCUS_BIAS[focus] : PERSONALITY.map((t) => t.id);
     const id = pick(s, pool);
     if (banned.includes(id)) continue;
     if (traits.some((t) => conflicts(t, id))) continue;
@@ -130,7 +127,12 @@ export function createCharacter(s: GameState, o: CreateOpts): Character {
   if (o.adultExtras && ageOf(s, c) >= 16) {
     const focus = pick(s, STAT_KEYS);
     traits = randomPersonality(s, 3, traits, focus);
-    const tier = weighted(s, [[1, 30], [2, 40], [3, 22], [4, 8]] as const);
+    const tier = weighted(s, [
+      [1, 30],
+      [2, 40],
+      [3, 22],
+      [4, 8],
+    ] as const);
     traits.push(eduTrait(focus, tier));
     base[focus] += 2;
   }

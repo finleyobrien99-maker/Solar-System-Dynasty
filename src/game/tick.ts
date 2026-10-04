@@ -35,7 +35,11 @@ export function ageUp(s: GameState): void {
   }
 
   const r = ruler(s);
-  log(s, `${r.name} turns ${ageOf(s, r)}. Income: ${dc >= 0 ? '+' : ''}${dc} credits, ${dp >= 0 ? '+' : ''}${dp} prestige, ${df >= 0 ? '+' : ''}${df} faith.`, 'info');
+  log(
+    s,
+    `${r.name} turns ${ageOf(s, r)}. Income: ${dc >= 0 ? '+' : ''}${dc} credits, ${dp >= 0 ? '+' : ''}${dp} prestige, ${df >= 0 ? '+' : ''}${df} faith.`,
+    'info',
+  );
 
   healthTick(s);
   if (s.gameOver) return;

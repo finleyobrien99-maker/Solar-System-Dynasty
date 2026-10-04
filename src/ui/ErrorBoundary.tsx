@@ -114,7 +114,12 @@ export class ErrorBoundary extends Component<Props, State> {
 export function GameErrorBoundary({ children }: { children: ReactNode }) {
   const { s, replace, setUi, quit } = useGame();
   return (
-    <ErrorBoundary current={s} onRestore={replace} onReset={() => setUi({ panel: null, charId: undefined, clanId: undefined, regionId: undefined })} onQuit={quit}>
+    <ErrorBoundary
+      current={s}
+      onRestore={replace}
+      onReset={() => setUi({ panel: null, charId: undefined, clanId: undefined, regionId: undefined })}
+      onQuit={quit}
+    >
       {children}
     </ErrorBoundary>
   );

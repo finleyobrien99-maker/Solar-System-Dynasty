@@ -142,10 +142,15 @@ export function forgeTick(s: GameState): void {
     s.forge.project = undefined;
     const name = TRAITS[p.trait].name;
     heresy(s, 8, `Synthesised the ${name} gene`);
-    notice(s, 'Gene Sequenced', `Your geneticists have synthesised ${name}. You can now lock it into the Gene Vault without a carrier, and splice it into living kin.`, {
-      icon: 'dna',
-      tone: 'good',
-    });
+    notice(
+      s,
+      'Gene Sequenced',
+      `Your geneticists have synthesised ${name}. You can now lock it into the Gene Vault without a carrier, and splice it into living kin.`,
+      {
+        icon: 'dna',
+        tone: 'good',
+      },
+    );
     log(s, `The Gene-Forge synthesised ${name}.`, 'good');
   }
 }
@@ -190,11 +195,16 @@ export function splice(s: GameState, charId: string, id: string): boolean {
   const harm = chance(s, 0.4) ? (chance(s, 0.3) ? 'gene_rot' : 'sickly') : undefined;
   if (harm && !s.dynasty.purged.includes(harm)) c.traits = addTrait(c.traits, harm);
   c.health -= 15;
-  notice(s, 'Splice Rejected', `${c.name}'s body rejected the ${name} sequence.${harm ? ` The damage left them ${TRAITS[harm].name}.` : ' They will recover.'}`, {
-    icon: 'dna',
-    tone: 'bad',
-    portraitId: c.id,
-  });
+  notice(
+    s,
+    'Splice Rejected',
+    `${c.name}'s body rejected the ${name} sequence.${harm ? ` The damage left them ${TRAITS[harm].name}.` : ' They will recover.'}`,
+    {
+      icon: 'dna',
+      tone: 'bad',
+      portraitId: c.id,
+    },
+  );
   return false;
 }
 
@@ -210,7 +220,8 @@ export function vatHeirBlocker(s: GameState, parentId: string, genes: string[]):
   if (!alive(p) || !isBloodlineClan(s, p.clanId) || ageOf(s, p) < 16) return 'Pick a living adult of your bloodline.';
   if (genes.length > maxVatGenes(s)) return `At most ${MAX_VAT_GENES} designer genes.`;
   if (genes.some((g) => !isResearched(s, g))) return 'Only researched genes can be designed in.';
-  for (let i = 0; i < genes.length; i++) for (let j = i + 1; j < genes.length; j++) if (conflicts(genes[i], genes[j])) return 'Two of those genes are on the same ladder.';
+  for (let i = 0; i < genes.length; i++)
+    for (let j = i + 1; j < genes.length; j++) if (conflicts(genes[i], genes[j])) return 'Two of those genes are on the same ladder.';
   if (!canAfford(s, vatHeirCost(s, genes.length))) return 'Not enough credits or prestige.';
   return null;
 }
@@ -237,7 +248,11 @@ export function growVatHeir(s: GameState, parentId: string, genes: string[]): Ch
   child.base = { ...parent.base };
   parent.childrenIds.push(child.id);
   heresy(s, 20, 'Grew a child in a vat');
-  notice(s, 'A Child From the Vats', `${child.name} emerges from the Vat Complex, grown from ${parent.name}'s genome.`, { icon: 'dna', tone: 'good', portraitId: child.id });
+  notice(s, 'A Child From the Vats', `${child.name} emerges from the Vat Complex, grown from ${parent.name}'s genome.`, {
+    icon: 'dna',
+    tone: 'good',
+    portraitId: child.id,
+  });
   log(s, `${child.name} was grown in the vats from ${parent.name}'s genome.`, 'birth');
   return child;
 }

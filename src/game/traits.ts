@@ -31,6 +31,8 @@ export interface TraitDef {
   temp?: boolean;
 }
 
+// One trait per line, so the table reads like a table.
+// prettier-ignore
 const T: TraitDef[] = [
   // ── Genetic: intellect ladder
   { id: 'dim', name: 'Dim', cat: 'genetic', group: 'intellect', level: -2, all: -4, good: false, mutation: 2, desc: 'Struggles to follow a conversation, let alone a war.' },

@@ -31,7 +31,15 @@ function withKin(s: GameState) {
   extra.owner = s.playerClanId; // test setup only
   s.regions = { ...s.regions }; // invalidate the region index
   const r = ruler(s);
-  const kin = createCharacter(s, { gender: 'F', born: s.year - 25, clanId: s.playerClanId, planetId: 'mars', fatherId: r.fatherId, motherId: r.motherId, adultExtras: true });
+  const kin = createCharacter(s, {
+    gender: 'F',
+    born: s.year - 25,
+    clanId: s.playerClanId,
+    planetId: 'mars',
+    fatherId: r.fatherId,
+    motherId: r.motherId,
+    adultExtras: true,
+  });
   const grandkid = createCharacter(s, { gender: 'M', born: s.year - 2, clanId: s.playerClanId, planetId: 'mars', motherId: kin.id });
   kin.childrenIds.push(grandkid.id);
   // Make sure the kinsman isn't the heir.

@@ -28,7 +28,9 @@ function Activities() {
                 </div>
               </div>
             </div>
-            <div className="muted" style={{ fontSize: '0.84rem', flex: 1 }}>{a.desc}</div>
+            <div className="muted" style={{ fontSize: '0.84rem', flex: 1 }}>
+              {a.desc}
+            </div>
             <div className="spread">
               <CostTag cost={a.cost(s)} />
               <Btn small kind="primary" reason={block} onClick={() => act((d) => doActivity(d, k))}>
@@ -66,8 +68,7 @@ function Schemes() {
 
   const clanTargets = Object.values(s.clans).filter((c) => !c.isPlayer && clanRegions(s, c.id).length);
   const regionTargets = Object.values(s.regions).filter((x) => x.owner !== s.playerClanId);
-  const valid =
-    def.target === 'char' ? !!s.characters[target] : def.target === 'clan' ? !!s.clans[target] && !s.clans[target].isPlayer : !!s.regions[target];
+  const valid = def.target === 'char' ? !!s.characters[target] : def.target === 'clan' ? !!s.clans[target] && !s.clans[target].isPlayer : !!s.regions[target];
   const block = valid ? schemeBlocker(s, kind, target) : 'Pick a target';
   const chance = valid ? schemeChance(s, kind, target) : 0;
 
@@ -137,7 +138,10 @@ function Schemes() {
         <div className="spread">
           <span>
             Success chance: <b className={chance >= 0.5 ? 'good' : 'bad'}>{valid ? `${Math.round(chance * 100)}%` : '-'}</b>
-            <span className="muted" style={{ fontSize: '0.8rem' }}> (Intrigue vs theirs, plus traits and relics)</span>
+            <span className="muted" style={{ fontSize: '0.8rem' }}>
+              {' '}
+              (Intrigue vs theirs, plus traits and relics)
+            </span>
           </span>
           <span className="row" style={{ gap: 6 }}>
             <CostTag cost={def.cost} />
@@ -155,10 +159,18 @@ function Schemes() {
 export function ActionsTab() {
   return (
     <div>
-      <Section title="Activities" icon="gala" info="Each activity can be done once per cooldown. Most give prestige or faith, with a dash of risk. Regents (rulers under 16) cannot do them.">
+      <Section
+        title="Activities"
+        icon="gala"
+        info="Each activity can be done once per cooldown. Most give prestige or faith, with a dash of risk. Regents (rulers under 16) cannot do them."
+      >
         <Activities />
       </Section>
-      <Section title="Schemes" icon="scheme" info="Up to 3 schemes per cycle. Success depends on your Intrigue against your target's, plus Deceitful, psionic genes, Venusian birth and relics. Paranoid and Plutonian targets are harder. Get caught and the victim's house will hate you, or worse.">
+      <Section
+        title="Schemes"
+        icon="scheme"
+        info="Up to 3 schemes per cycle. Success depends on your Intrigue against your target's, plus Deceitful, psionic genes, Venusian birth and relics. Paranoid and Plutonian targets are harder. Get caught and the victim's house will hate you, or worse."
+      >
         <Schemes />
       </Section>
     </div>

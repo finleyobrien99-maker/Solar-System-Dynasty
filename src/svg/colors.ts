@@ -2,12 +2,23 @@
 
 export function hexToRgb(hex: string): [number, number, number] {
   const h = hex.replace('#', '');
-  const n = parseInt(h.length === 3 ? h.split('').map((c) => c + c).join('') : h, 16);
+  const n = parseInt(
+    h.length === 3
+      ? h
+          .split('')
+          .map((c) => c + c)
+          .join('')
+      : h,
+    16,
+  );
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
 export function rgbToHex(r: number, g: number, b: number): string {
-  const c = (v: number) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  const c = (v: number) =>
+    Math.max(0, Math.min(255, Math.round(v)))
+      .toString(16)
+      .padStart(2, '0');
   return `#${c(r)}${c(g)}${c(b)}`;
 }
 
@@ -83,11 +94,11 @@ export function skinColor(index: number, planetId: string, traits: string[]): st
 }
 
 export function hairColor(index: number, planetId: string, age: number): string {
-  let c = index >= 7 ? EXOTIC_HAIR[planetId] ?? HAIR[0] : HAIR[Math.max(0, Math.min(6, index))];
+  let c = index >= 7 ? (EXOTIC_HAIR[planetId] ?? HAIR[0]) : HAIR[Math.max(0, Math.min(6, index))];
   if (age >= 45) c = mix(c, '#c9c9c9', Math.min(0.9, (age - 45) / 30));
   return c;
 }
 
 export function eyeColor(index: number, planetId: string): string {
-  return index >= 6 ? EXOTIC_EYES[planetId] ?? EYES[0] : EYES[Math.max(0, Math.min(5, index))];
+  return index >= 6 ? (EXOTIC_EYES[planetId] ?? EYES[0]) : EYES[Math.max(0, Math.min(5, index))];
 }

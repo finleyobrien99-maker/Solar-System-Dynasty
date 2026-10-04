@@ -77,31 +77,85 @@ function TopBar() {
           </div>
         </div>
         <div className="resources">
-          <Tip text={<><b>Credits</b><div>Money. Pays for ships, building up regions, activities, implants, bribes and the Gene Vault. If you go into debt your crews start deserting.</div><Lines lines={creditLines(s)} unit="credits" /></>}>
+          <Tip
+            text={
+              <>
+                <b>Credits</b>
+                <div>
+                  Money. Pays for ships, building up regions, activities, implants, bribes and the Gene Vault. If you go into debt your crews start deserting.
+                </div>
+                <Lines lines={creditLines(s)} unit="credits" />
+              </>
+            }
+          >
             <span className={`res credits ${s.credits < 0 ? 'neg' : ''}`}>
               <Icon name="credits" size={15} />
               {fmt(s.credits)}
-              <span className="delta">{dc >= 0 ? '+' : ''}{dc}</span>
+              <span className="delta">
+                {dc >= 0 ? '+' : ''}
+                {dc}
+              </span>
             </span>
           </Tip>
-          <Tip text={<><b>Fleet</b><div>Warships. Your strength in every battle, multiplied by your Command. Allies and loyal vassals add some of their ships. Each ship costs 0.8 credits a cycle.</div><div style={{ marginTop: 4 }}>Capacity: {s.fleet} / {fleetCap(s)} (grows with regions and rank)</div></>}>
+          <Tip
+            text={
+              <>
+                <b>Fleet</b>
+                <div>
+                  Warships. Your strength in every battle, multiplied by your Command. Allies and loyal vassals add some of their ships. Each ship costs 0.8
+                  credits a cycle.
+                </div>
+                <div style={{ marginTop: 4 }}>
+                  Capacity: {s.fleet} / {fleetCap(s)} (grows with regions and rank)
+                </div>
+              </>
+            }
+          >
             <span className="res fleet">
               <Icon name="fleet" size={15} />
               {fmt(s.fleet)}
             </span>
           </Tip>
-          <Tip text={<><b>Prestige</b><div>Fame and legitimacy. Spent on creating titles, locking genes, changing laws, demanding vassalage and wars of conquest. High prestige makes every clan like you more.</div><Lines lines={prestigeLines(s)} unit="prestige" /></>}>
+          <Tip
+            text={
+              <>
+                <b>Prestige</b>
+                <div>
+                  Fame and legitimacy. Spent on creating titles, locking genes, changing laws, demanding vassalage and wars of conquest. High prestige makes
+                  every clan like you more.
+                </div>
+                <Lines lines={prestigeLines(s)} unit="prestige" />
+              </>
+            }
+          >
             <span className={`res prestige ${s.prestige < 0 ? 'neg' : ''}`}>
               <Icon name="prestige" size={15} />
               {fmt(s.prestige)}
-              <span className="delta">{dp >= 0 ? '+' : ''}{dp}</span>
+              <span className="delta">
+                {dp >= 0 ? '+' : ''}
+                {dp}
+              </span>
             </span>
           </Tip>
-          <Tip text={<><b>Faith</b><div>Your standing with the church. Spent on holy wars, divorces, prayers in events, converting, and conditioning personality traits in the Gene Vault.</div><Lines lines={faithLines(s)} unit="faith" /></>}>
+          <Tip
+            text={
+              <>
+                <b>Faith</b>
+                <div>
+                  Your standing with the church. Spent on holy wars, divorces, prayers in events, converting, and conditioning personality traits in the Gene
+                  Vault.
+                </div>
+                <Lines lines={faithLines(s)} unit="faith" />
+              </>
+            }
+          >
             <span className="res faith">
               <Icon name="faith" size={15} />
               {fmt(s.faith)}
-              <span className="delta">{df >= 0 ? '+' : ''}{df}</span>
+              <span className="delta">
+                {df >= 0 ? '+' : ''}
+                {df}
+              </span>
             </span>
           </Tip>
         </div>
