@@ -426,6 +426,9 @@ export function ransomPrisoner(s: GameState, id: string): void {
   const c = s.characters[id];
   if (!alive(c) || c.prisonerOf !== s.playerClanId) return;
   const v = ransomValue(s, id);
+  // Their house pays, borrowing if it must.
+  const payer = s.clans[c.clanId];
+  if (payer) payer.credits -= v;
   s.credits += v;
   c.prisonerOf = undefined;
   remember(s, c.clanId, `Ransomed ${c.name}`, -8);

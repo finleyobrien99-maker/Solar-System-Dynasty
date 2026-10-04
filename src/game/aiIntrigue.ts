@@ -8,6 +8,7 @@
 // still come from sworn rivals (ai.ts) and from events.
 
 import { ageOf, alive, ch, clanRank, clanRegions, effStats, fullName, hasTrait, isCloseKin, log } from './core';
+import { pactMap, pactsOf, type Pacts } from './aiCourt';
 import { recordDeed } from './epithets';
 import { killCharacter } from './life';
 import { addFeeling, attempted, blackmailed, cuckolded, lovers, murdered, opinionOf } from './relations';
@@ -52,9 +53,10 @@ function vendetta(s: GameState, head: Character, rival: Character): boolean {
  * Hatred drives murder and sabotage, greed drives blackmail, lust drives
  * seduction, and warmth drives charm. Scores at or below zero are never chosen.
  */
-export function aiPlans(s: GameState, k: Clan): AiPlan[] {
+export function aiPlans(s: GameState, k: Clan, pacts: Pacts = pactMap(s)): AiPlan[] {
   const head = adultHead(s, k);
   if (!head) return [];
+  const kin = pactsOf(s, k.id, pacts);
   const plans: AiPlan[] = [];
   const has = (t: string) => hasTrait(head, t);
   for (const other of Object.values(s.clans)) {
@@ -62,7 +64,8 @@ export function aiPlans(s: GameState, k: Clan): AiPlan[] {
     const t = adultHead(s, other);
     if (!t) continue;
     const war = atWar(s, k.id, other.id);
-    const hate = -opinionOf(s, head, t) + (war ? 30 : 0);
+    // Kin by marriage get the benefit of the doubt.
+    const hate = -opinionOf(s, head, t) + (war ? 30 : 0) - (kin.has(other.id) ? 25 : 0);
     const blood = vendetta(s, head, t);
     const merciless = (has('cruel') ? 15 : 0) + (has('wrathful') ? 10 : 0) + (has('ambitious') ? 10 : 0) - (has('kind') ? 25 : 0) - (has('honest') ? 15 : 0);
     if (hate >= 60 || blood) plans.push({ kind: 'assassinate', target: t, score: hate - 50 + merciless + (blood ? 40 : 0) });
@@ -157,11 +160,12 @@ export function runAiScheme(s: GameState, k: Clan, plan: AiPlan): boolean {
 
 /** Each cycle, some AI heads pick a plot and carry it out. */
 export function aiIntrigueTick(s: GameState): void {
+  let pacts: Pacts | undefined;
   for (const k of Object.values(s.clans)) {
     if (k.isPlayer || !clanRegions(s, k.id).length) continue;
     const head = adultHead(s, k);
     if (!head || !chance(s, plotChance(head))) continue;
-    const plans = aiPlans(s, k);
+    const plans = aiPlans(s, k, (pacts ??= pactMap(s)));
     if (!plans.length) continue;
     // Favour the plots they want most, with room for surprise.
     const plan = weighted(

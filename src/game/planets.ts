@@ -323,3 +323,9 @@ export function makeName(planetId: string, gender: Gender, r: () => number): str
   if (s[s.length - 1].toLowerCase() === e[0]) return s + e.slice(1);
   return s + e;
 }
+
+/** Planets one orbit in or out: close enough to marry into, or to fight. */
+export function neighbourPlanets(planetId: string): string[] {
+  const orbit = PLANET_BY_ID[planetId].orbit;
+  return PLANETS.filter((p) => Math.abs(p.orbit - orbit) === 1).map((p) => p.id);
+}

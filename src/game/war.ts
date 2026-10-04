@@ -28,6 +28,7 @@ import type { BattleReport, CasusBelli, GameState, Region, War } from './types';
 import { killCharacter } from './life';
 import { councilStat } from './council';
 import { remember } from './memory';
+import { takeCaptive } from './aiCourt';
 
 export const CB_INFO: Record<CasusBelli, { name: string; desc: string }> = {
   claim: { name: 'Press Claim', desc: 'You hold a claim on this region. No prestige penalty.' },
@@ -301,6 +302,20 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
   if (outcome === 'win' && !war.playerAttacker) recordDeed(s, actorId, 'defensiveWins');
   if (outcome === 'lose' && war.playerAttacker) recordDeed(s, enemy.headId, 'defensiveWins');
   if (outcome === 'lose' && war.cb === 'revolt') recordDeed(s, enemy.headId, 'independence');
+  // The winner may carry off the loser's lord or kin, whichever side you're on.
+  const captive = outcome === 'win' ? takeCaptive(s, clan.id, enemy.id, 0.25) : takeCaptive(s, enemy.id, clan.id, 0.3);
+  if (captive && outcome === 'win')
+    notice(s, 'Captive Taken', `Your troops drag ${fullName(s, captive)} back in chains. Decide their fate under Prisoners on the Realm tab.`, {
+      icon: 'scheme',
+      tone: 'good',
+      portraitId: captive.id,
+    });
+  else if (captive)
+    notice(s, 'Taken Captive', `House ${enemy.name} has carried off ${fullName(s, captive)}. Expect a ransom demand, if they're feeling businesslike.`, {
+      icon: 'scheme',
+      tone: 'bad',
+      portraitId: captive.id,
+    });
   if (outcome === 'win') {
     s.prestige += 60;
     enemy.opinion = Math.max(-100, enemy.opinion - 20);

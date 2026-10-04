@@ -189,9 +189,9 @@ function grieve(s: GameState, victim: Character, byId: string, why: string, valu
   for (const k of closeKin(s, victim)) if (k.id !== byId) addFeeling(s, k.id, byId, { why, value, decay, grave: true });
 }
 
-/** The ruler executed someone: their close family barely ever forgive it. */
-export function executed(s: GameState, victim: Character): void {
-  grieve(s, victim, s.rulerId, `Executed ${victim.name}`, -75, 0.2);
+/** Someone was executed (by the ruler unless `byId` says otherwise): their close family barely ever forgive it. */
+export function executed(s: GameState, victim: Character, byId = s.rulerId): void {
+  grieve(s, victim, byId, `Executed ${victim.name}`, -75, 0.2);
 }
 
 /**
