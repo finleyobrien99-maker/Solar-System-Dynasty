@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { createCharacter } from './character';
 import { alive, ch, clanRegions } from './core';
 import { buildCtx, EVENT_BY_ID, queueEvent } from './events';
-import { COURT_EVENTS, heldKin } from './eventsCourt';
+import { COURT_EVENTS, courtingHouse, courtship, heldKin } from './eventsCourt';
+import { remember } from './memory';
 import { addFeeling } from './relations';
 import type { Clan, GameState, Pending } from './types';
 import { createWorld, rollRuler, startGame } from './world';
@@ -114,5 +115,40 @@ describe('AI houses deal with you as equals', () => {
     def.choices[0].run(ctx);
     expect(s.clans[String(ctx.data.clan)].allied).toBe(true);
     expect(ctx.data.foe).not.toBe('');
+  });
+});
+
+describe('who asks for your hand', () => {
+  it('a house whose lord you wronged, or that dislikes you, never proposes a match', () => {
+    const s = court();
+    const [a, b, c] = aiHouses(s);
+    for (const k of aiHouses(s)) k.opinion = -50;
+    a.opinion = 40;
+    b.opinion = 40;
+    c.opinion = 5;
+    addFeeling(s, b.headId, s.rulerId, { why: 'Murdered my wife', value: -90, decay: 0, grave: true });
+    expect(courtship(s, a)).toBeGreaterThan(0);
+    expect(courtship(s, b)).toBe(0);
+    expect(courtship(s, c)).toBe(0);
+    for (let seed = 1; seed < 30; seed++) {
+      s.seed = seed;
+      expect(courtingHouse(s)?.id).toBe(a.id);
+    }
+  });
+
+  it("accepting a match can't lift a house past the grudge it holds", () => {
+    const s = court();
+    const [k] = aiHouses(s);
+    for (const o of aiHouses(s)) o.opinion = -50;
+    k.opinion = 30;
+    const son = createCharacter(s, { gender: 'M', born: s.year - 20, clanId: s.playerClanId, planetId: 'mars', fatherId: s.rulerId, adultExtras: true });
+    s.characters[s.rulerId].childrenIds.push(son.id);
+    const def = EVENT_BY_ID.proposal;
+    expect(queueEvent(s, def)).toBe(true);
+    const ctx = buildCtx(s, s.pending[s.pending.length - 1] as Extract<Pending, { kind: 'event' }>);
+    expect(ctx.data.clan).toBe(k.id);
+    remember(s, k.id, 'Executed our heir', -75, undefined, true);
+    def.choices[0].run(ctx);
+    expect(k.opinion).toBeLessThan(0);
   });
 });

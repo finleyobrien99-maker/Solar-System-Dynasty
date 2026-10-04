@@ -18,7 +18,7 @@ import { alive, clanRegions, effStats, newId } from './core';
 import { clearFlag, setFlag, sicken, type EventChoice, type EventCtx, type EventDef } from './eventKit';
 import { makeItem } from './items';
 import { currentHeir, killCharacter } from './life';
-import { remember } from './memory';
+import { capOpinion, remember } from './memory';
 import { addFeeling, forget } from './relations';
 import { chance, clamp, int, pick } from './rng';
 import { addTrait, STAT_NAMES, TRAITS } from './traits';
@@ -273,7 +273,8 @@ function apply(c: Ctx, e: Effect, notes: string[]): void {
     if (reg) reg.dev = clamp(reg.dev + e.dev, 1, 10);
   } else if ('opinion' in e) {
     const k = clanOf(c, e.clan);
-    if (k) k.opinion = e.max === undefined ? k.opinion + e.opinion : Math.min(e.max, k.opinion + e.opinion);
+    // Never above the ceiling a grave grudge sets (memory.ts).
+    if (k) k.opinion = capOpinion(k, e.max === undefined ? k.opinion + e.opinion : Math.min(e.max, k.opinion + e.opinion));
   } else if ('remember' in e) {
     remember(s, clanOf(c, e.clan)?.id, e.remember, e.value, e.decay);
   } else if ('feud' in e) {

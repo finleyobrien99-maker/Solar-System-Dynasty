@@ -6,12 +6,12 @@
 
 import { aiAmbition } from './aiAmbition';
 import { captiveRansom } from './aiCourt';
-import { alive, canAct, ch, clanRegions, fullName } from './core';
+import { alive, canAct, ch, clanRank, clanRegions, fullName } from './core';
 import { defineEvent, type Ctx } from './dsl';
 import { pr, type EventDef } from './eventKit';
 import { isRival } from './memory';
-import { opinionOf } from './relations';
-import { pick } from './rng';
+import { feelingsSum, opinionOf } from './relations';
+import { pick, weighted } from './rng';
 import type { AiWar, Character, Clan, GameState } from './types';
 import { atWarWith } from './war';
 
@@ -65,6 +65,29 @@ function wouldAlly(s: GameState): Clan[] {
       !!freeHead(s, k) &&
       ((k.opinion >= 30 && (!!theirWar(s, k) || !!sharedFoe(s, k))) || wantsProtector(s, k)),
   );
+}
+
+/**
+ * How much a house wants to marry into yours, or 0 if it won't: never a house
+ * that dislikes you, is your sworn rival, is fighting you, or whose lord holds
+ * a personal grudge. The frightened and the heirless want it most, and
+ * everyone likes a powerful in-law.
+ */
+export function courtship(s: GameState, k: Clan): number {
+  const head = freeHead(s, k);
+  const r = ch(s, s.rulerId);
+  if (k.isPlayer || !head || !alive(r) || k.opinion < 10 || isRival(k) || atWarWith(s, k.id) || !clanRegions(s, k.id).length) return 0;
+  if (feelingsSum(s, head, r) <= -20) return 0;
+  const want = { security: 2, heir: 1.5, peace: 1, wealth: 1, conquest: 0.7, crusade: 0.5, revenge: 0.5 }[aiAmbition(s, k).kind];
+  return (1 + k.opinion / 25 + clanRank(s, s.playerClanId) / 2 + (s.fleet > k.fleet ? 1 : 0)) * want;
+}
+
+/** A house that would like a match with yours, picked by how much it wants one. */
+export function courtingHouse(s: GameState): Clan | undefined {
+  const pool = Object.values(s.clans)
+    .map((k) => [k, courtship(s, k)] as const)
+    .filter(([, w]) => w > 0);
+  return pool.length ? weighted(s, pool) : undefined;
 }
 
 /** An ally of yours that is at war and still thinks well of you. */

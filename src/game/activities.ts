@@ -1,3 +1,4 @@
+import { capOpinion } from './memory';
 import { recordDeed } from './epithets';
 // Once-a-cycle activities: galas, hunts, pilgrimages and the rest.
 
@@ -117,7 +118,7 @@ export function doActivity(s: GameState, kind: ActivityKind): void {
       const pr = int(s, 15, 30) + st.dip;
       s.prestige += pr;
       const home = playerClan(s).planetId;
-      for (const c of Object.values(s.clans)) if (c.planetId === home && !c.isPlayer) c.opinion = Math.min(100, c.opinion + 8);
+      for (const c of Object.values(s.clans)) if (c.planetId === home && !c.isPlayer) c.opinion = capOpinion(c, Math.min(100, c.opinion + 8));
       text = `The gala dazzles the court. +${pr} prestige, and every clan on your world warms to you.`;
       const roll = int(s, 0, 9);
       if (roll === 0) {

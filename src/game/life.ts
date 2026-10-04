@@ -27,7 +27,7 @@ import {
 } from './core';
 import { inheritGenetics, inheritPersonality } from './genetics';
 import { appoint, councilStat, ROLE_KEYS, ROLES } from './council';
-import { isRival } from './memory';
+import { capOpinion, isRival } from './memory';
 import { marriageMood } from './relations';
 import { cadetRescue } from './cadets';
 import { chance, clamp, int, pick, rand } from './rng';
@@ -317,7 +317,7 @@ export function matchmakingTick(s: GameState): void {
     c.marriedIn = !stays;
     c.spouseId = spouse.id;
     spouse.spouseId = c.id;
-    clan.opinion = Math.min(100, clan.opinion + 4);
+    clan.opinion = capOpinion(clan, Math.min(100, clan.opinion + 4));
     if (isCloseFamily(s, c)) {
       log(
         s,

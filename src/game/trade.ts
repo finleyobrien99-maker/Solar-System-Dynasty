@@ -6,7 +6,7 @@ import { recordDeed } from './epithets';
 import { clanRank, clanRegions, homePlanet, log, newId, ruler } from './core';
 import { councilStat } from './council';
 import { canAfford, pay, type Cost } from './genetics';
-import { remember } from './memory';
+import { capOpinion, remember } from './memory';
 import { PLANET_BY_ID } from './planets';
 import { chance, clamp } from './rng';
 import type { GameState, TradeRoute } from './types';
@@ -117,7 +117,7 @@ export function tradeTick(s: GameState): void {
     else if (atWarWith(s, partner.id)) closeRoute(s, r.id, 'war broke out');
     else if (partner.opinion < -30) closeRoute(s, r.id, `House ${partner.name} cut ties`);
     else {
-      partner.opinion = Math.min(100, partner.opinion + 1);
+      partner.opinion = capOpinion(partner, Math.min(100, partner.opinion + 1));
       if (chance(s, raidRisk(s))) {
         const lost = routeValue(s, r.from, r.partner, r.planetId);
         s.credits -= lost;

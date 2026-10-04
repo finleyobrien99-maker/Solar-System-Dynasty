@@ -23,7 +23,8 @@ import { dynastyKids, getFlag, myRegion, rivalClan, type EventCtx, type EventDef
 import { MORE_EVENTS } from './eventsMore';
 import { RELATION_EVENTS } from './eventsRelations';
 import { INTRIGUE_EVENTS } from './eventsIntrigue';
-import { COURT_EVENTS } from './eventsCourt';
+import { COURT_EVENTS, courtingHouse, courtship } from './eventsCourt';
+import { capOpinion } from './memory';
 import { defineEvent, regionOf, type Cond, type Ctx, type Effect, type Outcome } from './dsl';
 import { catchable, courtier, houseName, myRegionPick, named, placeName, present, rivalPick } from './eventBits';
 import { randomGoodGene } from './genetics';
@@ -117,7 +118,7 @@ function acceptProposal({ s, subject, data }: Ctx): string {
   }
   s.suitors = undefined;
   clan.allied = true;
-  clan.opinion = Math.min(100, clan.opinion + 30);
+  clan.opinion = capOpinion(clan, Math.min(100, clan.opinion + 30));
   log(s, `${target.name} is ${sl.mode === 'marry' ? 'married' : 'betrothed'} to ${suitor.char.name} of House ${clan.name}.`, 'family');
   return `${target.name} will wed ${suitor.char.name} of House ${clan.name}. The alliance is sealed.`;
 }
@@ -992,12 +993,14 @@ export const EVENTS: EventDef[] = [
     title: 'A Marriage Proposal',
     icon: 'heart',
     weight: 2,
+    // Only a house that wants the match proposes one: never one that hates you.
+    when: (s) => Object.values(s.clans).some((k) => courtship(s, k) > 0),
     subject: (s) => {
       const pool = dynastyMembers(s).filter((c) => !c.spouseId && !c.betrothedId && !c.bastard && ageOf(s, c) >= 3 && ageOf(s, c) <= 35);
       return pool.length ? pick(s, pool) : undefined;
     },
     setup: ({ s, data }) => {
-      data.clan = rivalClan(s)?.id ?? '';
+      data.clan = courtingHouse(s)?.id ?? '';
     },
     text: ({ s, subject, data }) =>
       `Envoys from House ${s.clans[String(data.clan)]?.name ?? 'a rival'} propose a match between one of their own and ${subject!.name}. It would mean an alliance.`,

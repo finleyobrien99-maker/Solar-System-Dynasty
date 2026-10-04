@@ -10,7 +10,7 @@ import { addTrait } from './traits';
 import type { Character, GameState } from './types';
 import { aiDeclareWar } from './war';
 import { councilStat } from './council';
-import { remember } from './memory';
+import { capOpinion, remember } from './memory';
 
 export type SchemeKind = 'assassinate' | 'sabotage' | 'blackmail' | 'fabricate' | 'sway' | 'seduce';
 
@@ -279,7 +279,7 @@ export function sendGift(s: GameState, clanId: string): boolean {
   s.cooldowns[key] = s.year + 1;
   const clan = s.clans[clanId];
   remember(s, clan.id, 'Sent us gifts', 10 + Math.round(effStats(s, ruler(s)).dip / 3), 0.15);
-  clan.opinion = Math.min(100, clan.opinion + 5);
+  clan.opinion = capOpinion(clan, Math.min(100, clan.opinion + 5));
   log(s, `You sent a gift to House ${clan.name}.`, 'info');
   return true;
 }
@@ -361,7 +361,7 @@ export function demandVassalage(s: GameState, clanId: string): boolean {
 export function releaseVassal(s: GameState, clanId: string): void {
   const clan = s.clans[clanId];
   clan.liege = 'none';
-  clan.opinion = Math.min(100, clan.opinion + 40);
+  clan.opinion = capOpinion(clan, Math.min(100, clan.opinion + 40));
   log(s, `House ${clan.name} has been released from your service.`, 'info');
 }
 

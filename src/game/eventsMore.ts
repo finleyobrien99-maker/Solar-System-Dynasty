@@ -1,6 +1,7 @@
 // The court deck: life at court, family drama and stories that pay off years
 // later. Shuffled into the main deck in events.ts.
 
+import { capOpinion } from './memory';
 import { createCharacter } from './character';
 import { ageOf, alive, canAct, ch, clanRegions, courtMembers, fullName, hasTrait, newId, playerClan, ruler } from './core';
 import { defineEvent, type Cond, type Ctx, type Outcome } from './dsl';
@@ -602,7 +603,7 @@ export const MORE_EVENTS: EventDef[] = [
             { gain: 'prestige', n: 15 },
             {
               run: (c) => {
-                for (const k of Object.values(c.s.clans)) if (!k.isPlayer) k.opinion = Math.min(100, k.opinion + 4);
+                for (const k of Object.values(c.s.clans)) if (!k.isPlayer) k.opinion = capOpinion(k, Math.min(100, k.opinion + 4));
               },
               text: 'every house likes you more (+4)',
             },
