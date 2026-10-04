@@ -13,6 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm test",
     "fixtures": "vitest run --mode fixtures src/game/save.test.ts",
     "balance": "vite-node scripts/balance.ts --",
     "bench": "vite-node scripts/bench.ts --",
