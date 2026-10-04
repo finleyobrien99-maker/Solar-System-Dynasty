@@ -19,11 +19,13 @@ import {
   ruler,
   vassalsOf,
 } from './core';
-import { clearFlag, dynastyKids, getFlag, myRegion, randomCourt, rivalClan, sicken, type EventCtx, type EventDef } from './eventKit';
+import { clearFlag, dynastyKids, getFlag, myRegion, rivalClan, sicken, type EventCtx, type EventDef } from './eventKit';
 import { MORE_EVENTS } from './eventsMore';
+import { defineEvent, type Ctx, type Outcome } from './dsl';
+import { catchable, courtier, myRegionPick, named, placeName, present } from './eventBits';
 import { randomGoodGene } from './genetics';
 import { makeItem } from './items';
-import { currentHeir, killCharacter } from './life';
+import { currentHeir } from './life';
 import { FAITHS, theFaith } from './planets';
 import { chance, int, pick, shuffle, weighted } from './rng';
 import { addTrait, TRAITS } from './traits';
@@ -36,106 +38,116 @@ export type { EventChoice, EventCtx, EventDef } from './eventKit';
 // ── The deck ──────────────────────────────────────────────────────────────
 
 export const EVENTS: EventDef[] = [
-  {
+  defineEvent({
     id: 'plague',
     title: 'The Red Lung',
     icon: 'plague',
     weight: 3,
     cooldown: 10,
     text: () => 'A cough is spreading through the docks. Doctors are calling it the Red Lung, a virus that came in on a cargo hauler. It moves fast.',
-    choices: [
+    options: [
       {
         label: 'Seal the docks',
-        hint: '-120 credits, keeps everyone safe',
-        available: ({ s }) => s.credits >= 120,
-        run: ({ s }) => {
-          s.credits -= 120;
-          return 'The quarantine holds. Trade suffers, but your court breathes easy.';
-        },
+        needs: [{ have: 'credits', n: 120 }],
+        then: { do: [{ lose: 'credits', n: 120 }], text: 'The quarantine holds. Trade suffers, but your court breathes easy.' },
       },
       {
         label: 'Pray for deliverance',
-        hint: '-60 faith, probably fine',
-        available: ({ s }) => s.faith >= 60,
-        run: ({ s }) => {
-          s.faith -= 60;
-          if (chance(s, 0.6)) return 'The fever passes your house by. The priests are insufferable about it.';
-          const v = randomCourt(s);
-          if (v && sicken(s, v)) return `Prayer was not enough. ${v.name} has caught the Red Lung.`;
-          return 'The fever brushes past. Lucky.';
+        needs: [{ have: 'faith', n: 60 }],
+        then: {
+          do: [{ lose: 'faith', n: 60 }],
+          roll: 0.6,
+          pass: { text: 'The fever passes your house by. The priests are insufferable about it.' },
+          fail: {
+            do: [courtier('victim')],
+            if: catchable('victim'),
+            pass: { do: [{ sicken: 'victim' }], text: (c) => `Prayer was not enough. ${named(c, 'victim')} has caught the Red Lung.` },
+            fail: { text: 'The fever brushes past. Lucky.' },
+          },
         },
       },
       {
         label: 'Carry on as normal',
-        hint: 'Risky',
-        run: ({ s, r }) => {
-          const reg = myRegion(s);
-          if (reg && reg.dev > 1) reg.dev -= 1;
-          if (chance(s, 0.5) && sicken(s, r)) return `The plague rips through ${reg?.name ?? 'your lands'}, and you have caught it yourself.`;
-          const v = randomCourt(s);
-          if (v && chance(s, 0.6) && sicken(s, v)) return `The plague rips through ${reg?.name ?? 'your lands'}. ${v.name} is sick.`;
-          return `The plague burns through ${reg?.name ?? 'your lands'} (-1 development) but spares your family.`;
-        },
+        then: (() => {
+          const spared = (c: Ctx) => `The plague burns through ${placeName(c, 'reg')} (-1 development) but spares your family.`;
+          const courtFalls: Outcome = {
+            do: [courtier('victim')],
+            if: present('victim'),
+            pass: {
+              roll: 0.6,
+              pass: {
+                if: catchable('victim'),
+                pass: { do: [{ sicken: 'victim' }], text: (c) => `The plague rips through ${placeName(c, 'reg')}. ${named(c, 'victim')} is sick.` },
+                fail: { text: spared },
+              },
+              fail: { text: spared },
+            },
+            fail: { text: spared },
+          };
+          return {
+            do: [myRegionPick('reg'), { dev: -1, region: 'reg' }],
+            roll: 0.5,
+            pass: {
+              if: catchable('root'),
+              pass: { do: [{ sicken: 'root' }], text: (c) => `The plague rips through ${placeName(c, 'reg')}, and you have caught it yourself.` },
+              fail: courtFalls,
+            },
+            fail: courtFalls,
+          };
+        })(),
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'comet',
     title: 'A Comet Blazes Past',
     icon: 'comet',
     weight: 2,
     text: () => 'A great comet with a tail of blue fire crosses your sky. The court argues: omen, opportunity, or just a big rock?',
-    choices: [
+    options: [
       {
         label: 'Proclaim it a holy omen',
-        hint: '+30 faith, +10 prestige',
-        run: ({ s }) => {
-          s.faith += 30;
-          s.prestige += 10;
-          return 'The faithful flock to the observation decks. +30 faith, +10 prestige.';
+        then: {
+          do: [
+            { gain: 'faith', n: 30 },
+            { gain: 'prestige', n: 10 },
+          ],
+          text: 'The faithful flock to the observation decks. +30 faith, +10 prestige.',
         },
       },
       {
         label: 'Send miners after it',
-        hint: 'Credits, better with Science',
-        run: ({ s, r }) => {
-          const n = int(s, 60, 140) + effStats(s, r).sci * 12;
-          s.credits += n;
-          return `Your crews strip the comet of ice and metals. +${n} credits.`;
+        then: {
+          do: [{ gain: 'credits', n: { roll: [60, 140], per: { stat: 'sci', n: 12 } }, as: 'n' }],
+          text: (c) => `Your crews strip the comet of ice and metals. +${c.vars.n} credits.`,
         },
       },
-      { label: 'Ignore it', run: () => 'It is just a rock. It goes away.' },
+      { label: 'Ignore it', then: { text: 'It is just a rock. It goes away.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'flare',
     title: 'Solar Flare',
     icon: 'sun',
     weight: 2,
     when: (s) => s.fleet > 10,
     text: () => 'Your astronomers scream warnings: a monstrous solar flare will hit your fleet within hours.',
-    choices: [
+    options: [
       {
         label: 'Raise the shields',
-        hint: '-90 credits',
-        available: ({ s }) => s.credits >= 90,
-        run: ({ s }) => {
-          s.credits -= 90;
-          return 'Shields hold. The fleet is safe, the power bill is not.';
-        },
+        needs: [{ have: 'credits', n: 90 }],
+        then: { do: [{ lose: 'credits', n: 90 }], text: 'Shields hold. The fleet is safe, the power bill is not.' },
       },
       {
         label: 'Ride it out',
-        hint: 'Lose some ships',
-        run: ({ s }) => {
-          const lost = Math.round(s.fleet * (0.08 + int(s, 0, 12) / 100));
-          s.fleet -= lost;
-          return `The flare fries ${lost} ships.`;
+        then: {
+          do: [{ lose: 'fleet', n: { calc: (c) => Math.round(c.s.fleet * (0.08 + int(c.s, 0, 12) / 100)), text: '8–20% of your' }, as: 'lost' }],
+          text: (c) => `The flare fries ${c.vars.lost} ships.`,
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'pirates',
     title: 'Belt Pirates!',
     icon: 'war',
@@ -145,49 +157,61 @@ export const EVENTS: EventDef[] = [
       data.ransom = int(s, 80, 180);
     },
     text: ({ data }) => `A pirate flotilla of ${data.ships} ships is raiding your shipping lanes. Their captain demands ${data.ransom} credits to leave.`,
-    choices: [
+    options: [
       {
         label: 'Pay them off',
-        hint: 'Lose the ransom',
-        available: ({ s, data }) => s.credits >= Number(data.ransom),
-        run: ({ s, data }) => {
-          s.credits -= Number(data.ransom);
-          return 'The pirates take their credits and vanish into the Belt. For now.';
-        },
+        needs: [{ have: 'credits', n: 'ransom' }],
+        then: { do: [{ lose: 'credits', n: { data: 'ransom' } }], text: 'The pirates take their credits and vanish into the Belt. For now.' },
       },
       {
         label: 'Fight them',
-        hint: 'Fleet battle',
-        run: ({ s, r, data }) => {
-          const mine = s.fleet * (1 + effStats(s, r).cmd * 0.04) * (0.75 + int(s, 0, 50) / 100);
-          const theirs = Number(data.ships) * 1.3;
-          if (mine > theirs) {
-            const loot = int(s, 60, 160);
-            s.credits += loot;
-            s.prestige += 15;
-            s.fleet -= int(s, 0, 3);
-            return `Your fleet scatters the pirates. +${loot} credits in loot, +15 prestige.`;
-          }
-          const lost = Math.min(s.fleet, int(s, 4, 10));
-          s.fleet -= lost;
-          s.credits -= Math.min(Math.max(0, s.credits), Number(data.ransom));
-          return `The pirates outfight you. You lose ${lost} ships and they loot your convoys anyway.`;
+        then: {
+          roll: {
+            text: 'Fleet battle',
+            // Your fleet, boosted by Command, times a 0.75–1.25 swing, must beat theirs × 1.3.
+            odds: (c) => {
+              const mine = c.s.fleet * (1 + effStats(c.s, c.r).cmd * 0.04);
+              const theirs = Number(c.data.ships) * 1.3;
+              let wins = 0;
+              for (let k = 0; k <= 50; k++) if (mine * (0.75 + k / 100) > theirs) wins++;
+              return wins / 51;
+            },
+            roll: (c) => c.s.fleet * (1 + effStats(c.s, c.r).cmd * 0.04) * (0.75 + int(c.s, 0, 50) / 100) > Number(c.data.ships) * 1.3,
+          },
+          pass: {
+            do: [
+              { gain: 'credits', n: { roll: [60, 160] }, as: 'loot' },
+              { gain: 'prestige', n: 15 },
+              { lose: 'fleet', n: { roll: [0, 3] } },
+            ],
+            text: (c) => `Your fleet scatters the pirates. +${c.vars.loot} credits in loot, +15 prestige.`,
+          },
+          fail: {
+            do: [
+              { lose: 'fleet', n: { roll: [4, 10] }, upTo: 'have', as: 'lost' },
+              { lose: 'credits', n: { data: 'ransom' }, upTo: 'have' },
+            ],
+            text: (c) => `The pirates outfight you. You lose ${c.vars.lost} ships and they loot your convoys anyway.`,
+          },
         },
       },
       {
         label: 'Hire them as privateers',
-        hint: '-50 credits, needs Intrigue 8+',
-        available: ({ s, r }) => effStats(s, r).int >= 8 && s.credits >= 50,
-        run: ({ s, data }) => {
-          s.credits -= 50;
-          const n = Math.round(Number(data.ships) * 0.6);
-          s.fleet += n;
-          return `A quiet word and a fat purse. ${n} pirate ships now fly your colours.`;
+        needs: [
+          { stat: 'int', min: 8 },
+          { have: 'credits', n: 50 },
+        ],
+        then: {
+          do: [
+            { lose: 'credits', n: 50 },
+            { gain: 'fleet', n: { data: 'ships', times: 0.6, round: true }, as: 'n' },
+          ],
+          text: (c) => `A quiet word and a fat purse. ${c.vars.n} pirate ships now fly your colours.`,
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'strike',
     title: "Miners' Strike",
     icon: 'eco',
@@ -198,108 +222,96 @@ export const EVENTS: EventDef[] = [
     when: (s) => clanRegions(s, s.playerClanId).length > 0,
     text: ({ s, data }) =>
       `The miners of ${s.regions[String(data.region)]?.name ?? 'your lands'} have downed tools. They want better air rations and fewer cave-ins.`,
-    choices: [
+    options: [
       {
         label: 'Meet their demands',
-        hint: '-100 credits',
-        available: ({ s }) => s.credits >= 100,
-        run: ({ s }) => {
-          s.credits -= 100;
-          return 'The miners cheer your name. Production resumes.';
-        },
+        needs: [{ have: 'credits', n: 100 }],
+        then: { do: [{ lose: 'credits', n: 100 }], text: 'The miners cheer your name. Production resumes.' },
       },
       {
         label: 'Negotiate',
-        hint: 'Diplomacy check',
-        run: ({ s, r, data }) => {
-          if (chance(s, 0.3 + effStats(s, r).dip * 0.05)) {
-            s.prestige += 10;
-            return 'You talk them round with a fair deal. +10 prestige.';
-          }
-          const reg = s.regions[String(data.region)];
-          if (reg && reg.dev > 1) reg.dev -= 1;
-          return 'Talks collapse. The strike drags on and the region suffers (-1 development).';
+        then: {
+          roll: { base: 0.3, per: { stat: 'dip', n: 0.05 } },
+          pass: { do: [{ gain: 'prestige', n: 10 }], text: 'You talk them round with a fair deal. +10 prestige.' },
+          fail: { do: [{ dev: -1, region: 'region' }], text: 'Talks collapse. The strike drags on and the region suffers (-1 development).' },
         },
       },
       {
         label: 'Send in the marines',
-        hint: 'Brutal but cheap',
-        run: ({ s, r }) => {
-          s.prestige -= 10;
-          if (chance(s, 0.25)) r.traits = addTrait(r.traits, 'cruel');
-          return 'The strike is broken with stun batons. Nobody will forget it. -10 prestige.';
+        then: {
+          do: [
+            { lose: 'prestige', n: 10 },
+            { trait: 'cruel', p: 0.25 },
+          ],
+          text: 'The strike is broken with stun batons. Nobody will forget it. -10 prestige.',
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'derelict',
     title: 'A Derelict Warship',
     icon: 'ship',
     weight: 2,
     text: () => 'Scouts find an ancient warship drifting in the dark, pre-Collapse design, lights still flickering inside.',
-    choices: [
+    options: [
       {
         label: 'Salvage it for parts',
-        hint: '+ships',
-        run: ({ s }) => {
-          const n = int(s, 5, 14);
-          s.fleet += n;
-          return `Your engineers rebuild ${n} ships from the wreck.`;
-        },
+        then: { do: [{ gain: 'fleet', n: { roll: [5, 14] }, as: 'n' }], text: (c) => `Your engineers rebuild ${c.vars.n} ships from the wreck.` },
       },
       {
         label: 'Explore inside',
-        hint: 'Could be treasure. Could be a tomb.',
-        run: ({ s, r }) => {
-          if (chance(s, 0.55)) {
-            const item = makeItem(s, newId(s, 'i'), { origin: 'Found on a derelict warship' });
-            s.items.push(item);
-            return `Deep inside you find the captain's quarters, and a ${item.name}. Added to your treasury.`;
-          }
-          if (chance(s, 0.4)) {
-            r.traits = addTrait(r.traits, 'wounded');
-            return 'The automated defences were still active. You barely made it out.';
-          }
-          return 'Nothing but frozen corpses and bad memories.';
+        then: {
+          roll: 0.55,
+          pass: {
+            do: [{ item: { origin: 'Found on a derelict warship' }, as: 'item' }],
+            text: (c) => `Deep inside you find the captain's quarters, and a ${c.vars.item}. Added to your treasury.`,
+          },
+          fail: {
+            roll: 0.4,
+            pass: { do: [{ trait: 'wounded' }], text: 'The automated defences were still active. You barely made it out.' },
+            fail: { text: 'Nothing but frozen corpses and bad memories.' },
+          },
         },
       },
-      { label: 'Leave it be', run: () => 'Some things are better left drifting.' },
+      { label: 'Leave it be', then: { text: 'Some things are better left drifting.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'signal',
     title: 'A Signal from the Dark',
     icon: 'signal',
     weight: 1.5,
     text: () => 'Deep-space arrays pick up a repeating signal from far beyond Pluto. It is not human. It is getting closer.',
-    choices: [
+    options: [
       {
         label: 'Decode it',
-        hint: 'Science check',
-        run: ({ s, r }) => {
-          if (chance(s, 0.3 + effStats(s, r).sci * 0.05)) {
-            r.base.sci += 2;
-            s.prestige += 30;
-            return 'The signal contains mathematics no human has seen. Your scientists are ecstatic. +2 Science, +30 prestige.';
-          }
-          r.traits = addTrait(r.traits, 'depressed');
-          return 'You listen too long. Something in the pattern gets into your head. You have not slept properly since.';
+        then: {
+          roll: { base: 0.3, per: { stat: 'sci', n: 0.05 } },
+          pass: {
+            do: [
+              { stat: 'sci', n: 2 },
+              { gain: 'prestige', n: 30 },
+            ],
+            text: 'The signal contains mathematics no human has seen. Your scientists are ecstatic. +2 Science, +30 prestige.',
+          },
+          fail: {
+            do: [{ trait: 'depressed' }],
+            text: 'You listen too long. Something in the pattern gets into your head. You have not slept properly since.',
+          },
         },
       },
       {
         label: 'Sell the data to the Synod',
-        hint: '+credits',
-        run: ({ s }) => {
-          const n = int(s, 100, 220);
-          s.credits += n;
-          return `The Saturnine Synod pays ${n} credits and asks no questions.`;
+        then: {
+          do: [{ gain: 'credits', n: { roll: [100, 220] }, as: 'n' }],
+          text: (c) => `The Saturnine Synod pays ${c.vars.n} credits and asks no questions.`,
         },
       },
-      { label: 'Jam it. Burn the recordings.', run: ({ s }) => ((s.faith += 10), 'Some doors stay shut. +10 faith.') },
+      { label: 'Jam it. Burn the recordings.', then: { do: [{ gain: 'faith', n: 10 }], text: 'Some doors stay shut. +10 faith.' } },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'geneticist',
     title: 'The Rogue Geneticist',
     icon: 'dna',
@@ -310,48 +322,40 @@ export const EVENTS: EventDef[] = [
     },
     text: ({ data }) =>
       `A geneticist struck off by the Synod offers her services. She claims she can splice ${TRAITS[String(data.gene)].name} straight into living DNA. It might take. It might not.`,
-    choices: [
+    options: [
       {
         label: 'Splice it into yourself',
-        hint: '-300 credits, 70% success',
-        available: ({ s }) => s.credits >= 300,
-        run: ({ s, r, data }) => {
-          s.credits -= 300;
-          if (chance(s, 0.7)) {
-            r.traits = addTrait(r.traits, String(data.gene));
-            return `It worked. You now carry ${TRAITS[String(data.gene)].name}, and so can your bloodline. Lock it in the Gene Vault before it fades.`;
-          }
-          r.traits = addTrait(r.traits, chance(s, 0.5) ? 'gene_rot' : 'sickly');
-          return 'Something went horribly wrong in the vat. Your genome is damaged.';
+        needs: [{ have: 'credits', n: 300 }],
+        then: {
+          do: [{ lose: 'credits', n: 300 }],
+          roll: 0.7,
+          pass: {
+            do: [{ trait: { data: 'gene' } }],
+            text: (c) => `It worked. You now carry ${TRAITS[String(c.data.gene)].name}, and so can your bloodline. Lock it in the Gene Vault before it fades.`,
+          },
+          fail: { do: [{ trait: 'gene_rot', p: 0.5, or: 'sickly' }], text: 'Something went horribly wrong in the vat. Your genome is damaged.' },
         },
       },
       {
         label: 'Splice your heir instead',
-        hint: '-300 credits, 70% success',
-        available: ({ s }) => s.credits >= 300 && !!currentHeir(s),
-        run: ({ s, data }) => {
-          s.credits -= 300;
-          const h = currentHeir(s);
-          if (!h) return 'Your heir is not available.';
-          if (chance(s, 0.7)) {
-            h.traits = addTrait(h.traits, String(data.gene));
-            return `${h.name} now carries ${TRAITS[String(data.gene)].name}.`;
-          }
-          h.traits = addTrait(h.traits, 'sickly');
-          return `${h.name} survives the procedure, but is left Sickly.`;
+        needs: [{ have: 'credits', n: 300 }, { exists: 'heir' }],
+        then: {
+          do: [{ lose: 'credits', n: 300 }],
+          roll: 0.7,
+          pass: {
+            do: [{ trait: { data: 'gene' }, to: 'heir' }],
+            text: (c) => `${named(c, 'heir')} now carries ${TRAITS[String(c.data.gene)].name}.`,
+          },
+          fail: { do: [{ trait: 'sickly', to: 'heir' }], text: (c) => `${named(c, 'heir')} survives the procedure, but is left Sickly.` },
         },
       },
       {
         label: 'Report her to the priests',
-        hint: '+20 faith',
-        run: ({ s }) => {
-          s.faith += 20;
-          return 'She is dragged off by temple guards. Your confessor beams. +20 faith.';
-        },
+        then: { do: [{ gain: 'faith', n: 20 }], text: 'She is dragged off by temple guards. Your confessor beams. +20 faith.' },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'assassin',
     title: 'Assassin in the Night',
     icon: 'scheme',
@@ -363,38 +367,37 @@ export const EVENTS: EventDef[] = [
       data.clan = pick(s, enemies).id;
     },
     text: () => 'You wake to a faint whine in the dark. A spider-drone is crawling across the ceiling toward your bed.',
-    choices: [
+    options: [
       {
         label: 'Grab your blaster',
-        hint: 'Command check',
-        run: ({ s, r, data }) => {
-          if (chance(s, 0.45 + effStats(s, r).cmd * 0.05)) {
-            if (!s.feuds.includes(String(data.clan))) s.feuds.push(String(data.clan));
-            return `One shot, one dead drone. Its chip traces back to House ${s.clans[String(data.clan)].name}. You now have a Blood Feud against them.`;
-          }
-          r.traits = addTrait(r.traits, 'wounded');
-          return 'You hit it, eventually, but not before it hit you.';
+        then: {
+          roll: { base: 0.45, per: { stat: 'cmd', n: 0.05 } },
+          pass: {
+            do: [{ feud: 'clan' }],
+            text: (c) =>
+              `One shot, one dead drone. Its chip traces back to House ${c.s.clans[String(c.data.clan)].name}. You now have a Blood Feud against them.`,
+          },
+          fail: { do: [{ trait: 'wounded' }], text: 'You hit it, eventually, but not before it hit you.' },
         },
       },
       {
         label: 'Trigger the panic room',
-        hint: 'Intrigue check',
-        run: ({ s, r, data }) => {
-          if (chance(s, 0.5 + effStats(s, r).int * 0.04)) {
-            if (!s.feuds.includes(String(data.clan))) s.feuds.push(String(data.clan));
-            return `Blast doors slam shut. Your spymaster traces the drone to House ${s.clans[String(data.clan)].name}. Blood Feud declared.`;
-          }
-          if (chance(s, 0.15)) {
-            killCharacter(s, r.id, 'assassinated');
-            return 'The drone was already inside the panic room.';
-          }
-          r.traits = addTrait(r.traits, 'wounded');
-          return 'The doors were too slow. You are hurt.';
+        then: {
+          roll: { base: 0.5, per: { stat: 'int', n: 0.04 } },
+          pass: {
+            do: [{ feud: 'clan' }],
+            text: (c) => `Blast doors slam shut. Your spymaster traces the drone to House ${c.s.clans[String(c.data.clan)].name}. Blood Feud declared.`,
+          },
+          fail: {
+            roll: 0.15,
+            pass: { do: [{ kill: 'root', cause: 'assassinated' }], text: 'The drone was already inside the panic room.' },
+            fail: { do: [{ trait: 'wounded' }], text: 'The doors were too slow. You are hurt.' },
+          },
         },
       },
     ],
-  },
-  {
+  }),
+  defineEvent({
     id: 'spouse_rumour',
     title: 'Whispers About Your Spouse',
     icon: 'heart',
@@ -404,30 +407,30 @@ export const EVENTS: EventDef[] = [
       return alive(sp) ? sp : undefined;
     },
     text: ({ subject }) => `The servants whisper that ${subject!.name} has been sneaking out to the lower decks at night.`,
-    choices: [
+    options: [
       {
         label: 'Have them followed',
-        hint: 'Intrigue check',
-        run: ({ s, r, subject }) => {
-          if (chance(s, 0.5)) return `${subject!.name} has been volunteering at a field hospital. You feel a bit daft.`;
-          if (chance(s, 0.4 + effStats(s, r).int * 0.03)) {
-            r.traits = addTrait(r.traits, 'paranoid');
-            return `${subject!.name} was meeting a lover. You have the evidence, and now you trust nobody.`;
-          }
-          return 'Your spies lose the trail. The rumours continue.';
+        then: {
+          roll: 0.5,
+          pass: { text: (c) => `${c.subject!.name} has been volunteering at a field hospital. You feel a bit daft.` },
+          fail: {
+            roll: { base: 0.4, per: { stat: 'int', n: 0.03 } },
+            pass: { do: [{ trait: 'paranoid' }], text: (c) => `${c.subject!.name} was meeting a lover. You have the evidence, and now you trust nobody.` },
+            fail: { text: 'Your spies lose the trail. The rumours continue.' },
+          },
         },
       },
-      { label: 'Ignore the gossip', run: ({ s }) => ((s.prestige -= 5), 'People talk. -5 prestige.') },
+      { label: 'Ignore the gossip', then: { do: [{ lose: 'prestige', n: 5 }], text: 'People talk. -5 prestige.' } },
       {
         label: 'Confront them directly',
-        run: ({ s, r, subject }) => {
-          if (chance(s, 0.5)) return `${subject!.name} laughs it off and you feel better for asking.`;
-          if (chance(s, 0.4)) r.traits = addTrait(r.traits, 'wrathful');
-          return 'It turns into a screaming match heard across three decks.';
+        then: {
+          roll: 0.5,
+          pass: { text: (c) => `${c.subject!.name} laughs it off and you feel better for asking.` },
+          fail: { do: [{ trait: 'wrathful', p: 0.4 }], text: 'It turns into a screaming match heard across three decks.' },
         },
       },
     ],
-  },
+  }),
   {
     id: 'prodigy',
     title: 'A Prodigy in the Family',

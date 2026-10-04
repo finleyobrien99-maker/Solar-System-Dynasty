@@ -345,6 +345,7 @@ This is the bit no other game does. Make it *deep*.
 Content is the cheapest depth there is. This phase builds the machine and then feeds it.
 
 ### 3.1 Event DSL v2 `P0` `L`
+- **Status: in progress (10 of 67 events ported).** `src/game/dsl.ts`: options declare `needs`/`show` conditions, effects, stat checks and branches; `defineEvent()` compiles them to the runtime shape, writes each option's tooltip from the same data (exact odds for the current ruler, e.g. "Diplomacy check (65%): +10 prestige · otherwise −1 development") and gives the real reason an option is locked. Shared bits in `eventBits.ts`. `dsl.test.ts` checks every DSL option's real resource changes stay within what its tooltip allows, and that describing never changes the game. Ports are checked against the old code choice by choice (identical state over many seeds and courts). Still functions for now: event texts, triggers, subjects and setup; localisation keys are not started.
 - **What:** a typed declarative schema (see section 16.2):
   - **triggers**: conditions on scopes
   - **scopes**: root, spouse, heir, liege, rival, random courtier, planet, region…
@@ -896,7 +897,7 @@ Why this order: the DSL, relations, secrets and genotype are the multipliers. Ev
 3. ✅ `0.6` Error boundary with "Export save" and "Reload backup". **S**
 4. ✅ `0.5` Balance harness MVP with 3 bots and a CSV of rank, credits and dynasty size. **M**
 5. 🟡 `0.4` Character archive for the dead, and a bench script. **M** (bench done; see 0.4 for why the autosave probably comes before the archive)
-6. `3.1` Event DSL types plus `applyEffects` and `describeEffects`, then port 10 events and prove the tooltips. **M**
+6. ✅ `3.1` Event DSL types plus `applyEffects` and `describeEffects`, then port 10 events and prove the tooltips. **M**
 7. `3.1` Port the remaining 57 events and delete the old path. **M**
 8. `1.1` Relations data model, decay, baseline opinion, and the UI list on the character modal. **M**
 9. `1.1` 15 relationship events (friendship, rivalry, romance) using the DSL. **M**

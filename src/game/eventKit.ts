@@ -14,7 +14,12 @@ export interface EventCtx {
 
 export interface EventChoice {
   label: string;
+  /** A hand-written hint. Events built with the DSL (dsl.ts) generate `describe` instead. */
   hint?: string;
+  /** The option's effects and odds, written from its definition. */
+  describe?: (c: EventCtx) => string;
+  /** Why the option is greyed out, if it is. */
+  why?: (c: EventCtx) => string | null;
   /** Hidden entirely unless this holds (unlike `available`, which greys it out). */
   show?: (c: EventCtx) => boolean;
   available?: (c: EventCtx) => boolean;
@@ -34,6 +39,11 @@ export interface EventDef {
   setup?: (c: EventCtx) => void;
   text: (c: EventCtx) => string;
   choices: EventChoice[];
+}
+
+/** Alive and not immune to disease. */
+export function canCatch(c: Character | undefined): c is Character {
+  return !!c && c.died === undefined && !hasTrait(c, 'xenoblood') && !hasTrait(c, 'nano_immune') && !hasTrait(c, 'ironblood');
 }
 
 export function sicken(_s: GameState, c: Character): boolean {
