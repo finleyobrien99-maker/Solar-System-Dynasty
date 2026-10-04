@@ -345,6 +345,7 @@ This is the bit no other game does. Make it *deep*.
 Content is the cheapest depth there is. This phase builds the machine and then feeds it.
 
 ### 3.1 Event DSL v2 `P0` `L`
+- **Status: done for options (all 67 events).** `src/game/dsl.ts`: options declare `needs`/`show` conditions, effects, stat checks and branches; `defineEvent()` compiles them to the runtime shape, writes each option's tooltip from the same data (exact odds for the current ruler, e.g. "Diplomacy check (65%): +10 prestige · otherwise −1 development") and gives the real reason an option is locked. Hidden outcomes stay hidden (a loan's fate, a bugged gift). Shared bits in `eventBits.ts`. The port was checked against the old code choice by choice (identical game state over 40 dice seeds and four kinds of court) and over whole bot games (24 runs × 150 cycles, identical apart from wording). `dsl.test.ts` checks every option's real resource changes stay within what its tooltip allows, and that describing never changes the game. **Still to do:** event texts, triggers, subjects and setup are plain functions (story cycles, 3.2, will want scopes and triggers declarative); localisation keys; AI weights for options.
 - **What:** a typed declarative schema (see section 16.2):
   - **triggers**: conditions on scopes
   - **scopes**: root, spouse, heir, liege, rival, random courtier, planet, region…
@@ -897,8 +898,8 @@ Why this order: the DSL, relations, secrets and genotype are the multipliers. Ev
 3. ✅ `0.6` Error boundary with "Export save" and "Reload backup". **S**
 4. ✅ `0.5` Balance harness MVP with 3 bots and a CSV of rank, credits and dynasty size. **M**
 5. 🟡 `0.4` Character archive for the dead, and a bench script. **M** (bench done; see 0.4 for why the autosave probably comes before the archive)
-6. `3.1` Event DSL types plus `applyEffects` and `describeEffects`, then port 10 events and prove the tooltips. **M**
-7. `3.1` Port the remaining 57 events and delete the old path. **M**
+6. ✅ `3.1` Event DSL types plus `applyEffects` and `describeEffects`, then port 10 events and prove the tooltips. **M**
+7. ✅ `3.1` Port the remaining 57 events and delete the old path. **M**
 8. `1.1` Relations data model, decay, baseline opinion, and the UI list on the character modal. **M**
 9. `1.1` 15 relationship events (friendship, rivalry, romance) using the DSL. **M**
 10. `1.7` Obituary card on death, epithets and regnal numbers. **S**
