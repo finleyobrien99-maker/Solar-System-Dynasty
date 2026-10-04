@@ -1,3 +1,4 @@
+import { affairInfo } from '../courtInfo';
 import { retiredRuler } from '../../game/life';
 import { RulerLegacy } from '../sections/RulerLegacy';
 import { EpithetsSection } from '../sections/EpithetsSection';
@@ -20,7 +21,7 @@ import { runScheme, schemeBlocker, schemeChance } from '../../game/intrigue';
 import { FAITHS, PLANET_BY_ID } from '../../game/planets';
 import { TRAITS } from '../../game/traits';
 import type { Character } from '../../game/types';
-import { Btn, CharCard, ClanBadge, Face, HealthBar, InfoDot, Modal, StatBlock, TraitList } from '../components';
+import { Btn, CaptivityStatus, CharCard, ClanBadge, Face, HealthBar, InfoDot, Modal, StatBlock, TraitList } from '../components';
 import { EduControls } from '../tabs/FamilyTab';
 import { useGame } from '../store';
 import { FoundCadetPanel } from '../sections/CadetSection';
@@ -59,6 +60,7 @@ export function CharacterModal({ id }: { id: string }) {
   const living = alive(c);
   const parents = [ch(s, c.fatherId), ch(s, c.motherId)].filter((x): x is Character => !!x);
   const spouse = ch(s, c.spouseId);
+  const affair = affairInfo(s, c);
   const kids = childrenOf(s, c);
   const sibs = siblingsOf(s, c);
   const cyberOpen = living && (isDynasty || c.id === r.spouseId);
@@ -81,12 +83,13 @@ export function CharacterModal({ id }: { id: string }) {
               <ClanBadge clanId={c.clanId} />
               {retiredRuler(s, c.id) && <span className="pill gold">Retired ruler</span>}
               {c.bastard && <span className="pill red">Unsanctioned birth</span>}
-              {c.prisonerOf && <span className="pill red">Prisoner of House {s.clans[c.prisonerOf]?.name}</span>}
+              {living && c.prisonerOf === s.playerClanId && <span className="pill red">Held by your house</span>}
               {s.dynasty.designatedHeir === c.id && <span className="pill gold">Designated heir</span>}
               {roleOf(s, c.id) && <span className="pill cyan">{ROLES[roleOf(s, c.id)!].name}</span>}
               {c.cloneOf && <span className="pill">Clone of {s.characters[c.cloneOf]?.name ?? 'an ancestor'}</span>}
             </div>
           </div>
+          <CaptivityStatus c={c} />
           {living && <HealthBar s={s} c={c} />}
           <StatBlock s={s} c={c} />
           <TraitList c={c} s={s} collapseOnPhone />
@@ -101,6 +104,13 @@ export function CharacterModal({ id }: { id: string }) {
       <hr className="divider" />
       <Links label="Parents" people={parents} />
       <Links label="Spouse" people={spouse ? [spouse] : []} />
+      {affair && (
+        <div className="card flat" style={{ marginBottom: 'var(--space-8px)' }}>
+          <Links label="Lover" people={[affair.lover]} />
+          <span className={affair.status === 'Exposed affair' ? 'bad' : 'muted'}>{affair.status}</span>
+          <InfoDot text="An affair is exposed when a living spouse has a recorded discovery of these lovers. No discovery recorded means nobody has recorded finding them out yet. These links show the simulation's relationships, including other houses." />
+        </div>
+      )}
       <Links label="Betrothed" people={c.betrothedId && s.characters[c.betrothedId] ? [s.characters[c.betrothedId]] : []} />
       <Links label="Children" people={kids} />
       <Links label="Siblings" people={sibs} />

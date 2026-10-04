@@ -146,7 +146,22 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               hurtful memory; nemeses need -80 and a grave grievance. Taking a lover hurts your spouse, and resentful married couples have fewer children.
             </p>
             <h3>Affairs</h3>
-            <p>Lovers can give you unsanctioned children. They cannot inherit unless legitimised for 150 prestige.</p>
+            <p>
+              Lovers can give you unsanctioned children. They cannot inherit unless legitimised for 150 prestige. Character profiles link to lovers and say
+              whether a spouse has discovered the affair; other houses have love lives too.
+            </p>
+            <h3>Captive relatives</h3>
+            <p>
+              Family lists your relatives held by other houses. Their cards and profiles show who holds them and their ransom price. A captor's envoy can offer
+              release: pay, refuse or attempt a rescue. The demanded price is fixed when the envoy arrives. The usual price is 100 credits, plus 80 per house
+              rank, plus 100 for its ruler or 50 for the ruler's spouse or child. Captors may execute, ransom, free or keep captives; some escape.
+            </p>
+            <h3>Marriage ties between houses</h3>
+            <p>
+              House profiles show their ties by marriage. A ruler's, child's or sibling's marriage into another ruler's blood binds the houses. Kin send a
+              quarter of their fleet in defence and 15% in attack; anyone related to both sides stays home. Ties lapse as people die. Treacherous, hostile
+              rulers can betray even their in-laws.
+            </p>
             <h3>Earned epithets</h3>
             <p>
               Every house head can earn 57 names from their deeds: the Just, the Cruel, the Conqueror, the Builder and more. Your profile lists every earned

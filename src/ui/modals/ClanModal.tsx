@@ -15,7 +15,7 @@ import {
 } from '../../game/intrigue';
 import { FAITHS, PLANET_BY_ID } from '../../game/planets';
 import { Sigil } from '../../svg/Sigil';
-import { Btn, CharCard, InfoDot, Modal, Opinion } from '../components';
+import { Btn, CharCard, InfoDot, Modal, Opinion, Section } from '../components';
 import { useGame } from '../store';
 import { MemoryList } from '../sections/GrudgeSection';
 import { isRival } from '../../game/memory';
@@ -61,11 +61,6 @@ export function ClanModal({ id }: { id: string }) {
             {atWar && <span className="pill red">At war with you</span>}
             {clan.cadetOf === s.playerClanId && <span className="pill gold">Cadet branch of your bloodline</span>}
             {isRival(clan) && <span className="pill red">Sworn rival</span>}
-            {kin.map((k) => (
-              <span key={k.id} className="pill">
-                Bound by marriage to {k.name}
-              </span>
-            ))}
           </div>
           {!mine && head && (
             <div className="muted" style={{ fontSize: 'var(--font-size-0_86rem)' }}>
@@ -90,6 +85,26 @@ export function ClanModal({ id }: { id: string }) {
         </div>
       </div>
 
+      {!!kin.length && (
+        <Section
+          title={`Marriage ties (${kin.length})`}
+          icon="heart"
+          info="A ruler's or their children's or siblings' marriage into another ruling family binds the houses. Kin send 25% of their fleet in defence and 15% in attack; kin of both sides stay home. Ties end as the family links die out. Deceitful or ambitious rulers who hate their kin may betray the pact."
+        >
+          <div className="row wrap">
+            {kin.map((k) => (
+              <button
+                key={k.id}
+                className="pill"
+                style={{ whiteSpace: 'normal', textAlign: 'left', maxWidth: '100%', overflowWrap: 'anywhere' }}
+                onClick={() => openClan(k.id)}
+              >
+                Bound by marriage to House {k.name}
+              </button>
+            ))}
+          </div>
+        </Section>
+      )}
       {!mine && (
         <div className="card flat" style={{ marginTop: 'var(--space-12px)' }}>
           <h4>

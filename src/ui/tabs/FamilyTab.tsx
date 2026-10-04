@@ -117,6 +117,7 @@ export function FamilyTab() {
   const sibs = siblingsOf(s, r).filter((x) => x.clanId === s.playerClanId);
   const line = lineOfSuccession(s).slice(0, 6);
   const shown = new Set([r.id, spouse?.id, lover?.id, ...kids.map((k) => k.id), ...parents.map((p) => p.id), ...sibs.map((x) => x.id)]);
+  const captives = dynastyMembers(s).filter((c) => c.prisonerOf && c.prisonerOf !== s.playerClanId && s.clans[c.prisonerOf]);
   const kin = dynastyMembers(s).filter((c) => !shown.has(c.id));
   const kinShown = kin
     .filter((c) => !kinFilter || c.name.toLowerCase().includes(kinFilter.toLowerCase()))
@@ -126,6 +127,19 @@ export function FamilyTab() {
 
   return (
     <div>
+      {!!captives.length && (
+        <Section
+          title={`Captive relatives (${captives.length})`}
+          icon="scheme"
+          info="These members of your house are held by other houses. Their cards show the captor and ransom price. When an envoy demands a ransom, you can pay, refuse or try a rescue. Cruel captors may execute prisoners, and captives sometimes escape."
+        >
+          <div className="grid tight">
+            {captives.map((c) => (
+              <CharCard key={c.id} c={c} traitsMax={2} size={44} />
+            ))}
+          </div>
+        </Section>
+      )}
       <Section
         title="Spouse"
         icon="heart"

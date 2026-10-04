@@ -15,6 +15,7 @@ import { Sigil } from '../svg/Sigil';
 import { useGame } from './store';
 import { CategoryMark, CATEGORY_LABELS } from './traitCategories';
 import { lockDialogBackground } from './dialogBackground';
+import { captivityInfo } from './courtInfo';
 
 // ── Tooltip ───────────────────────────────────────────────────────────────
 
@@ -481,6 +482,28 @@ export function Face({ c, size = 56 }: { c: Character; size?: number }) {
   return <Portrait c={c} year={s.year} rank={charRank(s, c)} clanColor={clan?.color} trim={clan?.sigil.c2} size={size} />;
 }
 
+export function CaptivityStatus({ c, compact = false }: { c: Character; compact?: boolean }) {
+  const { s, openClan } = useGame();
+  const info = captivityInfo(s, c);
+  if (!info) return null;
+  return (
+    <div style={{ marginTop: 'var(--space-4px)', fontSize: 'var(--font-size-0_78rem)', overflowWrap: 'anywhere' }}>
+      <div className="bad">Held by House {info.captor.name}</div>
+      <div className="muted">
+        {info.quoted ? 'Ransom demanded' : 'Ransom price'}: {info.amount.toLocaleString()} credits
+        {!compact && (
+          <InfoDot text="The price uses the captive's house rank and closeness to its ruler. A demand fixes the price when issued. Pay or attempt a rescue when the captor's envoy arrives; a price alone does not guarantee release. Captors may free, execute or keep their prisoners." />
+        )}
+      </div>
+      {!compact && (
+        <button className="btn ghost small" onClick={() => openClan(info.captor.id)}>
+          View captor
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function CharCard({ c, sub, size = 56, extra, traitsMax = 4 }: { c: Character; sub?: ReactNode; size?: number; extra?: ReactNode; traitsMax?: number }) {
   const { s, openChar } = useGame();
   const rel = relationTo(s, c);
@@ -509,6 +532,7 @@ export function CharCard({ c, sub, size = 56, extra, traitsMax = 4 }: { c: Chara
           )}
         </div>
         <div className="sub">{sub ?? [rel, title, alive(c) ? `age ${ageOf(s, c)}` : `died ${c.died} (${c.deathCause})`].filter(Boolean).join(' · ')}</div>
+        <CaptivityStatus c={c} compact />
         {traitsMax > 0 && (
           <div style={{ marginTop: 'var(--space-4px)' }}>
             <TraitList c={c} s={s} max={traitsMax} />
