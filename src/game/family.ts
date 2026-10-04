@@ -9,6 +9,8 @@ import type { Character, GameState, GenderLaw, StatKey, SuccessionLaw, Suitor, T
 import { atWarWith } from './war';
 import { remember } from './memory';
 import { councilStat } from './council';
+import { currentHeir } from './life';
+import { passedOver } from './relations';
 
 // ── Marriage market ───────────────────────────────────────────────────────
 
@@ -220,10 +222,18 @@ export const GENDER_LAWS: Record<GenderLaw, { name: string; desc: string }> = {
 export const LAW_COST = { prestige: 200 };
 export const GENDER_LAW_COST = { prestige: 150 };
 
+/** Run a change that can reorder the succession; whoever loses their place as heir resents it. */
+function watchHeir(s: GameState, change: () => void): void {
+  const before = currentHeir(s);
+  change();
+  const after = currentHeir(s);
+  if (before && before.id !== after?.id) passedOver(s, before);
+}
+
 export function changeLaw(s: GameState, law: SuccessionLaw): boolean {
   if (!cooldownReady(s, 'law') || !canAfford(s, LAW_COST) || s.dynasty.law === law) return false;
   pay(s, LAW_COST);
-  s.dynasty.law = law;
+  watchHeir(s, () => (s.dynasty.law = law));
   setCooldown(s, 'law', 5);
   log(s, `Succession law changed to ${LAWS[law].name}.`, 'info');
   return true;
@@ -232,7 +242,7 @@ export function changeLaw(s: GameState, law: SuccessionLaw): boolean {
 export function changeGenderLaw(s: GameState, law: GenderLaw): boolean {
   if (!cooldownReady(s, 'genderlaw') || !canAfford(s, GENDER_LAW_COST) || s.dynasty.genderLaw === law) return false;
   pay(s, GENDER_LAW_COST);
-  s.dynasty.genderLaw = law;
+  watchHeir(s, () => (s.dynasty.genderLaw = law));
   setCooldown(s, 'genderlaw', 5);
   log(s, `Gender law changed to ${GENDER_LAWS[law].name}.`, 'info');
   return true;
@@ -241,7 +251,7 @@ export function changeGenderLaw(s: GameState, law: GenderLaw): boolean {
 export function designateHeir(s: GameState, id: string): void {
   const c = s.characters[id];
   if (!alive(c) || c.clanId !== s.playerClanId || c.bastard || id === s.rulerId) return;
-  s.dynasty.designatedHeir = id;
+  watchHeir(s, () => (s.dynasty.designatedHeir = id));
 }
 
 export const LEGITIMIZE_COST = { prestige: 150 };
@@ -250,7 +260,7 @@ export function legitimize(s: GameState, id: string): boolean {
   const c = s.characters[id];
   if (!c?.bastard || !canAfford(s, LEGITIMIZE_COST)) return false;
   pay(s, LEGITIMIZE_COST);
-  c.bastard = undefined;
+  watchHeir(s, () => (c.bastard = undefined));
   log(s, `${c.name} has been legitimised.`, 'family');
   return true;
 }

@@ -194,6 +194,7 @@ See section 17. Headless runner, bot strategies, CSV/JSON output, a summary tabl
 The BitLife half. Goal: you care about specific people, not stats.
 
 ### 1.1 Personal relationships `P0` `L`
+- **Status: engine done, UI to do.** `src/game/relations.ts` (save v2): opinion from deep dives §C (personality, family, faith, looks, envy) plus fading feelings, with a reason for every point (`opinionLines`). Hooks: taking a lover (spouse −40), losing your place as heir to a law or designation (−30), executions (the victim's kin −75), land grants (+30), neglect of the ruler's children (−15 after 5 cycles without time together, then −4 a cycle to −45; the spec's flat −15 never made a neglected child hostile). `spendTime()` (dinner, sparring, stargazing; 3 people a cycle) fixes neglect. Friends, rivals, nemeses and lovers settle each cycle, three of each at most. Couples who resent each other have half the children. **To do:** the relationships list on the character modal and "Spend time with…" on the Life tab (use `relationsOf`, `opinionLines`, `TIME_KINDS`, `timeBlocker`); until then nobody can spend time, so the ruler's children all drift into neglect (harmless for now: their opinion has no effect yet). Then ticket 9's relationship events.
 - **What:** a sparse opinion matrix between characters (`relations: Record<charId, Record<charId, Relation>>`, only for pairs that have interacted). `Relation = { opinion: number; kind?: 'friend'|'rival'|'lover'|'nemesis'|'mentor'|'ward'|'crush'; since: number; memories: string[] }`.
 - **Sources of opinion:** shared traits (+), opposite traits (−), events, gifts, schemes, family ties, neglect (ruler never spends time with a child), being passed over in succession, executions of kin.
 - **Effects:** spouses with low opinion have affairs, refuse children or plot. Kids who hate you become disloyal heirs or found hostile cadet branches. Friends give bonuses and lovers spawn events. Nemeses spawn feud storylines.
@@ -899,7 +900,7 @@ Why this order: the DSL, relations, secrets and genotype are the multipliers. Ev
 5. 🟡 `0.4` Character archive for the dead, and a bench script. **M** (bench done; see 0.4 for why the autosave probably comes before the archive)
 6. ✅ `3.1` Event DSL types plus `applyEffects` and `describeEffects`, then port 10 events and prove the tooltips. **M**
 7. ✅ `3.1` Port the remaining 57 events and delete the old path. **M**
-8. `1.1` Relations data model, decay, baseline opinion, and the UI list on the character modal. **M**
+8. 🟡 `1.1` Relations data model, decay, baseline opinion, and the UI list on the character modal. **M**
 9. `1.1` 15 relationship events (friendship, rivalry, romance) using the DSL. **M**
 10. `1.7` Obituary card on death, epithets and regnal numbers. **S**
 11. `3.3` Decisions panel MVP with Abdicate, Move Capital and Hold a Tournament. **S**

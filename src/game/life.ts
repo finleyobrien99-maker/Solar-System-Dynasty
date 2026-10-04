@@ -27,6 +27,7 @@ import {
 import { inheritGenetics, inheritPersonality } from './genetics';
 import { councilStat } from './council';
 import { isRival } from './memory';
+import { marriageMood } from './relations';
 import { cadetRescue } from './cadets';
 import { chance, clamp, int, pick, rand } from './rng';
 import { addTrait, TRAITS } from './traits';
@@ -186,6 +187,8 @@ export function birthsTick(s: GameState): void {
     if (rulerCouple && s.dynasty.familyPlanning) continue;
     const kids = childrenOf(s, c).filter(alive).length;
     let mult = Math.pow(0.72, kids); // big families get rarer naturally
+    // Couples who resent each other have fewer children (only couples with history can).
+    if ((s.relations[c.id]?.[husband.id] || s.relations[husband.id]?.[c.id]) && marriageMood(s, c, husband) < -40) mult *= 0.5;
     if (isPlayerCourt && !rulerCouple && capped) {
       if (dynastySize >= 60 || kids >= 4) continue;
       mult *= dynastySize >= 30 ? 0.25 : 0.6;

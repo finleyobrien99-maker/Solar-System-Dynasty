@@ -3,6 +3,7 @@
 import { ageOf, alive, ch, clanRank, effStats, fullName, homePlanet, itemSum, liegeOf, log, notice, playerClan, ruler, traitSum, vassalsOf } from './core';
 import { canAfford, pay, type Cost } from './genetics';
 import { killCharacter } from './life';
+import { executed, lovers } from './relations';
 import { chance, clamp, int } from './rng';
 import { addTrait } from './traits';
 import type { Character, GameState } from './types';
@@ -222,6 +223,7 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
       const t = s.characters[targetId];
       if (success) {
         r.loverId = t.id;
+        lovers(s, r, t);
         title = 'A New Lover';
         text = `${fullName(s, t)} has fallen for you. Discretion is advised.`;
         if (chance(s, 0.15)) r.traits = addTrait(r.traits, 'lustful');
@@ -374,6 +376,7 @@ export function executePrisoner(s: GameState, id: string): void {
   const clan = s.clans[c.clanId];
   c.prisonerOf = undefined;
   killCharacter(s, id, 'executed');
+  executed(s, c);
   remember(s, c.clanId, `Executed ${c.name}`, -75, 0.012);
   s.prestige -= 30;
   for (const k of Object.values(s.clans)) if (!k.isPlayer) k.opinion -= 6;
