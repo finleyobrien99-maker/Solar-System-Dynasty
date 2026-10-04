@@ -216,8 +216,10 @@ export function Modal({
   children,
   wide,
   icon,
+  focusTitle = false,
 }: {
   title: ReactNode;
+  focusTitle?: boolean;
   onClose?: () => void;
   children: ReactNode;
   wide?: boolean;
@@ -240,7 +242,7 @@ export function Modal({
           'button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), a[href], summary, [tabindex]:not([tabindex="-1"])',
         ),
       ].filter((el) => !el.closest('[hidden]') && !el.closest('details:not([open]) > :not(summary)') && el.getClientRects().length > 0);
-    const focusFirst = () => (focusable()[0] ?? root).focus();
+    const focusFirst = () => (focusTitle ? (root.querySelector<HTMLElement>('h2') ?? root) : (focusable()[0] ?? root)).focus();
     const unlock = lockDialogBackground(root);
     if (top()) focusFirst();
     const onKey = (event: KeyboardEvent) => {
@@ -277,7 +279,7 @@ export function Modal({
       unlock();
       if (opener?.isConnected && !opener.closest('[hidden]')) opener.focus();
     };
-  }, []);
+  }, [focusTitle]);
   return (
     <div ref={overlay} tabIndex={-1} className="overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <div className={`modal ${wide ? 'wide' : ''}`} onClick={(e) => e.stopPropagation()}>
@@ -288,7 +290,9 @@ export function Modal({
                 <Icon name={icon} size={22} />
               </div>
             )}
-            <h2 id={titleId}>{title}</h2>
+            <h2 id={titleId} tabIndex={focusTitle ? -1 : undefined}>
+              {title}
+            </h2>
           </div>
           {onClose && (
             <button className="close-x" onClick={onClose} aria-label="Close">

@@ -1,3 +1,4 @@
+import { AbdicateSection } from '../sections/AbdicateSection';
 import { useId, useState } from 'react';
 import { ageOf, alive, ch, charTitle, clanRank, fullName, lifespan, playerClan, ruler } from '../../game/core';
 import { currentHeir, regencyActive } from '../../game/life';
@@ -126,6 +127,7 @@ export function LifeTab() {
         </div>
       </div>
       <SpendTimeSection />
+      <AbdicateSection />
       <Section title="Getting started" icon="info">
         <div className="card flat muted" style={{ fontSize: 'var(--font-size-0_88rem)' }}>
           Press <b className="gold">Age Up</b> to live through a cycle (one year). Between cycles you can marry and raise heirs (Family), forge a perfect

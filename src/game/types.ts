@@ -215,6 +215,7 @@ export type Pending =
       portraitId?: string;
     }
   | { kind: 'battle'; uid: string; report: BattleReport }
+  // deadId identifies the outgoing ruler; after abdication they are still alive.
   | { kind: 'succession'; uid: string; deadId: string; heirId: string };
 
 export interface Suitor {

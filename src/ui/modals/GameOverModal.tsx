@@ -1,4 +1,5 @@
-import { dynastyMembers, playerClan } from '../../game/core';
+import { RulerLegacy } from '../sections/RulerLegacy';
+import { dynastyMembers, fullName, playerClan, ruler } from '../../game/core';
 import { Sigil } from '../../svg/Sigil';
 import { Btn, Modal } from '../components';
 import { useGame } from '../store';
@@ -8,7 +9,7 @@ export function GameOverModal() {
   const clan = playerClan(s);
   const years = s.year - s.startYear;
   return (
-    <Modal title="The End of a Dynasty" icon="death">
+    <Modal title="The End of a Dynasty" icon="death" focusTitle>
       <div className="row top" style={{ gap: 'var(--space-14px)' }}>
         <Sigil spec={clan.sigil} size={70} />
         <div>
@@ -19,11 +20,12 @@ export function GameOverModal() {
           </p>
         </div>
       </div>
+      <RulerLegacy c={ruler(s)} />
       <div className="card flat" style={{ margin: '10px 0' }}>
         {s.dynasty.rulers.map((r, i) => (
           <div key={r.id + i} className="spread" style={{ fontSize: 'var(--font-size-0_88rem)' }}>
             <span>
-              {i + 1}. {r.name}
+              {i + 1}. {s.characters[r.id] ? fullName(s, s.characters[r.id]) : r.name}
             </span>
             <span className="muted">
               {r.from}–{r.to ?? s.year}

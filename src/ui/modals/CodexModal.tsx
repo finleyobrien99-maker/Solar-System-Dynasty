@@ -162,6 +162,18 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               When your ruler dies, the next in line inherits everything. Laws decide the order: Primogeniture (eldest), Ultimogeniture (youngest), Meritocracy
               (best total stats) or Designated (you choose). A gender law can favour sons or daughters. If no legitimate dynasty member is alive, the game ends.
             </p>
+            <h3>Pass the torch</h3>
+            <p>
+              On Life, Abdicate lets an adult ruler hand over to their free, adult heir, including in VIP mode. The old ruler stays alive and takes a vacant
+              council seat if one is available. They retire from the succession line. The normal handover costs 10% prestige and lowers each vassal's opinion by
+              10.
+            </p>
+            <h3>A reign remembered</h3>
+            <p>
+              Succession and the end of a dynasty show the old ruler's life, family, earned epithets and recorded deeds. The same legacy is available in ruler
+              profiles, including rivals. These are personal achievements, never the dynasty's totals; older saves can only show deeds recorded since the
+              epithet update.
+            </p>
             <h3>Sprawling dynasties</h3>
             <p>
               At the start of a run you pick <b>Sprawling</b> (no limit on dynasty size) or <b>Tight family</b> (distant kin have fewer children once the

@@ -1,8 +1,9 @@
+import { RulerLegacy } from '../sections/RulerLegacy';
 // Shows whatever is at the front of the pending queue: an event with choices,
 // a notice, a battle report or a succession.
 
 import { useEffect } from 'react';
-import { ageOf, ch, clanTitle, fullName } from '../../game/core';
+import { ageOf, alive, ch, clanTitle, fullName } from '../../game/core';
 import { buildCtx, EVENT_BY_ID, resolveEvent } from '../../game/events';
 import { TRAITS } from '../../game/traits';
 import type { BattleReport, Pending } from '../../game/types';
@@ -156,14 +157,14 @@ function SuccessionView({ p }: { p: Extract<Pending, { kind: 'succession' }> }) 
   }
   const locked = heir.traits.filter((t) => s.dynasty.locked.includes(t));
   return (
-    <Modal title="The Ruler is Dead. Long Live the Ruler!" icon="crown">
+    <Modal title={alive(dead) ? 'The Throne Passes to a New Generation' : 'The Ruler is Dead. Long Live the Ruler!'} icon="crown" focusTitle>
       <div className="row" style={{ justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
         {dead && (
           <div style={{ textAlign: 'center' }}>
             <Face c={dead} size={110} />
-            <div className="muted">{dead.name}</div>
+            <div className="muted">{fullName(s, dead)}</div>
             <div className="dim" style={{ fontSize: '0.78rem' }}>
-              {dead.born}–{dead.died} · {dead.deathCause}
+              {alive(dead) ? 'Retired, aged ' + ageOf(s, dead) : dead.born + '–' + dead.died + ' · ' + dead.deathCause}
             </div>
           </div>
         )}
@@ -178,8 +179,10 @@ function SuccessionView({ p }: { p: Extract<Pending, { kind: 'succession' }> }) 
           </div>
         </div>
       </div>
+      {dead && <RulerLegacy c={dead} />}
       <p style={{ marginTop: 12 }}>
-        You now play as <b>{heir.name}</b>. Titles, treasury, wars and claims all pass to them. Vassals are wary of a new ruler.
+        You now play as <b>{heir.name}</b>. Lands, noble titles, treasury, wars and claims all pass to them. Personal epithets stay with the person who earned
+        them. Vassals are wary of a new ruler.
         {ageOf(s, heir) < 16 && (
           <span className="bad"> {heir.name} is a minor: a regency council rules until they turn 16 (no wars, schemes or activities).</span>
         )}
