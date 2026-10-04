@@ -4,6 +4,7 @@
 // offers an alliance; an ally at war calls on you to honour it. Shuffled
 // into the main deck in events.ts.
 
+import { aiAmbition } from './aiAmbition';
 import { captiveRansom } from './aiCourt';
 import { alive, canAct, ch, clanRegions, fullName } from './core';
 import { defineEvent, type Ctx } from './dsl';
@@ -47,18 +48,22 @@ function theirWar(s: GameState, k: Clan): AiWar | undefined {
   return s.aiWars.find((w) => w.attacker === k.id || w.defender === k.id);
 }
 
-/** Houses that would like you at their side: warm toward you, and either at war or sharing an enemy. */
+/** A frightened house that sees you as the stronger friend. */
+function wantsProtector(s: GameState, k: Clan): boolean {
+  return k.opinion >= 15 && s.fleet > k.fleet && aiAmbition(s, k).kind === 'security';
+}
+
+/** Houses that would like you at their side: warm toward you, and at war, sharing an enemy, or afraid. */
 function wouldAlly(s: GameState): Clan[] {
   return Object.values(s.clans).filter(
     (k) =>
       !k.isPlayer &&
       !k.allied &&
-      k.opinion >= 30 &&
       !isRival(k) &&
       clanRegions(s, k.id).length > 0 &&
       !atWarWith(s, k.id) &&
       !!freeHead(s, k) &&
-      (!!theirWar(s, k) || !!sharedFoe(s, k)),
+      ((k.opinion >= 30 && (!!theirWar(s, k) || !!sharedFoe(s, k))) || wantsProtector(s, k)),
   );
 }
 

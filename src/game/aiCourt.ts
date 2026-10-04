@@ -8,6 +8,7 @@
 // other death. Allies who come to hate you walk away. No save change: pacts
 // are read off the family trees and captives off `prisonerOf`.
 
+import { aiAmbition } from './aiAmbition';
 import { createCharacter } from './character';
 import { ageOf, alive, ch, childrenOf, clanRank, clanRegions, effStats, fullName, hasTrait, log, newId, notice, ruler, vassalsOf } from './core';
 import { isCloseKin, recordDeed } from './epithets';
@@ -95,7 +96,16 @@ function foesOf(s: GameState, head: Character): Set<string> {
  * they're ambitious), nearness, faith and a shared enemy. Never a house they're
  * at war with or can't stand; a house they're already bound to is worth less.
  */
-export function matchValue(s: GameState, k: Clan, head: Character, other: Clan, pacts: Set<string>, foes = foesOf(s, head)): number {
+export function matchValue(
+  s: GameState,
+  k: Clan,
+  head: Character,
+  other: Clan,
+  pacts: Set<string>,
+  foes = foesOf(s, head),
+  // The ambitious and the frightened both want powerful in-laws.
+  powerHungry = hasTrait(head, 'ambitious') || aiAmbition(s, k).kind === 'security',
+): number {
   if (other.id === k.id || other.isPlayer || atWar(s, k.id, other.id)) return 0;
   let v = 6;
   const theirs = ch(s, other.headId);
@@ -106,7 +116,7 @@ export function matchValue(s: GameState, k: Clan, head: Character, other: Clan, 
     if ([...foesOf(s, theirs)].some((f) => f !== k.id && f !== other.id && foes.has(f))) v += 20;
   }
   if (clanRegions(s, other.id).length) {
-    v += (clanRank(s, other.id) * 6 + other.fleet / 12) * (hasTrait(head, 'ambitious') ? 1.6 : 1);
+    v += (clanRank(s, other.id) * 6 + other.fleet / 12) * (powerHungry ? 1.6 : 1);
     if (other.planetId === k.planetId) v += 12;
     else if (neighbourPlanets(k.planetId).includes(other.planetId)) v += 6;
   }
@@ -146,14 +156,19 @@ export function aiMarriages(s: GameState): void {
     const head = ch(s, k.headId);
     if (!alive(head)) continue;
     const candidates = [head, ...childrenOf(s, head).filter((c) => c.clanId === k.id)];
+    // A lord with no heir looks hard for a wife, even late in life.
+    const ambition = aiAmbition(s, k).kind;
+    const needHeir = ambition === 'heir';
+    const powerHungry = hasTrait(head, 'ambitious') || ambition === 'security';
     for (const c of candidates) {
-      if (!alive(c) || ageOf(s, c) < 18 || ageOf(s, c) > 55 || c.marriedIn || c.prisonerOf) continue;
+      const lord = c.id === k.headId;
+      if (!alive(c) || ageOf(s, c) < 18 || ageOf(s, c) > (lord && needHeir ? 65 : 55) || c.marriedIn || c.prisonerOf) continue;
       if (c.betrothedId || alive(ch(s, c.spouseId))) continue;
-      if (!chance(s, c.id === k.headId ? 0.35 : 0.2)) continue;
+      if (!chance(s, lord ? (needHeir ? 0.8 : 0.35) : 0.2)) continue;
       const mine = pactsOf(s, k.id, pacts);
       const foes = foesOf(s, head);
       const options = Object.values(s.clans)
-        .map((o) => [o, matchValue(s, k, head, o, mine, foes)] as const)
+        .map((o) => [o, matchValue(s, k, head, o, mine, foes, powerHungry)] as const)
         .filter(([, v]) => v > 0);
       const from = options.length ? weighted(s, options) : k;
       const partner = from.id !== k.id ? matchFrom(s, from, c) : undefined;

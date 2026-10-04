@@ -9,6 +9,7 @@
 
 import { ageOf, alive, ch, clanRank, clanRegions, effStats, fullName, hasTrait, isCloseKin, log } from './core';
 import { pactMap, pactsOf, type Pacts } from './aiCourt';
+import { aiAmbition, ambitionHouse, type AmbitionKind } from './aiAmbition';
 import { recordDeed } from './epithets';
 import { killCharacter } from './life';
 import { addFeeling, attempted, blackmailed, cuckolded, lovers, murdered, opinionOf } from './relations';
@@ -31,12 +32,12 @@ function adultHead(s: GameState, k: Clan): Character | undefined {
   return alive(h) && !h.prisonerOf && ageOf(s, h) >= 16 ? h : undefined;
 }
 
-/** How likely a head is to plot at all this cycle. */
-export function plotChance(head: Character): number {
-  let p = 0.12;
+/** How likely a head is to plot at all this cycle. A lord sworn to revenge plots far more. */
+export function plotChance(head: Character, ambition?: AmbitionKind): number {
+  let p = ambition === 'revenge' ? 0.27 : 0.12;
   for (const t of ['deceitful', 'ambitious', 'cruel', 'greedy', 'paranoid']) if (hasTrait(head, t)) p += 0.05;
   for (const t of ['honest', 'kind', 'content', 'just']) if (hasTrait(head, t)) p -= 0.04;
-  return clamp(p, 0.02, 0.4);
+  return clamp(p, 0.02, ambition === 'revenge' ? 0.55 : 0.4);
 }
 
 function atWar(s: GameState, a: string, b: string): boolean {
@@ -57,8 +58,12 @@ export function aiPlans(s: GameState, k: Clan, pacts: Pacts = pactMap(s)): AiPla
   const head = adultHead(s, k);
   if (!head) return [];
   const kin = pactsOf(s, k.id, pacts);
+  // Their ambition sharpens the knife: the man they want revenge on, the house they want to break.
+  const aim = aiAmbition(s, k);
+  const aimHouse = ambitionHouse(s, aim);
   const plans: AiPlan[] = [];
   const has = (t: string) => hasTrait(head, t);
+  const merciless = (has('cruel') ? 15 : 0) + (has('wrathful') ? 10 : 0) + (has('ambitious') ? 10 : 0) - (has('kind') ? 25 : 0) - (has('honest') ? 15 : 0);
   for (const other of Object.values(s.clans)) {
     if (other.isPlayer || other.id === k.id || !clanRegions(s, other.id).length) continue;
     const t = adultHead(s, other);
@@ -67,9 +72,10 @@ export function aiPlans(s: GameState, k: Clan, pacts: Pacts = pactMap(s)): AiPla
     // Kin by marriage get the benefit of the doubt.
     const hate = -opinionOf(s, head, t) + (war ? 30 : 0) - (kin.has(other.id) ? 25 : 0);
     const blood = vendetta(s, head, t);
-    const merciless = (has('cruel') ? 15 : 0) + (has('wrathful') ? 10 : 0) + (has('ambitious') ? 10 : 0) - (has('kind') ? 25 : 0) - (has('honest') ? 15 : 0);
-    if (hate >= 60 || blood) plans.push({ kind: 'assassinate', target: t, score: hate - 50 + merciless + (blood ? 40 : 0) });
-    if (war || hate >= 60) plans.push({ kind: 'sabotage', target: t, score: hate - 40 + (war ? 25 : 0) });
+    const avenging = aim.kind === 'revenge' && aim.target === t.id;
+    if (hate >= 60 || blood) plans.push({ kind: 'assassinate', target: t, score: hate - 50 + merciless + (blood ? 40 : 0) + (avenging ? 30 : 0) });
+    const breaking = other.id === aimHouse && aim.kind !== 'security';
+    if (war || hate >= 60 || breaking) plans.push({ kind: 'sabotage', target: t, score: hate - 40 + (war ? 25 : 0) + (breaking ? 30 : 0) });
     if ((has('greedy') || has('deceitful')) && other.credits >= 100)
       plans.push({ kind: 'blackmail', target: t, score: 15 + hate / 3 + (has('greedy') ? 10 : 0) });
     const spouse = ch(s, t.spouseId);
@@ -77,6 +83,10 @@ export function aiPlans(s: GameState, k: Clan, pacts: Pacts = pactMap(s)): AiPla
       plans.push({ kind: 'seduce', target: spouse, score: 20 + hate / 4 });
     if (hate <= -10 && (has('gregarious') || has('ambitious') || has('generous'))) plans.push({ kind: 'sway', target: t, score: 10 - hate / 4 });
   }
+  // Revenge on someone who isn't a lord (the son who did it, say): they go after that person directly.
+  const nemesis = aim.kind === 'revenge' ? ch(s, aim.target) : undefined;
+  if (alive(nemesis) && !nemesis.prisonerOf && !s.clans[nemesis.clanId]?.isPlayer && s.clans[nemesis.clanId]?.headId !== nemesis.id)
+    plans.push({ kind: 'assassinate', target: nemesis, score: 40 + merciless });
   return plans.filter((p) => p.score > 0 && k.credits >= AI_SCHEME_COST[p.kind]);
 }
 
@@ -164,7 +174,7 @@ export function aiIntrigueTick(s: GameState): void {
   for (const k of Object.values(s.clans)) {
     if (k.isPlayer || !clanRegions(s, k.id).length) continue;
     const head = adultHead(s, k);
-    if (!head || !chance(s, plotChance(head))) continue;
+    if (!head || !chance(s, plotChance(head, aiAmbition(s, k).kind))) continue;
     const plans = aiPlans(s, k, (pacts ??= pactMap(s)));
     if (!plans.length) continue;
     // Favour the plots they want most, with room for surprise.

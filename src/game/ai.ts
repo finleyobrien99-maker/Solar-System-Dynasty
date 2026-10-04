@@ -29,6 +29,7 @@ import { councilStat } from './council';
 import { capOpinion, grudgeOpinion, isRival, opinionCeiling } from './memory';
 import { addFeeling, feelingsSum, opinionOf } from './relations';
 import { aiIntrigueTick } from './aiIntrigue';
+import { aiAmbition, ambitionHouse, AMBITION_AGGRESSION, type AmbitionKind } from './aiAmbition';
 import { aiArrests, aiMarriages, alliesAbandon, betrayPact, captivesTick, kinFleet, pactMap, takeCaptive, wouldBetray } from './aiCourt';
 import { neighbourPlanets, PLANET_BY_ID } from './planets';
 import { chance, clamp, int, pick, range, weighted } from './rng';
@@ -134,7 +135,7 @@ function startAiWar(s: GameState): void {
   if (!pool.length) return;
   const attacker = weighted(
     s,
-    pool.map((c) => [c, c.fleet * aggression(s, c)] as const),
+    pool.map((c) => [c, c.fleet * aggression(s, c) * AMBITION_AGGRESSION[aiAmbition(s, c).kind]] as const),
   );
   const rank = clanRank(s, attacker.id);
   let targets = Object.values(s.regions).filter((r) => r.owner !== attacker.id && r.owner !== s.playerClanId && r.owner);
@@ -152,13 +153,14 @@ function startAiWar(s: GameState): void {
   const kin = pacts.get(attacker.id);
   if (kin?.size && alive(lord)) targets = targets.filter((r) => !kin.has(r.owner) || wouldBetray(s, lord, ch(s, s.clans[r.owner]?.headId)));
   if (!targets.length) return;
-  // Grudges pick the enemy: the more the attacker's head hates a house, the likelier its land.
+  // Grudges and ambition pick the enemy: the more the attacker's head hates a house, the likelier its land.
+  const aim = ambitionHouse(s, aiAmbition(s, attacker));
   const target = weighted(
     s,
     targets.map((r) => {
       const theirs = ch(s, s.clans[r.owner]?.headId);
       const hate = alive(lord) && alive(theirs) ? Math.max(0, -opinionOf(s, lord, theirs)) : 0;
-      return [r, 1 + hate / 20] as const;
+      return [r, (1 + hate / 20) * (r.owner === aim ? 4 : 1)] as const;
     }),
   );
   const war: AiWar = { id: newId(s, 'aw'), attacker: attacker.id, defender: target.owner, target: target.id, started: s.year, progress: 0 };
@@ -239,27 +241,38 @@ function aggressionOnPlayer(s: GameState): void {
   const mine = clanRegions(s, s.playerClanId);
   if (!mine.length) return;
   const myPlanets = new Set(mine.map((r) => r.planetId));
+  const settled = s.year - s.startYear >= 10;
   const pool = landed(s).filter((c) => {
     if (c.allied || atWarWith(s, c.id) || s.aiWars.some((w) => w.attacker === c.id)) return false;
     if (liegeOf(s, c.id) === s.playerClanId) return false;
     const near = myPlanets.has(c.planetId) || neighbourPlanets(c.planetId).some((p) => myPlanets.has(p));
-    // Sworn rivals come for you from anywhere, and with less of an edge.
-    if (isRival(c)) return c.fleet > s.fleet * 0.7;
+    // Sworn rivals and lords sworn to revenge on you come from anywhere, and with less of an edge.
+    if (isRival(c) || aimsAtPlayer(s, c) === 'revenge') return c.fleet > s.fleet * 0.7;
+    // A conqueror or crusader eyeing your land needs less provocation than most, but still some,
+    // and leaves a new dynasty its first decade to find its feet.
+    if (aimsAtPlayer(s, c)) return near && settled && c.opinion < -10 && c.fleet > s.fleet * 0.9;
     return near && c.opinion < -25 && c.fleet > s.fleet * 0.9;
   });
   if (!pool.length) return;
   const attacker = pick(s, pool);
-  if (!chance(s, 0.1 * aggression(s, attacker) * (isRival(attacker) ? 1.8 : 1))) return;
+  const bent = isRival(attacker) || aimsAtPlayer(s, attacker) === 'revenge';
+  if (!chance(s, 0.1 * aggression(s, attacker) * (bent ? 1.8 : 1))) return;
   const onPlanet = mine.filter((r) => r.planetId === attacker.planetId && !(r.capital && clanRank(s, attacker.id) < 2));
   const target = onPlanet.length ? pick(s, onPlanet) : pick(s, mine);
   const cb = s.claims.length && chance(s, 0.3) ? 'feud' : 'conquest';
   aiDeclareWar(s, attacker.id, cb, target.id);
 }
 
-/** Sworn rivals scheme against you: assassins, sabotage and theft. */
+/** Whether a house's ambition is aimed at you: revenge on your people, or your land. */
+function aimsAtPlayer(s: GameState, c: Clan): AmbitionKind | undefined {
+  const a = aiAmbition(s, c);
+  return a.kind !== 'security' && ambitionHouse(s, a) === s.playerClanId ? a.kind : undefined;
+}
+
+/** Sworn rivals, and lords sworn to revenge, scheme against you: assassins, sabotage and theft. */
 function rivalPlots(s: GameState): void {
   if (s.year - s.startYear < GRACE_YEARS) return;
-  const rivals = landed(s).filter((c) => isRival(c) && alive(ch(s, c.headId)) && !ch(s, c.headId)?.prisonerOf);
+  const rivals = landed(s).filter((c) => (isRival(c) || aimsAtPlayer(s, c) === 'revenge') && alive(ch(s, c.headId)) && !ch(s, c.headId)?.prisonerOf);
   if (!rivals.length || !chance(s, Math.min(0.35, 0.12 * rivals.length))) return;
   const rival = pick(s, rivals);
   const head = ch(s, rival.headId)!;

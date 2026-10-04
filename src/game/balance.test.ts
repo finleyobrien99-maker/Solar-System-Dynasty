@@ -23,7 +23,9 @@ describe('balance harness', () => {
 
   it('bots play to their strategy', () => {
     expect(runs.warmonger.battlesWon + runs.warmonger.battlesLost).toBeGreaterThan(0);
-    expect(runs.breeder.end.dynasty).toBeGreaterThan(runs.passive.end.dynasty);
+    // Over a few worlds, not one: any single family can be unlucky.
+    const family = (bot: BotId) => [3, 4, 5].reduce((n, seed) => n + (seed === 3 ? runs[bot] : playRun(bot, seed, 40)).end.dynasty, 0);
+    expect(family('breeder')).toBeGreaterThan(family('passive'));
   });
 
   it('writes a report row per run and per sample', () => {

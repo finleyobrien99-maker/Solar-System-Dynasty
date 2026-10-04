@@ -19,6 +19,8 @@ import { Btn, CharCard, InfoDot, Modal, Opinion } from '../components';
 import { useGame } from '../store';
 import { MemoryList } from '../sections/GrudgeSection';
 import { isRival } from '../../game/memory';
+import { aiAmbition } from '../../game/aiAmbition';
+import { pactsOf } from '../../game/aiCourt';
 
 export function ClanModal({ id }: { id: string }) {
   const { s, act, openClan, setUi } = useGame();
@@ -36,6 +38,8 @@ export function ClanModal({ id }: { id: string }) {
     .sort((a, b) => (b.died ?? s.year) - (a.died ?? s.year));
   const mine = clan.isPlayer;
   const atWar = s.wars.some((w) => w.enemy === id);
+  const ambition = aiAmbition(s, clan);
+  const kin = [...pactsOf(s, id)].map((k) => s.clans[k]);
 
   return (
     <Modal title={`House ${clan.name}`} onClose={() => openClan(undefined)} wide>
@@ -57,7 +61,17 @@ export function ClanModal({ id }: { id: string }) {
             {atWar && <span className="pill red">At war with you</span>}
             {clan.cadetOf === s.playerClanId && <span className="pill gold">Cadet branch of your bloodline</span>}
             {isRival(clan) && <span className="pill red">Sworn rival</span>}
+            {kin.map((k) => (
+              <span key={k.id} className="pill">
+                Bound by marriage to {k.name}
+              </span>
+            ))}
           </div>
+          {!mine && head && (
+            <div className="muted" style={{ fontSize: 'var(--font-size-0_86rem)' }}>
+              {head.name}'s ambition: {ambition.text}
+            </div>
+          )}
           <div className="row wrap" style={{ marginTop: 'var(--space-4px)' }}>
             {regions.map((r) => (
               <button
