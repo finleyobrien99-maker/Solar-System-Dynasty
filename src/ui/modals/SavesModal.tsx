@@ -33,12 +33,12 @@ export function SavesPanel({ current, onLoad, onClose }: { current?: GameState; 
 
   return (
     <Modal title="Saves" onClose={onClose} icon="save">
-      <p className="muted" style={{ fontSize: '0.84rem' }}>
+      <p className="muted" style={{ fontSize: 'var(--font-size-0_84rem)' }}>
         Your game autosaves after every action. Each slot keeps a verified backup of the previous save, so a corrupted write never costs you a run. Export a
         file to keep a copy outside the browser.
       </p>
       {msg && (
-        <div className="card flat" style={{ marginBottom: 8 }}>
+        <div className="card flat" style={{ marginBottom: 'var(--space-8px)' }}>
           {msg}
         </div>
       )}
@@ -50,7 +50,7 @@ export function SavesPanel({ current, onLoad, onClose }: { current?: GameState; 
               <div>
                 <b>{LABEL[slot]}</b>
                 {info ? (
-                  <div className="muted" style={{ fontSize: '0.82rem' }}>
+                  <div className="muted" style={{ fontSize: 'var(--font-size-0_82rem)' }}>
                     {info.summary.ruler} of House {info.summary.house} · {info.summary.title} · year {info.summary.year}
                     {info.summary.gameOver ? ' · ended' : ''}
                     {info.summary.vip ? ' · VIP' : ''}

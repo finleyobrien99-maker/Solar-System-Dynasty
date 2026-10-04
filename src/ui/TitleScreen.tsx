@@ -15,7 +15,7 @@ function TitleArt() {
       <defs>
         <radialGradient id="tsun">
           <stop offset="0%" stopColor="#fff6d5" />
-          <stop offset="35%" stopColor="#ffd166" />
+          <stop offset="35%" stopColor="var(--gold)" />
           <stop offset="70%" stopColor="#ff9f1c" stopOpacity={0.5} />
           <stop offset="100%" stopColor="#ff6b00" stopOpacity={0} />
         </radialGradient>
@@ -72,7 +72,7 @@ export function TitleScreen({ onNew, onLoad }: { onNew: () => void; onLoad: (s: 
         </button>
         {err && <div className="bad">{err}</div>}
       </div>
-      <div className="dim" style={{ fontSize: '0.75rem' }}>
+      <div className="dim" style={{ fontSize: 'var(--font-size-0_75rem)' }}>
         {inApp
           ? 'Saves are kept on this phone. Export them from the menu to back them up.'
           : 'Saves live in this browser. Export them from the menu to keep them safe.'}

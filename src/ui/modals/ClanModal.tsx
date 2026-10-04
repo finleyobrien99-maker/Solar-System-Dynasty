@@ -36,11 +36,11 @@ export function ClanModal({ id }: { id: string }) {
 
   return (
     <Modal title={`House ${clan.name}`} onClose={() => openClan(undefined)} wide>
-      <div className="row top wrap" style={{ gap: 14 }}>
+      <div className="row top wrap" style={{ gap: 'var(--space-14px)' }}>
         <Sigil spec={clan.sigil} size={84} />
-        <div className="grow stack" style={{ gap: 4 }}>
+        <div className="grow stack" style={{ gap: 'var(--space-4px)' }}>
           <div className="gold">{head ? clanTitle(s, id, head.gender) : ''}</div>
-          <div className="muted" style={{ fontSize: '0.86rem' }}>
+          <div className="muted" style={{ fontSize: 'var(--font-size-0_86rem)' }}>
             {PLANET_BY_ID[clan.planetId].faction} · <span style={{ color: FAITHS[clan.faithId].color }}>{FAITHS[clan.faithId].name}</span> · founded{' '}
             {clan.founded}
           </div>
@@ -55,7 +55,7 @@ export function ClanModal({ id }: { id: string }) {
             {clan.cadetOf === s.playerClanId && <span className="pill gold">Cadet branch of your bloodline</span>}
             {isRival(clan) && <span className="pill red">Sworn rival</span>}
           </div>
-          <div className="row wrap" style={{ marginTop: 4 }}>
+          <div className="row wrap" style={{ marginTop: 'var(--space-4px)' }}>
             {regions.map((r) => (
               <button
                 key={r.id}
@@ -74,7 +74,7 @@ export function ClanModal({ id }: { id: string }) {
       </div>
 
       {!mine && (
-        <div className="card flat" style={{ marginTop: 12 }}>
+        <div className="card flat" style={{ marginTop: 'var(--space-12px)' }}>
           <h4>
             Diplomacy{' '}
             <InfoDot text="Gifts raise opinion. Allies send 30% of their fleet to your wars. Viceroys and above can demand fealty from weaker clans. Insulting starts a blood feud: a free reason for war, both ways." />
@@ -115,7 +115,7 @@ export function ClanModal({ id }: { id: string }) {
               Insult
             </Btn>
           </div>
-          <h4 style={{ marginTop: 10 }}>Schemes</h4>
+          <h4 style={{ marginTop: 'var(--space-10px)' }}>Schemes</h4>
           <div className="btn-row">
             <Btn small reason={schemeBlocker(s, 'sway', id)} onClick={() => act((d) => runScheme(d, 'sway', id))}>
               Sway ({Math.round(schemeChance(s, 'sway', id) * 100)}%)
@@ -131,13 +131,13 @@ export function ClanModal({ id }: { id: string }) {
       )}
 
       {!mine && (
-        <div className="card flat" style={{ marginTop: 12 }}>
+        <div className="card flat" style={{ marginTop: 'var(--space-12px)' }}>
           <h4>What they remember</h4>
           <MemoryList clan={clan} />
         </div>
       )}
 
-      <h4 style={{ marginTop: 14 }}>Members</h4>
+      <h4 style={{ marginTop: 'var(--space-14px)' }}>Members</h4>
       <div className="grid tight">
         {members.map((m) => (
           <CharCard key={m.id} c={m} size={46} traitsMax={3} sub={`${m.id === clan.headId ? 'Head of house · ' : ''}${ageOf(s, m)} yrs`} />

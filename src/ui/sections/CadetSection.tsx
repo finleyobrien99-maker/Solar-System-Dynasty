@@ -32,7 +32,7 @@ export function CadetSection() {
                 <div className="sub">
                   {head ? fullName(s, head) : ''} · {regions.map((r) => r.name).join(', ') || 'landless'} · {members} kin · {k.fleet} ships
                 </div>
-                <div className="row" style={{ marginTop: 4, gap: 4 }}>
+                <div className="row" style={{ marginTop: 'var(--space-4px)', gap: 'var(--space-4px)' }}>
                   <Opinion v={k.opinion} />
                   {memorySum(k) <= -40 && <span className="pill red">Resentful</span>}
                 </div>
@@ -53,13 +53,13 @@ export function FoundCadetPanel({ c }: { c: Character }) {
   const [name, setName] = useState('');
   const block = regionId ? cadetBlocker(s, c.id, regionId) : "You have no region to spare (throne-regions can't be granted).";
   return (
-    <details style={{ marginTop: 12 }}>
+    <details style={{ marginTop: 'var(--space-12px)' }}>
       <summary className="gold">Found a cadet branch</summary>
-      <div className="stack" style={{ gap: 8, marginTop: 8 }}>
-        <div className="muted" style={{ fontSize: '0.84rem' }}>
+      <div className="stack" style={{ gap: 'var(--space-8px)', marginTop: 'var(--space-8px)' }}>
+        <div className="muted" style={{ fontSize: 'var(--font-size-0_84rem)' }}>
           Grant {c.name} a region. They, and their descendants still in your house, become a new house of your bloodline, sworn to you.
         </div>
-        <div className="row wrap" style={{ gap: 8 }}>
+        <div className="row wrap" style={{ gap: 'var(--space-8px)' }}>
           <select
             id="cadet-region"
             value={regionId}

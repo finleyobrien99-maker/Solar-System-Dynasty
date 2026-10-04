@@ -12,7 +12,7 @@ function Seat({ role }: { role: CouncilRole }) {
   const pool = candidates(s, role).slice(0, 25);
   const v = councilStat(s, role);
   return (
-    <div className="card flat stack" style={{ gap: 8, padding: 12 }}>
+    <div className="card flat stack" style={{ gap: 'var(--space-8px)', padding: 'var(--space-12px)' }}>
       <div className="spread">
         <b>{def.name}</b>
         <span className="pill">{STAT_NAMES[def.stat]}</span>
@@ -22,20 +22,20 @@ function Seat({ role }: { role: CouncilRole }) {
           <Face c={c} size={44} />
           <div className="grow" style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 700 }}>{fullName(s, c)}</div>
-            <div className="muted" style={{ fontSize: '0.78rem' }}>
+            <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)' }}>
               {relationTo(s, c) || 'Kin'} · {STAT_NAMES[def.stat]} {effStats(s, c)[def.stat]}
             </div>
           </div>
         </div>
       ) : (
-        <div className="dim" style={{ fontSize: '0.85rem' }}>
+        <div className="dim" style={{ fontSize: 'var(--font-size-0_85rem)' }}>
           Seat empty. {def.desc}
         </div>
       )}
-      <div className="good" style={{ fontSize: '0.8rem' }}>
+      <div className="good" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
         {c ? def.effect(v) : def.desc}
       </div>
-      <div className="row wrap" style={{ gap: 6 }}>
+      <div className="row wrap" style={{ gap: 'var(--space-6px)' }}>
         <select
           id={`council-${role}`}
           aria-label={`Appoint ${def.name}`}

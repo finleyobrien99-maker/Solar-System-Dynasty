@@ -62,7 +62,7 @@ function LooksEditor({ looks, gender, onChange }: { looks: Appearance; gender: G
         return (
           <div key={k} className="looks-row">
             <span>{label}</span>
-            <span className="row" style={{ gap: 4 }}>
+            <span className="row" style={{ gap: 'var(--space-4px)' }}>
               <button type="button" className="btn small ghost" onClick={() => set(-1)} aria-label={`Previous ${label}`}>
                 ‹
               </button>
@@ -205,7 +205,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
 
   return (
     <div className="main" style={{ paddingBottom: 40 }}>
-      <div className="spread" style={{ marginBottom: 10 }}>
+      <div className="spread" style={{ marginBottom: 'var(--space-10px)' }}>
         <h1 className="gold" style={{ margin: 0 }}>
           Found your dynasty
         </h1>
@@ -239,17 +239,17 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                 <PlanetArt planetId={pl.id} size={64} />
                 <div>
                   <div className="nm">{pl.name}</div>
-                  <div className="gold" style={{ fontSize: '0.78rem' }}>
+                  <div className="gold" style={{ fontSize: 'var(--font-size-0_78rem)' }}>
                     {pl.faction}
                   </div>
-                  <div className="muted" style={{ fontSize: '0.76rem' }}>
+                  <div className="muted" style={{ fontSize: 'var(--font-size-0_76rem)' }}>
                     {pl.bonus}
                   </div>
                 </div>
               </button>
             ))}
           </div>
-          <div className="card" style={{ marginTop: 12 }}>
+          <div className="card" style={{ marginTop: 'var(--space-12px)' }}>
             <div className="row top">
               <PlanetArt planetId={planetId} size={110} />
               <div>
@@ -262,7 +262,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               </div>
             </div>
           </div>
-          <div className="btn-row" style={{ marginTop: 12, justifyContent: 'flex-end' }}>
+          <div className="btn-row" style={{ marginTop: 'var(--space-12px)', justifyContent: 'flex-end' }}>
             <button className="btn primary" onClick={() => setStep(1)}>
               Next: how you start <Icon name="arrow" size={16} />
             </button>
@@ -292,7 +292,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                     ))}
                   </span>
                 </div>
-                <div className="gold" style={{ fontSize: '0.8rem' }}>
+                <div className="gold" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
                   {sc.tagline}
                 </div>
                 <div className="d">{sc.blurb}</div>
@@ -310,16 +310,16 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                     .
                   </div>
                 )}
-                <div className="row wrap" style={{ gap: 4, marginTop: 6 }}>
+                <div className="row wrap" style={{ gap: 'var(--space-4px)', marginTop: 'var(--space-6px)' }}>
                   <span className="pill gold">
                     <Icon name="credits" size={11} />
                     {sc.credits.toLocaleString('en-GB')}
                   </span>
-                  <span className="pill" style={{ color: '#ffb4f0' }}>
+                  <span className="pill" style={{ color: 'var(--prestige)' }}>
                     <Icon name="prestige" size={11} />
                     {sc.prestige.toLocaleString('en-GB')}
                   </span>
-                  <span className="pill" style={{ color: '#ffb36b' }}>
+                  <span className="pill" style={{ color: 'var(--faith)' }}>
                     <Icon name="faith" size={11} />
                     {sc.faith}
                   </span>
@@ -328,7 +328,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             ))}
           </div>
 
-          <h3 style={{ marginTop: 16 }}>
+          <h3 style={{ marginTop: 'var(--space-16px)' }}>
             Game mode{' '}
             <InfoDot text="VIP mode is a sandbox, like the VIP perks in mobile life sims. You can switch it on or off later from the menu, so picking Standard now doesn't lock you out." />
           </h3>
@@ -348,7 +348,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             </button>
           </div>
 
-          <h3 style={{ marginTop: 16 }}>
+          <h3 style={{ marginTop: 'var(--space-16px)' }}>
             Dynasty growth{' '}
             <InfoDot text="Sprawling: no limit. Your bloodline can grow into the hundreds and spread into houses on every planet. Tight family: once the dynasty passes 30 living members, distant kin have far fewer children (none past 60), keeping the court small and focused. You can't change this mid-run." />
           </h3>
@@ -363,7 +363,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             </button>
           </div>
 
-          <div className="btn-row" style={{ marginTop: 12, justifyContent: 'space-between' }}>
+          <div className="btn-row" style={{ marginTop: 'var(--space-12px)', justifyContent: 'space-between' }}>
             <button className="btn ghost" onClick={() => setStep(0)} data-back>
               Back
             </button>
@@ -399,10 +399,10 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             ))}
           </div>
           {clan && (
-            <div className="card" style={{ marginTop: 12 }}>
+            <div className="card" style={{ marginTop: 'var(--space-12px)' }}>
               <div className="row wrap">
                 <Sigil spec={sigil ?? clan.sigil} size={70} />
-                <div className="stack" style={{ gap: 6 }}>
+                <div className="stack" style={{ gap: 'var(--space-6px)' }}>
                   <label className="row wrap">
                     <span className="muted">House name</span>
                     <input value={clanName} placeholder={clan.name} maxLength={24} onChange={(e) => setClanName(e.target.value)} />
@@ -414,7 +414,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               </div>
             </div>
           )}
-          <div className="btn-row" style={{ marginTop: 12, justifyContent: 'space-between' }}>
+          <div className="btn-row" style={{ marginTop: 'var(--space-12px)', justifyContent: 'space-between' }}>
             <button className="btn ghost" onClick={() => setStep(1)} data-back>
               Back
             </button>
@@ -433,7 +433,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
       {step === 3 && clan && (
         <>
           {vip && (
-            <div className="card flat vip-banner spread" style={{ marginBottom: 12 }}>
+            <div className="card flat vip-banner spread" style={{ marginBottom: 'var(--space-12px)' }}>
               <span>
                 <Icon name="relic" size={14} /> <b className="gold">VIP builder.</b> Pick any traits you like, set talents up to {STAT_MAX}, or go all in.
               </span>
@@ -443,11 +443,11 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             </div>
           )}
           <div className="cols">
-            <div className="card stack" style={{ gap: 10 }}>
+            <div className="card stack" style={{ gap: 'var(--space-10px)' }}>
               <div className="row top">
                 <Portrait c={fake} year={world.year} rank={rank} clanColor={sigil?.c1 ?? clan.color} trim={sigil?.c2 ?? clan.sigil.c2} size={140} />
-                <div className="stack" style={{ gap: 8, minWidth: 0 }}>
-                  <label className="stack" style={{ gap: 4 }}>
+                <div className="stack" style={{ gap: 'var(--space-8px)', minWidth: 0 }}>
+                  <label className="stack" style={{ gap: 'var(--space-4px)' }}>
                     <span className="muted">Name</span>
                     <input value={rulerName} maxLength={20} onChange={(e) => setName(e.target.value)} />
                   </label>
@@ -472,7 +472,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                 </div>
               </div>
 
-              <label className="stack" style={{ gap: 4 }}>
+              <label className="stack" style={{ gap: 'var(--space-4px)' }}>
                 <span className="spread">
                   <span className="muted">Age</span>
                   <b>{age}</b>
@@ -485,7 +485,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                   onChange={(e) => setAge(Number(e.target.value))}
                   aria-label="Starting age"
                 />
-                <span className="dim" style={{ fontSize: '0.74rem' }}>
+                <span className="dim" style={{ fontSize: 'var(--font-size-0_74rem)' }}>
                   Older rulers start better educated{!vip && age >= 35 ? ' (Tier 3 schooling)' : ''} but have fewer years left.
                 </span>
               </label>
@@ -566,7 +566,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                   ))}
                 </div>
                 {vip && (
-                  <div className="row wrap" style={{ gap: 6, marginTop: 8 }}>
+                  <div className="row wrap" style={{ gap: 'var(--space-6px)', marginTop: 'var(--space-8px)' }}>
                     <span className="muted">Schooling tier</span>
                     {[1, 2, 3, 4].map((n) => (
                       <button key={n} className={`btn small ${eduTier === n ? 'primary' : ''}`} onClick={() => setEduTier(n)}>
@@ -613,7 +613,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               </div>
             </div>
           </div>
-          <div className="btn-row" style={{ marginTop: 12, justifyContent: 'space-between' }}>
+          <div className="btn-row" style={{ marginTop: 'var(--space-12px)', justifyContent: 'space-between' }}>
             <button className="btn ghost" onClick={() => setStep(2)} data-back>
               Back
             </button>

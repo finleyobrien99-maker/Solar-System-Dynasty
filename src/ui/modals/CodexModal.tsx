@@ -396,7 +396,7 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
         {page === 'worlds' && (
           <>
             {PLANETS.map((p) => (
-              <div key={p.id} className="row top" style={{ marginBottom: 10 }}>
+              <div key={p.id} className="row top" style={{ marginBottom: 'var(--space-10px)' }}>
                 <PlanetArt planetId={p.id} size={56} />
                 <div>
                   <b>

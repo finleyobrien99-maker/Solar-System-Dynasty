@@ -24,13 +24,13 @@ function ItemTile({ item, children }: { item: Item; children?: ReactNode }) {
         <div className="nm" style={{ color: RARITY_COLOR[item.rarity] }}>
           {item.name}
         </div>
-        <div className="muted" style={{ fontSize: '0.75rem' }}>
+        <div className="muted" style={{ fontSize: 'var(--font-size-0_75rem)' }}>
           {item.rarity} {SLOT_NAMES[item.slot].toLowerCase()}
           {item.origin ? ` · ${item.origin}` : ''}
         </div>
-        <div style={{ fontSize: '0.8rem', color: '#a8e6c1' }}>{itemEffectText(item.fx)}</div>
+        <div style={{ fontSize: 'var(--font-size-0_8rem)', color: '#a8e6c1' }}>{itemEffectText(item.fx)}</div>
         {children && (
-          <div className="btn-row" style={{ marginTop: 6 }}>
+          <div className="btn-row" style={{ marginTop: 'var(--space-6px)' }}>
             {children}
           </div>
         )}

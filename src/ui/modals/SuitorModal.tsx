@@ -22,8 +22,8 @@ export function SuitorModal() {
   const cost = suitorRefreshCost(s, sl.forId);
   return (
     <Modal title={`${sl.mode === 'marry' ? 'Marriage' : 'Betrothal'} for ${target?.name ?? ''}`} onClose={close} wide icon="heart">
-      <div className="spread" style={{ marginBottom: 10 }}>
-        <span className="muted" style={{ fontSize: '0.86rem' }}>
+      <div className="spread" style={{ marginBottom: 'var(--space-10px)' }}>
+        <span className="muted" style={{ fontSize: 'var(--font-size-0_86rem)' }}>
           The spouse joins your house, so all children are your dynasty. Check their genes: that is what your grandchildren get.
           <InfoDot text="Highborn candidates are a clan head's own child: they cost prestige but bring an alliance (allies fight with you). Others are cheaper kin with no alliance. Betrothed children marry automatically at 16." />
         </span>
@@ -46,15 +46,15 @@ export function SuitorModal() {
                   <b>
                     {c.name} {clan?.name}
                   </b>
-                  <div className="muted" style={{ fontSize: '0.8rem' }}>
+                  <div className="muted" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
                     {ageOf(s, c)} yrs · {PLANET_BY_ID[c.planetId].adjective}
                   </div>
-                  <div className="row wrap" style={{ marginTop: 4, gap: 4 }}>
+                  <div className="row wrap" style={{ marginTop: 'var(--space-4px)', gap: 'var(--space-4px)' }}>
                     {clan && <Sigil spec={clan.sigil} size={20} />}
                     {sug.highborn ? <span className="pill gold">Highborn · alliance</span> : <span className="pill">Lesser kin</span>}
                     {clan && <span className="pill">rank {clanRank(s, clan.id)}</span>}
                   </div>
-                  <div style={{ fontSize: '0.78rem', marginTop: 4 }}>
+                  <div style={{ fontSize: 'var(--font-size-0_78rem)', marginTop: 'var(--space-4px)' }}>
                     <span className="good">
                       {goodGenes} good gene{goodGenes === 1 ? '' : 's'}
                     </span>
@@ -66,7 +66,7 @@ export function SuitorModal() {
                 <TraitList c={c} s={s} />
               </div>
               <StatBlock s={s} c={c} />
-              <div className="spread" style={{ marginTop: 8 }}>
+              <div className="spread" style={{ marginTop: 'var(--space-8px)' }}>
                 <span className="muted">{sug.prestigeCost ? `${sug.prestigeCost} prestige` : 'No cost'}</span>
                 <Btn
                   kind="primary"

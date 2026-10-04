@@ -35,7 +35,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 
 function Lines({ lines, unit }: { lines: Line[]; unit: string }) {
   return (
-    <div style={{ marginTop: 6 }}>
+    <div style={{ marginTop: 'var(--space-6px)' }}>
       {lines.map((l) => (
         <div key={l.label} className="line">
           <span>{l.label}</span>
@@ -45,7 +45,7 @@ function Lines({ lines, unit }: { lines: Line[]; unit: string }) {
           </span>
         </div>
       ))}
-      <div className="line" style={{ borderTop: '1px solid #ffffff22', marginTop: 4, paddingTop: 4 }}>
+      <div className="line" style={{ borderTop: '1px solid #ffffff22', marginTop: 'var(--space-4px)', paddingTop: 'var(--space-4px)' }}>
         <b>Per cycle</b>
         <b>
           {sum(lines) >= 0 ? '+' : ''}
@@ -105,7 +105,7 @@ function TopBar() {
                   Warships. Your strength in every battle, multiplied by your Command. Allies and loyal vassals add some of their ships. Each ship costs 0.8
                   credits a cycle.
                 </div>
-                <div style={{ marginTop: 4 }}>
+                <div style={{ marginTop: 'var(--space-4px)' }}>
                   Capacity: {s.fleet} / {fleetCap(s)} (grows with regions and rank)
                 </div>
               </>

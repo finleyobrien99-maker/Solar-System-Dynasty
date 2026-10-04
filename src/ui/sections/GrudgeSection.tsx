@@ -9,9 +9,9 @@ export function MemoryList({ clan }: { clan: Clan }) {
   const mems = (clan.memories ?? []).slice().sort((a, b) => b.year - a.year);
   if (!mems.length) return <div className="dim">They have no strong feelings about you yet.</div>;
   return (
-    <div className="stack" style={{ gap: 4 }}>
+    <div className="stack" style={{ gap: 'var(--space-4px)' }}>
       {mems.map((m, i) => (
-        <div key={i} className="spread" style={{ fontSize: '0.86rem' }}>
+        <div key={i} className="spread" style={{ fontSize: 'var(--font-size-0_86rem)' }}>
           <span>
             <span className="dim">{m.year}</span> {m.text}
           </span>
@@ -21,7 +21,7 @@ export function MemoryList({ clan }: { clan: Clan }) {
           </span>
         </div>
       ))}
-      <div className="muted" style={{ fontSize: '0.76rem' }}>
+      <div className="muted" style={{ fontSize: 'var(--font-size-0_76rem)' }}>
         Memories fade each cycle, favours fastest, murders and executions slowest. They are inherited when the house gets a new head.
       </div>
     </div>
@@ -55,7 +55,7 @@ export function GrudgeSection() {
                   House {k.name} {isRival(k) && <span className="pill red">Sworn rival</span>}
                 </div>
                 <div className="sub">{top ? `${top.text} (${top.year})` : ''}</div>
-                <span className={`pill ${sum < 0 ? 'red' : 'green'}`} style={{ marginTop: 4 }}>
+                <span className={`pill ${sum < 0 ? 'red' : 'green'}`} style={{ marginTop: 'var(--space-4px)' }}>
                   {sum > 0 ? '+' : ''}
                   {sum} remembered
                 </span>

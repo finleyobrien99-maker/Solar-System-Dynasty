@@ -16,19 +16,19 @@ function Activities() {
         const a = ACTIVITIES[k];
         const block = activityBlocker(s, k);
         return (
-          <div key={k} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div key={k} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-8px)' }}>
             <div className="row">
               <div className="event-icon" style={{ width: 42, height: 42 }}>
                 <Icon name={a.icon} size={22} />
               </div>
               <div className="grow">
                 <b>{a.name}</b>
-                <div className="muted" style={{ fontSize: '0.75rem' }}>
+                <div className="muted" style={{ fontSize: 'var(--font-size-0_75rem)' }}>
                   Every {a.cooldown === 1 ? 'cycle' : `${a.cooldown} cycles`}
                 </div>
               </div>
             </div>
-            <div className="muted" style={{ fontSize: '0.84rem', flex: 1 }}>
+            <div className="muted" style={{ fontSize: 'var(--font-size-0_84rem)', flex: 1 }}>
               {a.desc}
             </div>
             <div className="spread">
@@ -74,12 +74,12 @@ function Schemes() {
 
   return (
     <div className="card">
-      <div className="spread" style={{ marginBottom: 8 }}>
+      <div className="spread" style={{ marginBottom: 'var(--space-8px)' }}>
         <span className="muted">
           Scheme actions left this cycle: <b className="gold">{schemesLeft(s)}</b> / {SCHEMES_PER_CYCLE}
         </span>
       </div>
-      <div className="choice-grid" style={{ marginBottom: 10 }}>
+      <div className="choice-grid" style={{ marginBottom: 'var(--space-10px)' }}>
         {(Object.keys(SCHEMES) as SchemeKind[]).map((k) => (
           <button
             key={k}
@@ -94,8 +94,8 @@ function Schemes() {
           </button>
         ))}
       </div>
-      <div className="stack" style={{ gap: 8 }}>
-        <label className="stack" style={{ gap: 4 }}>
+      <div className="stack" style={{ gap: 'var(--space-8px)' }}>
+        <label className="stack" style={{ gap: 'var(--space-4px)' }}>
           <span className="muted">Target</span>
           <select value={target} onChange={(e) => setTarget(e.target.value)}>
             <option value="">Choose…</option>
@@ -138,12 +138,12 @@ function Schemes() {
         <div className="spread">
           <span>
             Success chance: <b className={chance >= 0.5 ? 'good' : 'bad'}>{valid ? `${Math.round(chance * 100)}%` : '-'}</b>
-            <span className="muted" style={{ fontSize: '0.8rem' }}>
+            <span className="muted" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
               {' '}
               (Intrigue vs theirs, plus traits and relics)
             </span>
           </span>
-          <span className="row" style={{ gap: 6 }}>
+          <span className="row" style={{ gap: 'var(--space-6px)' }}>
             <CostTag cost={def.cost} />
             <Btn kind="primary" icon="scheme" reason={block} onClick={() => act((d) => runScheme(d, kind, target))}>
               Execute

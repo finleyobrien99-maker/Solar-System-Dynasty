@@ -156,14 +156,14 @@ export function CostTag({ cost }: { cost: Cost }) {
     );
   if (cost.prestige)
     parts.push(
-      <span key="p" className="pill" style={{ color: '#ffb4f0' }}>
+      <span key="p" className="pill" style={{ color: 'var(--prestige)' }}>
         <Icon name="prestige" size={12} />
         {cost.prestige}
       </span>,
     );
   if (cost.faith)
     parts.push(
-      <span key="f" className="pill" style={{ color: '#ffb36b' }}>
+      <span key="f" className="pill" style={{ color: 'var(--faith)' }}>
         <Icon name="faith" size={12} />
         {cost.faith}
       </span>,
@@ -175,7 +175,7 @@ export function CostTag({ cost }: { cost: Cost }) {
       </span>,
     );
   return (
-    <span className="row wrap" style={{ gap: 4 }}>
+    <span className="row wrap" style={{ gap: 'var(--space-4px)' }}>
       {parts}
     </span>
   );
@@ -244,8 +244,8 @@ export function TraitChip({ id, s }: { id: string; s?: GameState }) {
         <div>
           <b>{t.name}</b>
           <div>{t.desc}</div>
-          <div style={{ marginTop: 4, color: '#9fe6b8' }}>{traitEffectText(t)}</div>
-          <div style={{ marginTop: 4, color: '#9aa6c8', fontSize: '0.76rem' }}>{CAT_HELP[t.cat]}</div>
+          <div style={{ marginTop: 'var(--space-4px)', color: '#9fe6b8' }}>{traitEffectText(t)}</div>
+          <div style={{ marginTop: 'var(--space-4px)', color: '#9aa6c8', fontSize: 'var(--font-size-0_76rem)' }}>{CAT_HELP[t.cat]}</div>
           {locked && <div className="gold">Locked in your bloodline: every dynasty child is born with it.</div>}
           {purged && <div className="bad">Purged from your bloodline: dynasty children will never inherit it.</div>}
         </div>
@@ -337,8 +337,8 @@ export function HealthBar({ s, c }: { s: GameState; c: Character }) {
       }
     >
       <div style={{ width: '100%' }}>
-        <div className="spread" style={{ fontSize: '0.75rem' }}>
-          <span className="muted row" style={{ gap: 4 }}>
+        <div className="spread" style={{ fontSize: 'var(--font-size-0_75rem)' }}>
+          <span className="muted row" style={{ gap: 'var(--space-4px)' }}>
             <Icon name="health" size={12} /> Health
           </span>
           <span>{healthLabel(c.health)}</span>
@@ -381,14 +381,14 @@ export function CharCard({ c, sub, size = 56, extra, traitsMax = 4 }: { c: Chara
         <div className="nm">
           {fullName(s, c)}
           {c.bastard && (
-            <span className="pill red" style={{ marginLeft: 6 }}>
+            <span className="pill red" style={{ marginLeft: 'var(--space-6px)' }}>
               Bastard
             </span>
           )}
         </div>
         <div className="sub">{sub ?? [rel, title, alive(c) ? `age ${ageOf(s, c)}` : `died ${c.died} (${c.deathCause})`].filter(Boolean).join(' · ')}</div>
         {traitsMax > 0 && (
-          <div style={{ marginTop: 4 }}>
+          <div style={{ marginTop: 'var(--space-4px)' }}>
             <TraitList c={c} s={s} max={traitsMax} />
           </div>
         )}
@@ -403,7 +403,7 @@ export function ClanBadge({ clanId, size = 26 }: { clanId: string; size?: number
   const clan = s.clans[clanId];
   if (!clan) return null;
   return (
-    <button className="row" style={{ background: 'none', border: 0, padding: 0, gap: 6 }} onClick={() => openClan(clanId)}>
+    <button className="row" style={{ background: 'none', border: 0, padding: 0, gap: 'var(--space-6px)' }} onClick={() => openClan(clanId)}>
       <Sigil spec={clan.sigil} size={size} />
       <span style={{ fontWeight: 700 }}>House {clan.name}</span>
     </button>
@@ -436,7 +436,7 @@ export function WarBar({ score }: { score: number }) {
 export function Section({ title, icon, info, children, right }: { title: ReactNode; icon?: string; info?: ReactNode; children: ReactNode; right?: ReactNode }) {
   return (
     <section className="section">
-      <div className="spread" style={{ marginBottom: 8 }}>
+      <div className="spread" style={{ marginBottom: 'var(--space-8px)' }}>
         <h2 style={{ margin: 0 }}>
           {icon && <Icon name={icon} size={18} />}
           {title}

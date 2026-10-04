@@ -28,19 +28,19 @@ export function TradeSection() {
           const p = s.clans[r.partner];
           const home = s.regions[r.from];
           return (
-            <div key={r.id} className="card flat spread" style={{ padding: 10 }}>
+            <div key={r.id} className="card flat spread" style={{ padding: 'var(--space-10px)' }}>
               <div className="row" style={{ minWidth: 0 }}>
                 {p && <Sigil spec={p.sigil} size={28} />}
                 <div style={{ minWidth: 0 }}>
                   <b>
                     {home?.name} <Icon name="arrow" size={12} /> House {p?.name} ({PLANET_BY_ID[r.planetId].name})
                   </b>
-                  <div className="muted" style={{ fontSize: '0.78rem' }}>
+                  <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)' }}>
                     Exporting {GOODS[home?.planetId ?? '']}, importing {GOODS[r.planetId]} · since {r.since}
                   </div>
                 </div>
               </div>
-              <div className="row" style={{ gap: 6 }}>
+              <div className="row" style={{ gap: 'var(--space-6px)' }}>
                 <span className="pill gold">+{routeValue(s, r.from, r.partner, r.planetId)}/cycle</span>
                 <Btn small kind="ghost" confirm="Tap again to close" onClick={() => act((d) => closeRoute(d, r.id))}>
                   Close
@@ -50,11 +50,11 @@ export function TradeSection() {
           );
         })}
         {!s.routes.length && <div className="empty">No convoys running yet.</div>}
-        <div className="card stack" style={{ gap: 8 }}>
+        <div className="card stack" style={{ gap: 'var(--space-8px)' }}>
           <b>Open a new route</b>
-          <div className="row wrap" style={{ gap: 8 }}>
-            <label className="stack" style={{ gap: 2, flex: '1 1 160px', minWidth: 0 }}>
-              <span className="muted" style={{ fontSize: '0.78rem' }}>
+          <div className="row wrap" style={{ gap: 'var(--space-8px)' }}>
+            <label className="stack" style={{ gap: 'var(--space-2px)', flex: '1 1 160px', minWidth: 0 }}>
+              <span className="muted" style={{ fontSize: 'var(--font-size-0_78rem)' }}>
                 Home port
               </span>
               <select id="trade-from" value={fromId} onChange={(e) => setFrom(e.target.value)}>
@@ -65,8 +65,8 @@ export function TradeSection() {
                 ))}
               </select>
             </label>
-            <label className="stack" style={{ gap: 2, flex: '2 1 220px', minWidth: 0 }}>
-              <span className="muted" style={{ fontSize: '0.78rem' }}>
+            <label className="stack" style={{ gap: 'var(--space-2px)', flex: '2 1 220px', minWidth: 0 }}>
+              <span className="muted" style={{ fontSize: 'var(--font-size-0_78rem)' }}>
                 Partner house
               </span>
               <select id="trade-partner" value={partner} onChange={(e) => setPartner(e.target.value)}>
@@ -88,11 +88,11 @@ export function TradeSection() {
             </label>
           </div>
           <div className="spread">
-            <span className="muted" style={{ fontSize: '0.82rem' }}>
+            <span className="muted" style={{ fontSize: 'var(--font-size-0_82rem)' }}>
               {port ? `Worth about ${routeValue(s, fromId, partner, port)} credits a cycle. ` : ''}Pirate risk per route: {Math.round(raidRisk(s) * 100)}% a
               cycle.
             </span>
-            <span className="row" style={{ gap: 6 }}>
+            <span className="row" style={{ gap: 'var(--space-6px)' }}>
               {port && <CostTag cost={openCost(s, fromId, port)} />}
               <Btn
                 kind="primary"

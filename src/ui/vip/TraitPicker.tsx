@@ -77,7 +77,7 @@ export function TraitPicker({
   } else rows = [['', list]];
 
   return (
-    <div className="stack" style={{ gap: 8 }}>
+    <div className="stack" style={{ gap: 'var(--space-8px)' }}>
       <div className="tabs" style={{ marginBottom: 0 }}>
         {cats.map((c) => {
           const n = selected.filter((id) => TRAIT_LIST.some((t) => t.id === id && t.cat === c)).length;
@@ -90,7 +90,7 @@ export function TraitPicker({
         })}
       </div>
       <Rows rows={rows} selected={selected} onToggle={onToggle} />
-      <div className="dim" style={{ fontSize: '0.74rem' }}>
+      <div className="dim" style={{ fontSize: 'var(--font-size-0_74rem)' }}>
         Tap to add or remove. Traits on the same ladder, or opposite personalities, replace each other.
       </div>
     </div>

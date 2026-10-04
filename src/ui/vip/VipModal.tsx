@@ -33,7 +33,7 @@ export function VipModal() {
   const kin = bloodlineMembers(s).length;
   return (
     <Modal title="VIP console" onClose={() => setUi({ panel: null })} icon="relic" wide>
-      <div className="card flat vip-banner" style={{ marginBottom: 12 }}>
+      <div className="card flat vip-banner" style={{ marginBottom: 'var(--space-12px)' }}>
         <b className="gold">VIP mode is on.</b> Edit anyone's traits, stats and age from their profile. The Gene-Forge is fully built, every good gene is
         sequenced, and every procedure is free, always works, and upsets no one. The Gene Vault has no slot limit and needs no carriers. None of it ever helps
         an AI house.
@@ -42,11 +42,11 @@ export function VipModal() {
       <h3>Resources</h3>
       <div className="vip-grid">
         {TOP_UPS.map(([res, label, amounts]) => (
-          <div key={res} className="card flat stack" style={{ gap: 6, padding: 10 }}>
-            <span className="row" style={{ gap: 6 }}>
+          <div key={res} className="card flat stack" style={{ gap: 'var(--space-6px)', padding: 'var(--space-10px)' }}>
+            <span className="row" style={{ gap: 'var(--space-6px)' }}>
               <Icon name={res} size={15} /> <b>{label}</b> <span className="muted">{fmt(s[res])}</span>
             </span>
-            <div className="row wrap" style={{ gap: 6 }}>
+            <div className="row wrap" style={{ gap: 'var(--space-6px)' }}>
               {amounts.map((n) => (
                 <Btn key={n} small onClick={() => act((d) => give(d, res, n))}>
                   +{fmt(n)}
@@ -55,8 +55,8 @@ export function VipModal() {
             </div>
           </div>
         ))}
-        <div className="card flat stack" style={{ gap: 6, padding: 10 }}>
-          <span className="row" style={{ gap: 6 }}>
+        <div className="card flat stack" style={{ gap: 'var(--space-6px)', padding: 'var(--space-10px)' }}>
+          <span className="row" style={{ gap: 'var(--space-6px)' }}>
             <Icon name="fleet" size={15} /> <b>Fleet</b>{' '}
             <span className="muted">
               {fmt(s.fleet)} / {fmt(fleetCap(s))}
@@ -68,7 +68,7 @@ export function VipModal() {
         </div>
       </div>
 
-      <h3 style={{ marginTop: 14 }}>{r.name}</h3>
+      <h3 style={{ marginTop: 'var(--space-14px)' }}>{r.name}</h3>
       <div className="btn-row">
         <Btn
           kind="primary"
@@ -97,11 +97,11 @@ export function VipModal() {
           Open the trait editor
         </Btn>
       </div>
-      <div className="dim" style={{ fontSize: '0.76rem', marginTop: 4 }}>
+      <div className="dim" style={{ fontSize: 'var(--font-size-0_76rem)', marginTop: 'var(--space-4px)' }}>
         Immortal rulers never die, so the crown never passes on. Switch it off when you want an heir to take over.
       </div>
 
-      <h3 style={{ marginTop: 14 }}>The bloodline ({fmt(kin)} living)</h3>
+      <h3 style={{ marginTop: 'var(--space-14px)' }}>The bloodline ({fmt(kin)} living)</h3>
       <div className="btn-row">
         <Btn
           kind="good"
@@ -126,7 +126,7 @@ export function VipModal() {
 
       <hr className="divider" />
       <div className="spread">
-        <span className="muted" style={{ fontSize: '0.82rem' }}>
+        <span className="muted" style={{ fontSize: 'var(--font-size-0_82rem)' }}>
           Switch it off to play by the normal rules again. You can turn it back on from the menu any time.
         </span>
         <Btn

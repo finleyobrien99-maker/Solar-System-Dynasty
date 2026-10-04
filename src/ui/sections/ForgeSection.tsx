@@ -42,23 +42,23 @@ function Research() {
   const p = s.forge.project;
   const rate = researchRate(s);
   return (
-    <div className="card stack" style={{ gap: 10 }}>
+    <div className="card stack" style={{ gap: 'var(--space-10px)' }}>
       <div className="spread">
         <b>Gene research</b>
-        <span className="muted" style={{ fontSize: '0.8rem' }}>
+        <span className="muted" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
           {rate} progress per cycle · {RESEARCH_UPKEEP} credits per cycle while running
         </span>
       </div>
       {p ? (
-        <div className="stack" style={{ gap: 6 }}>
+        <div className="stack" style={{ gap: 'var(--space-6px)' }}>
           <div className="spread">
-            <span className="row" style={{ gap: 6 }}>
+            <span className="row" style={{ gap: 'var(--space-6px)' }}>
               Sequencing <TraitChip id={p.trait} s={s} />
             </span>
             <span className="muted">about {Math.max(1, Math.ceil((p.needed - p.progress) / rate))} cycles left</span>
           </div>
           <div className="bar">
-            <span style={{ width: `${Math.min(100, (p.progress / p.needed) * 100)}%`, background: 'linear-gradient(90deg, #b388ff, #4cc9f0)' }} />
+            <span style={{ width: `${Math.min(100, (p.progress / p.needed) * 100)}%`, background: 'linear-gradient(90deg, var(--purple), var(--cyan))' }} />
           </div>
           <div>
             <Btn small kind="ghost" confirm="Tap again to scrap it" onClick={() => act((d) => cancelResearch(d))}>
@@ -67,7 +67,7 @@ function Research() {
           </div>
         </div>
       ) : (
-        <div className="muted" style={{ fontSize: '0.85rem' }}>
+        <div className="muted" style={{ fontSize: 'var(--font-size-0_85rem)' }}>
           No project running. Pick a gene to sequence:
         </div>
       )}
@@ -87,13 +87,13 @@ function Research() {
       )}
       {s.forge.researched.length > 0 && (
         <div>
-          <h4 style={{ marginBottom: 4 }}>Synthesised genes</h4>
+          <h4 style={{ marginBottom: 'var(--space-4px)' }}>Synthesised genes</h4>
           <div className="traits">
             {s.forge.researched.map((id) => (
               <TraitChip key={id} id={id} s={s} />
             ))}
           </div>
-          <div className="muted" style={{ fontSize: '0.78rem', marginTop: 4 }}>
+          <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)', marginTop: 'var(--space-4px)' }}>
             These can be locked in the Gene Vault without a living carrier.
           </div>
         </div>
@@ -111,12 +111,12 @@ function Therapy() {
   const target = s.characters[who];
   const block = !target ? 'Pick someone.' : !gene ? 'Research a gene first.' : spliceBlocker(s, target, gene);
   return (
-    <div className="card stack" style={{ gap: 8 }}>
+    <div className="card stack" style={{ gap: 'var(--space-8px)' }}>
       <b>Gene therapy</b>
-      <div className="muted" style={{ fontSize: '0.84rem' }}>
+      <div className="muted" style={{ fontSize: 'var(--font-size-0_84rem)' }}>
         Rewrite a living relative's genome. Works best on the very young; a rejected splice can leave lasting damage.
       </div>
-      <div className="row wrap" style={{ gap: 8 }}>
+      <div className="row wrap" style={{ gap: 'var(--space-8px)' }}>
         <select id="splice-who" value={who} onChange={(e) => setWho(e.target.value)} style={{ flex: '1 1 180px', minWidth: 0 }} aria-label="Patient">
           {members.slice(0, 60).map((c) => (
             <option key={c.id} value={c.id}>
@@ -134,10 +134,10 @@ function Therapy() {
         </select>
       </div>
       <div className="spread">
-        <span className="muted" style={{ fontSize: '0.82rem' }}>
+        <span className="muted" style={{ fontSize: 'var(--font-size-0_82rem)' }}>
           {target ? `${Math.round(spliceChance(s, target) * 100)}% chance it takes` : ''}
         </span>
-        <span className="row" style={{ gap: 6 }}>
+        <span className="row" style={{ gap: 'var(--space-6px)' }}>
           {gene && <CostTag cost={spliceCost(s, gene)} />}
           <Btn small kind="primary" icon="dna" reason={block} onClick={() => act((d) => splice(d, who, gene))}>
             Splice
@@ -167,9 +167,9 @@ function Vats() {
   const options = researchedGenes(s);
   return (
     <div className="grid">
-      <div className="card stack" style={{ gap: 8 }}>
+      <div className="card stack" style={{ gap: 'var(--space-8px)' }}>
         <b>Grow a designer heir</b>
-        <div className="muted" style={{ fontSize: '0.84rem' }}>
+        <div className="muted" style={{ fontSize: 'var(--font-size-0_84rem)' }}>
           A child grown from one parent's genome, with {max === Infinity ? 'any number of' : `up to ${max}`} researched genes designed in (one per ladder), plus
           everything locked in your vault.
         </div>
@@ -211,9 +211,9 @@ function Vats() {
           </Btn>
         </div>
       </div>
-      <div className="card stack" style={{ gap: 8 }}>
+      <div className="card stack" style={{ gap: 'var(--space-8px)' }}>
         <b>Clone a member of the bloodline</b>
-        <div className="muted" style={{ fontSize: '0.84rem' }}>
+        <div className="muted" style={{ fontSize: 'var(--font-size-0_84rem)' }}>
           An exact genetic copy, raised as your own child. The dead work too: the vault keeps every ruler's DNA.
         </div>
         <select id="clone-src" value={src} onChange={(e) => setSrc(e.target.value)} aria-label="Clone source">
@@ -254,12 +254,12 @@ export function ForgeSection() {
       info="Research genes nobody in your family carries, splice them into living kin, and with the Vat Complex grow designer heirs or clone your ancestors. Every procedure shocks houses whose faith condemns it, and they will remember."
     >
       {isVip(s) ? (
-        <div className="card flat vip-banner" style={{ marginBottom: 10, fontSize: '0.86rem' }}>
+        <div className="card flat vip-banner" style={{ marginBottom: 'var(--space-10px)', fontSize: 'var(--font-size-0_86rem)' }}>
           <Icon name="relic" size={14} /> <b className="gold">VIP: unlimited Gene-Forge.</b> Fully built, every good gene already sequenced, every procedure
           free and certain to work, and no faith will ever hear about it.
         </div>
       ) : (
-        <div className="card flat" style={{ marginBottom: 10, fontSize: '0.86rem' }}>
+        <div className="card flat" style={{ marginBottom: 'var(--space-10px)', fontSize: 'var(--font-size-0_86rem)' }}>
           <Icon name="faith" size={14} /> Your faith, {faithName(s)},{' '}
           <b className={st === 'condemn' ? 'bad' : st === 'embrace' ? 'good' : ''}>{STANCE_TEXT[st]}</b>.
           <span className="muted"> Houses of the Solar Orthodoxy and the Abyssal Choir resent every procedure.</span>
@@ -268,7 +268,7 @@ export function ForgeSection() {
       {forgeLevel(s) === 0 ? (
         <div className="card spread">
           <span className="muted">Build the forge to start sequencing genes.</span>
-          <span className="row" style={{ gap: 6 }}>
+          <span className="row" style={{ gap: 'var(--space-6px)' }}>
             <CostTag cost={FORGE_COST} />
             <Btn kind="primary" icon="dna" reason={buildBlocker(s)} onClick={() => act((d) => buildForge(d))}>
               Build Gene-Forge
@@ -284,7 +284,7 @@ export function ForgeSection() {
               <span className="muted">
                 The Vat Complex lets you grow designer heirs, clone the dead, and lets mothers bear children into their late fifties.
               </span>
-              <span className="row" style={{ gap: 6 }}>
+              <span className="row" style={{ gap: 'var(--space-6px)' }}>
                 <CostTag cost={VAT_COST} />
                 <Btn kind="primary" reason={vatBlocker(s)} onClick={() => act((d) => buildVats(d))}>
                   Build Vat Complex

@@ -64,14 +64,14 @@ export function RealmTab() {
         <div className="card hl">
           <div className="spread">
             <div>
-              <div className="gold" style={{ fontFamily: 'var(--head)', fontSize: '1.1rem' }}>
+              <div className="gold" style={{ fontFamily: 'var(--head)', fontSize: 'var(--font-size-1_1rem)' }}>
                 {clanTitle(s, clan.id, r.gender)}
               </div>
               <div className="muted">
                 Rank {rank}: {RANKS[rank]}
               </div>
             </div>
-            <div className="row wrap" style={{ gap: 4 }}>
+            <div className="row wrap" style={{ gap: 'var(--space-4px)' }}>
               {RANKS.slice(1).map((n, i) => (
                 <span key={n} className={`pill ${rank >= i + 1 ? 'gold' : ''}`}>
                   {n}
@@ -82,9 +82,9 @@ export function RealmTab() {
           <hr className="divider" />
           <div className="grid">
             {!clan.titles.viceroy && (
-              <div className="stack" style={{ gap: 6 }}>
+              <div className="stack" style={{ gap: 'var(--space-6px)' }}>
                 <b>Create Viceroyalty</b>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>
+                <span className="muted" style={{ fontSize: 'var(--font-size-0_82rem)' }}>
                   Hold 3+ regions. Unlocks demanding vassalage from lesser clans.
                 </span>
                 <div className="spread">
@@ -96,9 +96,9 @@ export function RealmTab() {
               </div>
             )}
             {!clan.titles.emperor && (
-              <div className="stack" style={{ gap: 6 }}>
+              <div className="stack" style={{ gap: 'var(--space-6px)' }}>
                 <b>Forge the Solar Throne</b>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>
+                <span className="muted" style={{ fontSize: 'var(--font-size-0_82rem)' }}>
                   Rule the throne-regions of {EMPEROR_PLANETS} planets (you hold {sovereignPlanets(s, clan.id).length}).
                 </span>
                 <div className="spread">
@@ -110,13 +110,13 @@ export function RealmTab() {
               </div>
             )}
             {liege && (
-              <div className="stack" style={{ gap: 6 }}>
+              <div className="stack" style={{ gap: 'var(--space-6px)' }}>
                 <b>Your liege</b>
                 <div className="row">
                   <ClanBadge clanId={liege} />
                   <Opinion v={s.clans[liege].opinion} />
                 </div>
-                <span className="muted" style={{ fontSize: '0.82rem' }}>
+                <span className="muted" style={{ fontSize: 'var(--font-size-0_82rem)' }}>
                   You pay them 15% of your region income. They may summon you to war.
                 </span>
                 <Btn
@@ -155,7 +155,7 @@ export function RealmTab() {
                     <Sigil spec={enemy.sigil} size={34} />
                     <div>
                       <b>{warLabel(s, w)}</b>
-                      <div className="muted" style={{ fontSize: '0.8rem' }}>
+                      <div className="muted" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
                         {w.playerAttacker ? 'You attacked' : 'They attacked'} in {w.started} · {CB_INFO[w.cb].desc}
                       </div>
                     </div>
@@ -168,7 +168,7 @@ export function RealmTab() {
                 <div style={{ margin: '10px 0' }}>
                   <WarBar score={w.score} />
                 </div>
-                <div className="cols" style={{ gap: 8, fontSize: '0.84rem' }}>
+                <div className="cols" style={{ gap: 'var(--space-8px)', fontSize: 'var(--font-size-0_84rem)' }}>
                   <div>
                     <b className="good">Your side:</b> {me.ships} ships, strength ~{fmt(me.strength)}
                     {me.helpers.length > 0 && <div className="dim">{me.helpers.join(', ')}</div>}
@@ -178,7 +178,7 @@ export function RealmTab() {
                     {them.helpers.length > 0 && <div className="dim">{them.helpers.join(', ')}</div>}
                   </div>
                 </div>
-                <div className="btn-row" style={{ marginTop: 10 }}>
+                <div className="btn-row" style={{ marginTop: 'var(--space-10px)' }}>
                   <Btn
                     kind="primary"
                     icon="war"
@@ -212,13 +212,13 @@ export function RealmTab() {
         <div className="card">
           <div className="spread">
             <div>
-              <div style={{ fontFamily: 'var(--head)', fontSize: '1.4rem' }} className="row">
+              <div style={{ fontFamily: 'var(--head)', fontSize: 'var(--font-size-1_4rem)' }} className="row">
                 <Icon name="fleet" size={22} /> {s.fleet}{' '}
-                <span className="muted" style={{ fontSize: '0.9rem' }}>
+                <span className="muted" style={{ fontSize: 'var(--font-size-0_9rem)' }}>
                   / {cap} ships
                 </span>
               </div>
-              <div className="muted" style={{ fontSize: '0.8rem' }}>
+              <div className="muted" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
                 {sc} credits per new ship · upkeep {Math.round(s.fleet * 0.8)}/cycle
               </div>
             </div>
@@ -243,7 +243,7 @@ export function RealmTab() {
             </div>
           </div>
           <hr className="divider" />
-          <label className="row" style={{ gap: 8 }}>
+          <label className="row" style={{ gap: 'var(--space-8px)' }}>
             <input type="checkbox" checked={s.leadPersonally} onChange={(e) => act((d) => (d.leadPersonally = e.target.checked))} />
             <span>
               <b>Lead the fleet personally</b>
@@ -262,17 +262,17 @@ export function RealmTab() {
       >
         <div className="grid tight">
           {regions.map((reg) => (
-            <div key={reg.id} className="card flat" style={{ padding: 10 }}>
+            <div key={reg.id} className="card flat" style={{ padding: 'var(--space-10px)' }}>
               <div className="spread">
                 <b>
                   {reg.capital && <Icon name="crown" size={13} />} {reg.name}
                 </b>
                 <span className="pill">dev {reg.dev}</span>
               </div>
-              <div className="muted" style={{ fontSize: '0.8rem' }}>
+              <div className="muted" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
                 {PLANET_BY_ID[reg.planetId].name} · {regionIncome(s, reg)} credits/cycle
               </div>
-              <div className="spread" style={{ marginTop: 6 }}>
+              <div className="spread" style={{ marginTop: 'var(--space-6px)' }}>
                 <Btn small reason={developBlocker(s, reg.id)} onClick={() => act((d) => developRegion(d, reg.id))}>
                   Develop
                 </Btn>
@@ -282,9 +282,9 @@ export function RealmTab() {
           ))}
         </div>
         {s.claims.length > 0 && (
-          <div className="card flat" style={{ marginTop: 10 }}>
+          <div className="card flat" style={{ marginTop: 'var(--space-10px)' }}>
             <b>Claims</b> <InfoDot text="A claim is a free justification for war over that region. Get them by forging claims (Actions tab) or from events." />
-            <div className="row wrap" style={{ marginTop: 6 }}>
+            <div className="row wrap" style={{ marginTop: 'var(--space-6px)' }}>
               {s.claims.map((id) => (
                 <button key={id} className="pill gold" onClick={() => setUi({ tab: 'system', planetId: s.regions[id].planetId, regionId: id })}>
                   {s.regions[id].name} ({PLANET_BY_ID[s.regions[id].planetId].name})
@@ -305,12 +305,12 @@ export function RealmTab() {
           {vassals.map((v) => {
             const head = ch(s, v.headId);
             return (
-              <div key={v.id} className="card flat" style={{ padding: 10 }}>
+              <div key={v.id} className="card flat" style={{ padding: 'var(--space-10px)' }}>
                 <div className="spread">
                   <ClanBadge clanId={v.id} />
                   <Opinion v={v.opinion} />
                 </div>
-                <div className="muted" style={{ fontSize: '0.8rem', margin: '4px 0' }}>
+                <div className="muted" style={{ fontSize: 'var(--font-size-0_8rem)', margin: '4px 0' }}>
                   {head?.name} · {v.fleet} ships · {clanRegions(s, v.id).length} regions
                 </div>
                 <div className="btn-row">
@@ -349,7 +349,7 @@ export function RealmTab() {
                 key={p.id}
                 c={p}
                 extra={
-                  <div className="btn-row" style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
+                  <div className="btn-row" style={{ marginTop: 'var(--space-6px)' }} onClick={(e) => e.stopPropagation()}>
                     <Btn small kind="danger" confirm="Everyone will hear. Sure?" onClick={() => act((d) => executePrisoner(d, p.id))}>
                       Execute
                     </Btn>
@@ -373,26 +373,26 @@ export function RealmTab() {
         info="Your house's faith. Clans of the same faith like you more; different faiths can be attacked with a Holy War. Converting costs 200 faith and 100 prestige."
       >
         <div className="card">
-          <div className="row" style={{ marginBottom: 8 }}>
+          <div className="row" style={{ marginBottom: 'var(--space-8px)' }}>
             <span className="pill" style={{ color: FAITHS[clan.faithId].color }}>
               {FAITHS[clan.faithId].name}
             </span>
-            <span className="muted" style={{ fontSize: '0.85rem' }}>
+            <span className="muted" style={{ fontSize: 'var(--font-size-0_85rem)' }}>
               {FAITHS[clan.faithId].blurb}
             </span>
           </div>
-          <div className="muted" style={{ fontSize: '0.8rem' }}>
+          <div className="muted" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
             Virtues: {FAITHS[clan.faithId].virtues.join(', ')} · Sins: {FAITHS[clan.faithId].sins.join(', ')}
           </div>
-          <details style={{ marginTop: 8 }}>
+          <details style={{ marginTop: 'var(--space-8px)' }}>
             <summary className="muted">Convert to another faith</summary>
-            <div className="grid tight" style={{ marginTop: 8 }}>
+            <div className="grid tight" style={{ marginTop: 'var(--space-8px)' }}>
               {Object.values(FAITHS)
                 .filter((f) => f.id !== clan.faithId)
                 .map((f) => (
-                  <div key={f.id} className="card flat" style={{ padding: 10 }}>
+                  <div key={f.id} className="card flat" style={{ padding: 'var(--space-10px)' }}>
                     <b style={{ color: f.color }}>{f.name}</b>
-                    <div className="muted" style={{ fontSize: '0.78rem' }}>
+                    <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)' }}>
                       {f.blurb}
                     </div>
                     <Btn

@@ -44,16 +44,16 @@ function GeneLadders() {
       {groups.map((g) => {
         const tiers = GENETIC.filter((t) => t.group === g).sort((a, b) => (a.level ?? 0) - (b.level ?? 0));
         return (
-          <div key={g} className="card flat" style={{ padding: 10 }}>
-            <h4 style={{ marginBottom: 6 }}>{GROUP_NAMES[g]}</h4>
+          <div key={g} className="card flat" style={{ padding: 'var(--space-10px)' }}>
+            <h4 style={{ marginBottom: 'var(--space-6px)' }}>{GROUP_NAMES[g]}</h4>
             <div className="traits">
               {tiers.map((t) => {
                 const n = members.filter((m) => m.traits.includes(t.id)).length;
                 return (
-                  <span key={t.id} className="row" style={{ gap: 3, opacity: n || s.dynasty.locked.includes(t.id) ? 1 : 0.4 }}>
+                  <span key={t.id} className="row" style={{ gap: 'var(--space-3px)', opacity: n || s.dynasty.locked.includes(t.id) ? 1 : 0.4 }}>
                     <TraitChip id={t.id} s={s} />
                     {n > 0 && (
-                      <span className="muted" style={{ fontSize: '0.72rem' }}>
+                      <span className="muted" style={{ fontSize: 'var(--font-size-0_72rem)' }}>
                         ×{n}
                       </span>
                     )}
@@ -76,16 +76,16 @@ function TraitRow({ t }: { t: TraitDef }) {
   const lb = lockBlocker(s, t.id);
   const pb = purgeBlocker(s, t.id);
   return (
-    <div className={`card flat ${locked ? 'hl' : ''}`} style={{ padding: 10 }}>
+    <div className={`card flat ${locked ? 'hl' : ''}`} style={{ padding: 'var(--space-10px)' }}>
       <div className="spread">
         <TraitChip id={t.id} s={s} />
-        <span className="muted" style={{ fontSize: '0.75rem' }}>
+        <span className="muted" style={{ fontSize: 'var(--font-size-0_75rem)' }}>
           {who.length ? `${who.length} carrier${who.length > 1 ? 's' : ''}` : 'no carriers'}
         </span>
       </div>
-      <div style={{ fontSize: '0.78rem', margin: '6px 0', color: '#a8e6c1' }}>{traitEffectText(t)}</div>
+      <div style={{ fontSize: 'var(--font-size-0_78rem)', margin: '6px 0', color: '#a8e6c1' }}>{traitEffectText(t)}</div>
       {who.length > 0 && (
-        <div className="dim" style={{ fontSize: '0.74rem', marginBottom: 6 }}>
+        <div className="dim" style={{ fontSize: 'var(--font-size-0_74rem)', marginBottom: 'var(--space-6px)' }}>
           {who
             .slice(0, 4)
             .map((c) => c.name)
@@ -103,7 +103,7 @@ function TraitRow({ t }: { t: TraitDef }) {
           </Btn>
         </div>
       ) : (
-        <div className="stack" style={{ gap: 6 }}>
+        <div className="stack" style={{ gap: 'var(--space-6px)' }}>
           <div className="spread">
             <Btn small kind="good" icon="lock" reason={lb} onClick={() => act((d) => lockTrait(d, t.id)) && toast(`${t.name} locked into the bloodline.`)}>
               Lock in
@@ -143,22 +143,22 @@ export function BloodlineTab() {
   return (
     <div>
       <div className="card hl section">
-        <div className="row top wrap" style={{ gap: 18 }}>
+        <div className="row top wrap" style={{ gap: 'var(--space-18px)' }}>
           <div style={{ textAlign: 'center', minWidth: 90 }}>
             <div style={{ fontFamily: 'var(--head)', fontSize: '3rem', color: 'var(--gold)', lineHeight: 1 }}>{grade}</div>
-            <div className="muted" style={{ fontSize: '0.78rem' }}>
+            <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)' }}>
               Bloodline grade
               <InfoDot text="Average genetic tier across your living dynasty, plus a bonus for every good gene locked in. Climb from F to S by breeding, locking and purging." />
             </div>
-            <div className="dim" style={{ fontSize: '0.75rem' }}>
+            <div className="dim" style={{ fontSize: 'var(--font-size-0_75rem)' }}>
               score {score}
             </div>
           </div>
-          <div className="grow stack" style={{ gap: 8 }}>
+          <div className="grow stack" style={{ gap: 'var(--space-8px)' }}>
             <h2 style={{ margin: 0 }}>
               <Icon name="dna" size={18} /> The Gene Vault
             </h2>
-            <div className="muted" style={{ fontSize: '0.88rem' }}>
+            <div className="muted" style={{ fontSize: 'var(--font-size-0_88rem)' }}>
               Lock a trait and <b className="gold">every child born into your dynasty will have it</b>, forever, across every heir and descendant. Purge a trait
               and no dynasty child will ever inherit it. Genetic locks are sequenced from a living carrier, so breed for a gene first, then lock it. Personality
               locks are drilled in through conditioning, which also reshapes your kids under 16 right away.
@@ -177,7 +177,7 @@ export function BloodlineTab() {
                     Vault slots: <b className="gold">{used}</b> / {s.dynasty.slots}
                     <span className="muted"> (each lock or purge uses one)</span>
                   </span>
-                  <span className="row" style={{ gap: 6 }}>
+                  <span className="row" style={{ gap: 'var(--space-6px)' }}>
                     <Btn
                       small
                       icon="plus"
@@ -190,7 +190,9 @@ export function BloodlineTab() {
                   </span>
                 </div>
                 <div className="bar">
-                  <span style={{ width: `${(used / Math.max(1, s.dynasty.slots)) * 100}%`, background: 'linear-gradient(90deg, #b388ff, #4cc9f0)' }} />
+                  <span
+                    style={{ width: `${(used / Math.max(1, s.dynasty.slots)) * 100}%`, background: 'linear-gradient(90deg, var(--purple), var(--cyan))' }}
+                  />
                 </div>
               </>
             )}
@@ -199,8 +201,8 @@ export function BloodlineTab() {
       </div>
 
       <Section title="How genes pass on" icon="info">
-        <div className="card flat muted" style={{ fontSize: '0.86rem' }}>
-          <ul style={{ margin: 0, paddingLeft: 18 }}>
+        <div className="card flat muted" style={{ fontSize: 'var(--font-size-0_86rem)' }}>
+          <ul style={{ margin: 0, paddingLeft: 'var(--space-18px)' }}>
             <li>
               One parent carries a gene: <b>40%</b> chance the child gets it. Both parents carry the same gene: <b>75%</b>.
             </li>

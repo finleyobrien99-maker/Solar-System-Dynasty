@@ -36,8 +36,8 @@ export function EduControls({ c }: { c: Character }) {
   if (!c.edu) return null;
   const tier = eduTier(c.edu.progress);
   return (
-    <div className="stack" style={{ gap: 6, marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
-      <div className="row wrap" style={{ gap: 6 }}>
+    <div className="stack" style={{ gap: 'var(--space-6px)', marginTop: 'var(--space-6px)' }} onClick={(e) => e.stopPropagation()}>
+      <div className="row wrap" style={{ gap: 'var(--space-6px)' }}>
         <select value={c.edu.focus} onChange={(e) => act((d) => setEducation(d, c.id, e.target.value as StatKey, c.edu!.tutor))} aria-label="Education focus">
           {STAT_KEYS.map((k) => (
             <option key={k} value={k}>
@@ -53,7 +53,7 @@ export function EduControls({ c }: { c: Character }) {
           ))}
         </select>
       </div>
-      <div className="muted" style={{ fontSize: '0.78rem' }}>
+      <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)' }}>
         On track for: <b className="gold">{EDU_NAMES[c.edu.focus][tier - 1]}</b> (tier {tier}/4) · progress {Math.round(c.edu.progress)}
         <InfoDot text="At 16 a child earns an education trait based on progress: under 45 is tier 1, 45+ tier 2, 75+ tier 3, 100+ tier 4. Better tutors, Quick or Brilliant genes and Saturnine schooling all speed it up. Switching focus after age 10 loses some progress." />
       </div>
@@ -68,7 +68,7 @@ function ChildActions({ c }: { c: Character }) {
   const betrothed = ch(s, c.betrothedId);
   const canMatch = !canSeekSpouse(s, c) && ageOf(s, c) >= 3;
   return (
-    <div className="btn-row" style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
+    <div className="btn-row" style={{ marginTop: 'var(--space-6px)' }} onClick={(e) => e.stopPropagation()}>
       {canMatch && (
         <Btn
           small
@@ -135,7 +135,7 @@ export function FamilyTab() {
           <CharCard
             c={spouse}
             extra={
-              <div className="btn-row" style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
+              <div className="btn-row" style={{ marginTop: 'var(--space-6px)' }} onClick={(e) => e.stopPropagation()}>
                 <Btn
                   small
                   kind="danger"
@@ -165,12 +165,12 @@ export function FamilyTab() {
           </div>
         )}
         {lover && alive(lover) && (
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 'var(--space-8px)' }}>
             <CharCard
               c={lover}
               sub={`Lover · House ${s.clans[lover.clanId]?.name}`}
               extra={
-                <div className="btn-row" style={{ marginTop: 6 }} onClick={(e) => e.stopPropagation()}>
+                <div className="btn-row" style={{ marginTop: 'var(--space-6px)' }} onClick={(e) => e.stopPropagation()}>
                   <Btn small kind="ghost" onClick={() => act((d) => endAffair(d))}>
                     End the affair
                   </Btn>
@@ -186,7 +186,7 @@ export function FamilyTab() {
         icon="birth"
         info="Each married cycle there is a chance of a child, higher with Fecund or Lustful parents and lower after 35. Children inherit genes from both parents, plus anything locked in your Gene Vault. From 6 they go to school; at 16 they come of age."
         right={
-          <label className="row" style={{ gap: 6, fontSize: '0.85rem' }}>
+          <label className="row" style={{ gap: 'var(--space-6px)', fontSize: 'var(--font-size-0_85rem)' }}>
             <input type="checkbox" checked={!s.dynasty.familyPlanning} onChange={(e) => act((d) => (d.dynasty.familyPlanning = !e.target.checked))} />
             Trying for children
           </label>
@@ -234,7 +234,7 @@ export function FamilyTab() {
                   </button>
                 ))}
               </div>
-              <div className="muted" style={{ fontSize: '0.78rem', marginTop: 4 }}>
+              <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)', marginTop: 'var(--space-4px)' }}>
                 Changing costs 200 prestige{!cooldownReady(s, 'law') && ` (locked until ${s.cooldowns.law})`}.
               </div>
             </div>
@@ -253,14 +253,14 @@ export function FamilyTab() {
                   </button>
                 ))}
               </div>
-              <div className="muted" style={{ fontSize: '0.78rem', marginTop: 4 }}>
+              <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)', marginTop: 'var(--space-4px)' }}>
                 Changing costs 150 prestige. Also decides which kin bring spouses home when they marry themselves off.
               </div>
             </div>
           </div>
           <div className="card">
             <h4>Line of succession</h4>
-            <div className="stack" style={{ gap: 6 }}>
+            <div className="stack" style={{ gap: 'var(--space-6px)' }}>
               {line.map((c, i) => (
                 <CharCard key={c.id} c={c} size={44} traitsMax={3} sub={`${i + 1}. ${ageOf(s, c)} yrs${ageOf(s, c) < 16 ? ' (minor: regency)' : ''}`} />
               ))}
@@ -295,20 +295,20 @@ export function FamilyTab() {
           </button>
         }
       >
-        <div className="card flat stack" style={{ marginBottom: 10 }}>
-          <label className="row" style={{ gap: 8 }}>
+        <div className="card flat stack" style={{ marginBottom: 'var(--space-10px)' }}>
+          <label className="row" style={{ gap: 'var(--space-8px)' }}>
             <input type="checkbox" checked={s.dynasty.autoMatch} onChange={(e) => act((d) => (d.dynasty.autoMatch = e.target.checked))} />
             <span>
               <b>Auto-matchmaking</b> <span className="muted">(kin you haven't married off yourself find their own matches)</span>
             </span>
           </label>
           <div className="spread">
-            <span className="muted" style={{ fontSize: '0.85rem' }}>
+            <span className="muted" style={{ fontSize: 'var(--font-size-0_85rem)' }}>
               Dynasty growth: <b className="gold">{s.dynasty.growth === 'capped' ? 'Tight family (capped)' : 'Sprawling (uncapped)'}</b>
               <InfoDot text="Chosen when you started this run. Sprawling lets the bloodline grow without limit. Tight family slows births among distant kin once the dynasty passes 30 living members, and stops them at 60." />
             </span>
             {!s.dynasty.gestationVats ? (
-              <span className="row" style={{ gap: 6 }}>
+              <span className="row" style={{ gap: 'var(--space-6px)' }}>
                 <Btn small reason={canAfford(s, VATS_COST) ? null : 'Need 800 credits'} onClick={() => act((d) => buyVats(d))}>
                   Build gestation vats
                 </Btn>
@@ -320,7 +320,12 @@ export function FamilyTab() {
           </div>
         </div>
         {kin.length > 8 && (
-          <input placeholder="Search kin by name" value={kinFilter} onChange={(e) => setKinFilter(e.target.value)} style={{ marginBottom: 8, width: 260 }} />
+          <input
+            placeholder="Search kin by name"
+            value={kinFilter}
+            onChange={(e) => setKinFilter(e.target.value)}
+            style={{ marginBottom: 'var(--space-8px)', width: 260 }}
+          />
         )}
         <div className="grid tight">
           {kinShown.map((c) => (
@@ -334,7 +339,7 @@ export function FamilyTab() {
           ))}
         </div>
         {kin.length > kinShown.length && (
-          <div className="muted" style={{ marginTop: 6 }}>
+          <div className="muted" style={{ marginTop: 'var(--space-6px)' }}>
             Showing {kinShown.length} of {kin.length}. Use search or the family tree.
           </div>
         )}

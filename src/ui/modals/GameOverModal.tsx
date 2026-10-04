@@ -9,7 +9,7 @@ export function GameOverModal() {
   const years = s.year - s.startYear;
   return (
     <Modal title="The End of a Dynasty" icon="death">
-      <div className="row top" style={{ gap: 14 }}>
+      <div className="row top" style={{ gap: 'var(--space-14px)' }}>
         <Sigil spec={clan.sigil} size={70} />
         <div>
           <p>{s.gameOver?.reason}</p>
@@ -21,7 +21,7 @@ export function GameOverModal() {
       </div>
       <div className="card flat" style={{ margin: '10px 0' }}>
         {s.dynasty.rulers.map((r, i) => (
-          <div key={r.id + i} className="spread" style={{ fontSize: '0.88rem' }}>
+          <div key={r.id + i} className="spread" style={{ fontSize: 'var(--font-size-0_88rem)' }}>
             <span>
               {i + 1}. {r.name}
             </span>

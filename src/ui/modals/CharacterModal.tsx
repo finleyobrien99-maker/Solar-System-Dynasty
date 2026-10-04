@@ -28,7 +28,7 @@ function Links({ label, people }: { label: string; people: Character[] }) {
   const { openChar } = useGame();
   if (!people.length) return null;
   return (
-    <div style={{ marginBottom: 6 }}>
+    <div style={{ marginBottom: 'var(--space-6px)' }}>
       <span className="muted">{label}: </span>
       {people.map((p, i) => (
         <span key={p.id}>
@@ -65,15 +65,15 @@ export function CharacterModal({ id }: { id: string }) {
         <div>
           <Face c={c} size={150} />
         </div>
-        <div className="stack" style={{ gap: 8 }}>
+        <div className="stack" style={{ gap: 'var(--space-8px)' }}>
           <div>
             <div className="gold">{[rel, title].filter(Boolean).join(' · ')}</div>
-            <div className="muted" style={{ fontSize: '0.86rem' }}>
+            <div className="muted" style={{ fontSize: 'var(--font-size-0_86rem)' }}>
               {living ? `Age ${ageOf(s, c)}` : `${c.born}–${c.died}, ${c.deathCause}`} · {c.gender === 'M' ? 'Male' : 'Female'} ·{' '}
               {PLANET_BY_ID[c.planetId]?.adjective} · {FAITHS[c.faithId]?.name}
               {living && <InfoDot text={`Expected lifespan around ${lifespan(c)}.`} />}
             </div>
-            <div className="row wrap" style={{ marginTop: 6 }}>
+            <div className="row wrap" style={{ marginTop: 'var(--space-6px)' }}>
               <ClanBadge clanId={c.clanId} />
               {c.bastard && <span className="pill red">Unsanctioned birth</span>}
               {c.prisonerOf && <span className="pill red">Prisoner of House {s.clans[c.prisonerOf]?.name}</span>}
@@ -86,7 +86,7 @@ export function CharacterModal({ id }: { id: string }) {
           <StatBlock s={s} c={c} />
           <TraitList c={c} s={s} />
           {isDynasty && c.traits.some((t) => TRAITS[t]?.cat === 'genetic') && (
-            <div className="muted" style={{ fontSize: '0.78rem' }}>
+            <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)' }}>
               Genetic traits can be locked into the bloodline from the Bloodline tab while {c.name} is alive.
             </div>
           )}
@@ -101,14 +101,14 @@ export function CharacterModal({ id }: { id: string }) {
       <Links label="Siblings" people={sibs} />
 
       {living && isDynasty && c.edu && (
-        <div className="card flat" style={{ marginTop: 8 }}>
+        <div className="card flat" style={{ marginTop: 'var(--space-8px)' }}>
           <h4>Education</h4>
           <EduControls c={c} />
         </div>
       )}
 
       {living && isDynasty && !isRuler && (
-        <div className="btn-row" style={{ marginTop: 10 }}>
+        <div className="btn-row" style={{ marginTop: 'var(--space-10px)' }}>
           {!canSeekSpouse(s, c) && ageOf(s, c) >= 3 && (
             <Btn
               icon="heart"
@@ -134,7 +134,7 @@ export function CharacterModal({ id }: { id: string }) {
         </div>
       )}
       {living && isRuler && canSeekSpouse(s, c) === null && (
-        <div className="btn-row" style={{ marginTop: 10 }}>
+        <div className="btn-row" style={{ marginTop: 'var(--space-10px)' }}>
           <Btn
             kind="primary"
             icon="heart"
@@ -152,9 +152,9 @@ export function CharacterModal({ id }: { id: string }) {
       {living && c.clanId === s.playerClanId && !isRuler && ageOf(s, c) >= 18 && !c.marriedIn && <FoundCadetPanel c={c} />}
 
       {cyberOpen && (
-        <details style={{ marginTop: 12 }}>
+        <details style={{ marginTop: 'var(--space-12px)' }}>
           <summary className="gold">Cybernetic augments</summary>
-          <div className="muted" style={{ fontSize: '0.8rem', margin: '6px 0' }}>
+          <div className="muted" style={{ fontSize: 'var(--font-size-0_8rem)', margin: '6px 0' }}>
             Implants are never inherited. Risk of complications: {Math.round(augmentRisk(s, c) * 100)}% (lower with more Science).
             {s.clans[s.playerClanId].faithId === 'machine' && ' Machine Synod discount: 30% off.'}
           </div>
@@ -163,12 +163,12 @@ export function CharacterModal({ id }: { id: string }) {
               const t = TRAITS[a.id];
               const block = augmentBlocker(s, c, a.id);
               return (
-                <div key={a.id} className="card flat" style={{ padding: 8 }}>
+                <div key={a.id} className="card flat" style={{ padding: 'var(--space-8px)' }}>
                   <b>{t.name}</b>
-                  <div className="muted" style={{ fontSize: '0.75rem' }}>
+                  <div className="muted" style={{ fontSize: 'var(--font-size-0_75rem)' }}>
                     {t.desc}
                   </div>
-                  <div className="spread" style={{ marginTop: 4 }}>
+                  <div className="spread" style={{ marginTop: 'var(--space-4px)' }}>
                     <span className="pill gold">{augmentCost(s, a.id)}</span>
                     <Btn small reason={block} onClick={() => act((d) => augment(d, c.id, a.id))}>
                       Install
@@ -182,7 +182,7 @@ export function CharacterModal({ id }: { id: string }) {
       )}
 
       {living && !isDynasty && c.id !== r.spouseId && (
-        <div className="card flat" style={{ marginTop: 12 }}>
+        <div className="card flat" style={{ marginTop: 'var(--space-12px)' }}>
           <h4>Intrigue</h4>
           <div className="btn-row">
             {c.gender !== r.gender && ageOf(s, c) >= 16 && (
@@ -207,12 +207,12 @@ export function CharacterModal({ id }: { id: string }) {
         </div>
       )}
       {spouse && !alive(spouse) && (
-        <div className="dim" style={{ marginTop: 8 }}>
+        <div className="dim" style={{ marginTop: 'var(--space-8px)' }}>
           Widowed.
         </div>
       )}
       {isRuler && kids.length > 0 && (
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 'var(--space-12px)' }}>
           <h4>Children</h4>
           <div className="grid tight">
             {kids.slice(0, 6).map((k) => (

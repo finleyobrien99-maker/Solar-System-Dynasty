@@ -48,7 +48,7 @@ function Node({ c, depth }: { c: Character; depth: number }) {
         </span>
       </span>
       {kids.length > 0 && (
-        <button className="btn ghost small" style={{ marginLeft: 6 }} onClick={() => setOpen((o) => !o)}>
+        <button className="btn ghost small" style={{ marginLeft: 'var(--space-6px)' }} onClick={() => setOpen((o) => !o)}>
           {open ? '−' : `+${kids.length}`}
         </button>
       )}
@@ -75,9 +75,9 @@ export function TreeModal() {
   if (founder && !roots.some((r) => r.id === founder.id)) roots.unshift(founder);
   return (
     <Modal title="Dynasty Tree" onClose={() => setUi({ panel: null })} wide icon="family">
-      <div className="card flat" style={{ marginBottom: 10 }}>
+      <div className="card flat" style={{ marginBottom: 'var(--space-10px)' }}>
         <h4>Rulers of the house</h4>
-        <div className="row wrap" style={{ gap: 6 }}>
+        <div className="row wrap" style={{ gap: 'var(--space-6px)' }}>
           {s.dynasty.rulers.map((r, i) => (
             <button
               key={r.id + i}

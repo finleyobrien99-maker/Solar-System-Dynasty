@@ -63,7 +63,7 @@ export function VipEditor({ c }: { c: Character }) {
   const [name, setName] = useState(c.name);
   const living = alive(c);
   return (
-    <details className="vip-box" style={{ marginTop: 12 }}>
+    <details className="vip-box" style={{ marginTop: 'var(--space-12px)' }}>
       <summary>
         <Icon name="relic" size={15} /> VIP editor
         <span className="muted" style={{ fontWeight: 400 }}>
@@ -71,7 +71,7 @@ export function VipEditor({ c }: { c: Character }) {
           · change anything about {c.name}
         </span>
       </summary>
-      <div className="stack" style={{ gap: 12, marginTop: 10 }}>
+      <div className="stack" style={{ gap: 'var(--space-12px)', marginTop: 'var(--space-10px)' }}>
         <div className="btn-row">
           <Btn
             small
@@ -99,13 +99,13 @@ export function VipEditor({ c }: { c: Character }) {
 
         <form
           className="row wrap"
-          style={{ gap: 6 }}
+          style={{ gap: 'var(--space-6px)' }}
           onSubmit={(e) => {
             e.preventDefault();
             act((d) => rename(d, c.id, name));
           }}
         >
-          <label className="row" style={{ gap: 6, flex: '1 1 200px', minWidth: 0 }}>
+          <label className="row" style={{ gap: 'var(--space-6px)', flex: '1 1 200px', minWidth: 0 }}>
             <span className="muted">Name</span>
             <input value={name} maxLength={24} onChange={(e) => setName(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
           </label>
@@ -130,7 +130,7 @@ export function VipEditor({ c }: { c: Character }) {
             />
           ))}
         </div>
-        <div className="dim" style={{ fontSize: '0.74rem' }}>
+        <div className="dim" style={{ fontSize: 'var(--font-size-0_74rem)' }}>
           Stats here are natural talent (0 to {STAT_MAX}). Traits, education and items add on top.
         </div>
 

@@ -28,18 +28,18 @@ function RegionPanel({ regionId }: { regionId: string }) {
           <h3 style={{ margin: 0 }}>
             {reg.capital && <Icon name="crown" size={14} />} {reg.name}
           </h3>
-          <div className="muted" style={{ fontSize: '0.82rem' }}>
+          <div className="muted" style={{ fontSize: 'var(--font-size-0_82rem)' }}>
             {PLANET_BY_ID[reg.planetId].name} · development {reg.dev}
             {reg.capital ? ' · Throne-region: whoever holds it rules the planet' : ''}
           </div>
         </div>
-        <button className="row" style={{ background: 'none', border: 0, gap: 6 }} onClick={() => openClan(owner.id)}>
+        <button className="row" style={{ background: 'none', border: 0, gap: 'var(--space-6px)' }} onClick={() => openClan(owner.id)}>
           <Sigil spec={owner.sigil} size={30} />
           <b>House {owner.name}</b>
         </button>
       </div>
       {mine ? (
-        <div className="good" style={{ marginTop: 8 }}>
+        <div className="good" style={{ marginTop: 'var(--space-8px)' }}>
           This region is yours.
         </div>
       ) : (
@@ -52,16 +52,16 @@ function RegionPanel({ regionId }: { regionId: string }) {
           {block ? (
             <div className="muted">{block}</div>
           ) : (
-            <div className="stack" style={{ gap: 6 }}>
+            <div className="stack" style={{ gap: 'var(--space-6px)' }}>
               {opts.map((o) => (
                 <div key={o.cb} className="spread">
                   <span>
                     <b>{CB_INFO[o.cb].name}</b>{' '}
-                    <span className="muted" style={{ fontSize: '0.8rem' }}>
+                    <span className="muted" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
                       {CB_INFO[o.cb].desc}
                     </span>
                   </span>
-                  <span className="row" style={{ gap: 6 }}>
+                  <span className="row" style={{ gap: 'var(--space-6px)' }}>
                     <CostTag cost={o.cost} />
                     <Btn
                       small
@@ -81,8 +81,8 @@ function RegionPanel({ regionId }: { regionId: string }) {
             </div>
           )}
           {!s.claims.includes(reg.id) && (
-            <div className="spread" style={{ marginTop: 10 }}>
-              <span className="muted" style={{ fontSize: '0.84rem' }}>
+            <div className="spread" style={{ marginTop: 'var(--space-10px)' }}>
+              <span className="muted" style={{ fontSize: 'var(--font-size-0_84rem)' }}>
                 Forge a claim: {Math.round(schemeChance(s, 'fabricate', reg.id) * 100)}% chance
               </span>
               <Btn small icon="scheme" reason={fab} onClick={() => act((d) => runScheme(d, 'fabricate', reg.id))}>
@@ -91,7 +91,7 @@ function RegionPanel({ regionId }: { regionId: string }) {
             </div>
           )}
           {s.claims.includes(reg.id) && (
-            <div className="pill gold" style={{ marginTop: 8 }}>
+            <div className="pill gold" style={{ marginTop: 'var(--space-8px)' }}>
               You hold a claim here
             </div>
           )}
@@ -115,22 +115,22 @@ function ClanRow({ clanId }: { clanId: string }) {
         <div className="nm">
           House {clan.name} {clan.isPlayer && <span className="pill gold">You</span>}
           {clan.allied && (
-            <span className="pill green" style={{ marginLeft: 4 }}>
+            <span className="pill green" style={{ marginLeft: 'var(--space-4px)' }}>
               Ally
             </span>
           )}
           {liege === s.playerClanId && (
-            <span className="pill cyan" style={{ marginLeft: 4 }}>
+            <span className="pill cyan" style={{ marginLeft: 'var(--space-4px)' }}>
               {clan.cadetOf === s.playerClanId ? 'Cadet' : 'Vassal'}
             </span>
           )}
           {isRival(clan) && (
-            <span className="pill red" style={{ marginLeft: 4 }}>
+            <span className="pill red" style={{ marginLeft: 'var(--space-4px)' }}>
               Sworn rival
             </span>
           )}
           {s.wars.some((w) => w.enemy === clanId) && (
-            <span className="pill red" style={{ marginLeft: 4 }}>
+            <span className="pill red" style={{ marginLeft: 'var(--space-4px)' }}>
               At war
             </span>
           )}
@@ -140,7 +140,7 @@ function ClanRow({ clanId }: { clanId: string }) {
           {liege ? ` · vassal of ${s.clans[liege].name}` : ''}
         </div>
         {!clan.isPlayer && (
-          <div style={{ marginTop: 4 }}>
+          <div style={{ marginTop: 'var(--space-4px)' }}>
             <Opinion v={clan.opinion} />
           </div>
         )}
@@ -175,26 +175,26 @@ export function SystemTab() {
           <div className="row top">
             <PlanetArt planetId={planetId} size={84} />
             <div className="grow">
-              <h2 style={{ marginBottom: 2 }}>{p.name}</h2>
-              <div className="gold" style={{ fontSize: '0.88rem' }}>
+              <h2 style={{ marginBottom: 'var(--space-2px)' }}>{p.name}</h2>
+              <div className="gold" style={{ fontSize: 'var(--font-size-0_88rem)' }}>
                 {p.faction}
               </div>
-              <div className="muted" style={{ fontSize: '0.84rem', marginTop: 4 }}>
+              <div className="muted" style={{ fontSize: 'var(--font-size-0_84rem)', marginTop: 'var(--space-4px)' }}>
                 {p.blurb}
               </div>
-              <div style={{ fontSize: '0.82rem', marginTop: 4 }}>
+              <div style={{ fontSize: 'var(--font-size-0_82rem)', marginTop: 'var(--space-4px)' }}>
                 <b>Bonus for natives:</b> {p.bonus}
               </div>
-              <div style={{ fontSize: '0.82rem' }}>
+              <div style={{ fontSize: 'var(--font-size-0_82rem)' }}>
                 <b>Faith:</b> <span style={{ color: FAITHS[p.faithId].color }}>{FAITHS[p.faithId].name}</span>
               </div>
-              <div style={{ fontSize: '0.82rem' }}>
+              <div style={{ fontSize: 'var(--font-size-0_82rem)' }}>
                 <b>Ruled by:</b> {sovClan ? `House ${sovClan.name}, ${p.monarch[ch(s, sovClan.headId)?.gender ?? 'M']}` : 'nobody'}
               </div>
             </div>
           </div>
           <PlanetMap s={s} planetId={planetId} selected={regionId} onSelect={(id) => setUi({ regionId: id })} />
-          <div className="muted" style={{ fontSize: '0.78rem', textAlign: 'center' }}>
+          <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)', textAlign: 'center' }}>
             Tap a region. Gold dashes: yours. Hatched: your claims. Red: war targets. Crown: the throne-region.
           </div>
         </div>
@@ -204,7 +204,7 @@ export function SystemTab() {
           ) : (
             <div className="card flat muted">Select a region on the map to see who holds it, forge claims or declare war.</div>
           )}
-          <h3 style={{ marginTop: 6 }}>Houses of {p.name}</h3>
+          <h3 style={{ marginTop: 'var(--space-6px)' }}>Houses of {p.name}</h3>
           {clansHere.map((c) => (
             <ClanRow key={c.id} clanId={c.id} />
           ))}

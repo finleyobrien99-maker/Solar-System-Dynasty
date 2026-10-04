@@ -36,18 +36,18 @@ export function LifeTab() {
           <div onClick={() => openChar(r.id)} style={{ cursor: 'pointer' }}>
             <Face c={r} size={150} />
           </div>
-          <div className="stack" style={{ gap: 8 }}>
+          <div className="stack" style={{ gap: 'var(--space-8px)' }}>
             <div>
               <div className="nm">{fullName(s, r)}</div>
               <div className="gold">{charTitle(s, r)}</div>
-              <div className="muted" style={{ fontSize: '0.85rem' }}>
+              <div className="muted" style={{ fontSize: 'var(--font-size-0_85rem)' }}>
                 Age {ageOf(s, r)} · {planet.adjective} · {FAITHS[r.faithId]?.name}
                 <InfoDot
                   text={`Expected lifespan around ${lifespan(r)} years, shifted by genes and implants. Health and illness matter more than age alone.`}
                 />
               </div>
               {regencyActive(s) && (
-                <div className="pill red" style={{ marginTop: 4 }}>
+                <div className="pill red" style={{ marginTop: 'var(--space-4px)' }}>
                   Regency until age 16: war, schemes and activities are locked
                 </div>
               )}
@@ -68,11 +68,11 @@ export function LifeTab() {
                 <Icon name="family" size={14} /> Family tree
               </button>
             </div>
-            <div className="row" style={{ marginTop: 8 }}>
+            <div className="row" style={{ marginTop: 'var(--space-8px)' }}>
               <Sigil spec={clan.sigil} size={46} />
               <div>
                 <div style={{ fontWeight: 700 }}>House {clan.name}</div>
-                <div className="muted" style={{ fontSize: '0.82rem' }}>
+                <div className="muted" style={{ fontSize: 'var(--font-size-0_82rem)' }}>
                   {planet.faction} · {['Landless', 'Governors', 'Viceroys', 'Sovereigns', 'Emperors'][clanRank(s, clan.id)]} · {s.dynasty.rulers.length} rulers
                   so far
                 </div>
@@ -105,7 +105,7 @@ export function LifeTab() {
               ))}
             </div>
           </div>
-          <div className="log" style={{ marginTop: 8 }}>
+          <div className="log" style={{ marginTop: 'var(--space-8px)' }}>
             {entries.map((e, i) => (
               <div key={i} className={`entry k-${e.k}`}>
                 <span className="y">{e.y}</span>
@@ -117,7 +117,7 @@ export function LifeTab() {
         </div>
       </div>
       <Section title="Getting started" icon="info">
-        <div className="card flat muted" style={{ fontSize: '0.88rem' }}>
+        <div className="card flat muted" style={{ fontSize: 'var(--font-size-0_88rem)' }}>
           Press <b className="gold">Age Up</b> to live through a cycle (one year). Between cycles you can marry and raise heirs (Family), forge a perfect
           bloodline (Bloodline), manage your fleet, wars and lands (Realm), scheme against rivals across the planets (System and Actions), and kit yourself out
           with relics (Treasury). When you die, you carry on as your heir. Open the{' '}
