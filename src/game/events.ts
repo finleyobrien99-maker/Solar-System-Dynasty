@@ -21,6 +21,7 @@ import {
 } from './core';
 import { dynastyKids, getFlag, myRegion, rivalClan, type EventCtx, type EventDef } from './eventKit';
 import { MORE_EVENTS } from './eventsMore';
+import { RELATION_EVENTS } from './eventsRelations';
 import { defineEvent, regionOf, type Cond, type Ctx, type Effect, type Outcome } from './dsl';
 import { catchable, courtier, houseName, myRegionPick, named, placeName, present, rivalPick } from './eventBits';
 import { randomGoodGene } from './genetics';
@@ -1620,6 +1621,7 @@ export const EVENTS: EventDef[] = [
     ],
   }),
   ...MORE_EVENTS,
+  ...RELATION_EVENTS,
 ];
 
 export const EVENT_BY_ID: Record<string, EventDef> = Object.fromEntries(EVENTS.map((e) => [e.id, e]));

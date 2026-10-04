@@ -17,6 +17,7 @@ import { clearFlag, setFlag, sicken, type EventChoice, type EventCtx, type Event
 import { makeItem } from './items';
 import { currentHeir, killCharacter } from './life';
 import { remember } from './memory';
+import { addFeeling, forget } from './relations';
 import { chance, clamp, int, pick } from './rng';
 import { addTrait, STAT_NAMES, TRAITS } from './traits';
 import type { Character, Clan, ItemSlot, Rarity, Region, StatKey } from './types';
@@ -76,6 +77,10 @@ export type Effect =
   | { pick: string; get: (c: Ctx) => Character | Region | Clan | undefined; text: Text; say?: Text }
   /** Roll a chance in secret and keep the result (1 or 0) for later. */
   | { set: string; roll: Prob }
+  /** How `from` feels about `to` (the ruler by default) changes (relations.ts). Fades by `decay` a cycle (default 1); a `key` replaces an earlier feeling. */
+  | { feel: number; from: Who; to?: Who; why: string; decay?: number; key?: string }
+  /** `from` lets go of a keyed feeling about `to` (the ruler by default): a grudge settled, neglect made good. */
+  | { forgive: string; from: Who; to?: Who }
   /** The escape hatch. May return a sentence to add to the outcome. */
   | { run: (c: Ctx) => string | void; text: Text };
 
@@ -293,6 +298,14 @@ function apply(c: Ctx, e: Effect, notes: string[]): void {
     c.picks[e.pick] = e.get(c);
   } else if ('set' in e) {
     c.vars[e.set] = roll(c, e.roll) ? 1 : 0;
+  } else if ('feel' in e) {
+    const a = who(c, e.from);
+    const b = who(c, e.to);
+    if (a && b) addFeeling(s, a.id, b.id, { why: e.why, value: e.feel, decay: e.decay ?? 1, key: e.key });
+  } else if ('forgive' in e) {
+    const a = who(c, e.from);
+    const b = who(c, e.to);
+    if (a && b) forget(s, a.id, b.id, e.forgive);
   } else {
     const note = e.run(c);
     if (note) notes.push(note);
@@ -384,7 +397,12 @@ function describeEffect(d: Describe, e: Effect): string {
     d.names[e.pick] = render(c, e.text);
     return e.say ? render(c, e.say) : '';
   }
-  if ('flag' in e || 'clearFlag' in e || 'set' in e) return '';
+  if ('feel' in e) {
+    const to = nameOf(d, e.to);
+    const likes = nameOf(d, e.from) === 'you' ? `you like ${to}` : `${nameOf(d, e.from)} likes ${to}`;
+    return `${likes} ${e.feel >= 0 ? 'more' : 'less'} (${e.feel >= 0 ? '+' : '−'}${Math.abs(e.feel)})`;
+  }
+  if ('flag' in e || 'clearFlag' in e || 'set' in e || 'forgive' in e) return '';
   return render(c, e.text);
 }
 

@@ -6,7 +6,7 @@
 // The roadmap (§17) wants Passive, Builder, Warmonger, Breeder and Schemer
 // bots, plus a VIP "God" bot as a sanity check. The first four are here.
 
-import { ageOf, alive, clanRank, clanRegions, dynastyMembers, homePlanet, planetRegions, ruler } from './core';
+import { ageOf, alive, childrenOf, clanRank, clanRegions, dynastyMembers, homePlanet, planetRegions, ruler } from './core';
 import { appoint, candidates, ROLE_KEYS } from './council';
 import { fleetCap } from './economy';
 import { buildCtx, EVENT_BY_ID, resolveEvent } from './events';
@@ -15,6 +15,7 @@ import { buildForge, buildVats, researchable, splice, startResearch } from './fo
 import { buySlot, lockTrait, purgeTrait, vaultSlots, vaultUsed } from './genetics';
 import { currentHeir, isCloseFamily } from './life';
 import { createViceroy, developCost, developRegion, forgeSolarThrone, recruitShips, shipCost } from './realm';
+import { neglectedFor, spendTime, timeLeft } from './relations';
 import { pick, type Seeded } from './rng';
 import { openRoute } from './trade';
 import { isHeritable, TRAITS } from './traits';
@@ -179,6 +180,14 @@ function tendForge(s: GameState): void {
   }
 }
 
+/** See the children who have gone longest without you, as many as the cycle allows. */
+function tendFamily(s: GameState): void {
+  const kids = childrenOf(s, ruler(s))
+    .filter((k) => alive(k) && ageOf(s, k) <= 15)
+    .sort((a, b) => neglectedFor(s, b) - neglectedFor(s, a));
+  for (const k of kids) if (timeLeft(s) > 0) spendTime(s, k.id, 'dinner');
+}
+
 // ── The bots ──────────────────────────────────────────────────────────────
 
 export const BOTS: Record<BotId, Bot> = {
@@ -191,10 +200,11 @@ export const BOTS: Record<BotId, Bot> = {
   builder: {
     id: 'builder',
     name: 'Builder',
-    blurb: 'Economy first: council, development, trade, a modest fleet. Fights only with a clear edge.',
+    blurb: 'Economy first: council, development, trade, a modest fleet, time with the children. Fights only with a clear edge.',
     turn: (s) => {
       s.leadPersonally = false;
       secureLine(s);
+      tendFamily(s);
       fillCouncil(s);
       develop(s, 150);
       recruitTo(s, 0.6, 150);
@@ -226,6 +236,7 @@ export const BOTS: Record<BotId, Bot> = {
     turn: (s) => {
       s.leadPersonally = false;
       secureLine(s, geneScore);
+      tendFamily(s);
       // Hand-pick matches for close family; auto-matchmaking handles distant kin, as for a player.
       for (const c of dynastyMembers(s)) if (ageOf(s, c) >= 16 && isCloseFamily(s, c)) arrangeMatch(s, c, geneScore);
       fillCouncil(s);
