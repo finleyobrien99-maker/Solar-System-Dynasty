@@ -172,7 +172,7 @@ See section 17. Headless runner, bot strategies, CSV/JSON output, a summary tabl
 - **Status: done.** `npm run balance` (`scripts/balance.ts`, engine side in `src/game/balance.ts`) plays seeded Governor starts with four bots from `src/game/bots.ts` (Passive, Builder, Warmonger, Breeder) and scores them against the section 17 targets. It writes `runs.csv`, `series.csv`, `runs.json` and `summary.md` to `balance-report/`. CI runs 8 seeds × 200 cycles per push and posts the summary on the run page. Schemer and VIP "God" bots still to add. First findings are in section 18.
 
 ### 0.6 UI foundations `P1` `M`
-- **Status: error boundary done** (`src/ui/ErrorBoundary.tsx`: Try again, Export save, Go back one save, Back to title). Tokens, panel stack and code-splitting still to do.
+- **Status: error boundary and bundle split done.** `src/ui/ErrorBoundary.tsx` offers Try again, Export save, Go back one save and Back to title. React now ships in its own chunk (warning gone). Screens are deliberately **not** lazy-loaded: the offline service worker only caches files once fetched, so a lazy screen never opened online would fail offline. Revisit only with a precaching service worker. Tokens and the panel stack still to do.
 - Design tokens (CSS variables) for colour, type, radius, spacing and shadow, so any of the three UI concepts can be skinned in.
 - An error boundary that catches render crashes and offers "Export save" and "Reload from backup".
 - Panel routing (`ui.panel`) is ad hoc. Make it a small typed stack so modals can push and pop (back button support for the Expo app).
@@ -866,7 +866,7 @@ export interface Story { id: string; def: string; stage: number; actors: Record<
 - [ ] **VIP off with an overfull vault:** turning VIP off leaves `locked + purged` above `slots`. It works (new locks are blocked) but the UI shows "7 / 2". Show a "release some" hint, or grandfather them.
 - [ ] **Immortal VIP rulers block succession forever.** Needs the Abdicate decision (3.3).
 - [ ] **Suitors live outside `s.characters`** (in `s.suitors`). The editor handles it via `findChar`, but anything new that looks up characters must remember this.
-- [ ] **Bundle size** over 500kB (Vite warning). Code-split (0.6).
+- [x] **Bundle size** over 500kB (Vite warning). React split into its own chunk (0.6).
 - [x] **No ESLint/Prettier** (0.7). Both run in CI.
 - [ ] **Single `fleet` number for the player**, separate `clan.fleet` for the AI (will be replaced by 5.1).
 - [ ] **Trait colours alone** distinguish categories (accessibility, 9.6).
