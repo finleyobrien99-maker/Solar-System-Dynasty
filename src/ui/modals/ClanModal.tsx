@@ -1,3 +1,4 @@
+import { ForeignCommanderSection } from '../sections/CommanderSection';
 import { WarWearinessSection } from '../sections/WarWearinessSection';
 import { TrucesSection } from '../sections/TrucesSection';
 import { ageOf, alive, ch, clanRank, clanRegions, clanTitle, liegeOf } from '../../game/core';
@@ -56,6 +57,7 @@ export function ClanModal({ id }: { id: string }) {
         </div>
       )}
       {head?.ambition && <AmbitionRecord c={head} />}
+      {!mine && <ForeignCommanderSection clanId={id} />}
       <WarWearinessSection clanId={id} />
       <TrucesSection clanId={id} />
       <div className="row top wrap" style={{ gap: 'var(--space-14px)' }}>

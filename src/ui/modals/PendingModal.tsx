@@ -10,7 +10,7 @@ import type { BattleReport, Pending } from '../../game/types';
 import { haptic } from '../../native';
 import { Icon } from '../../svg/Icons';
 import { Ship } from '../../svg/Ship';
-import { Btn, Face, Modal, TraitList, WarBar } from '../components';
+import { Btn, CharCard, Face, Modal, TraitList, WarBar } from '../components';
 import { useGame } from '../store';
 
 function dismiss(uid: string) {
@@ -101,6 +101,8 @@ function BattleView({ p }: { p: { uid: string; report: BattleReport } }) {
   const r = p.report;
   const enemy = s.clans[r.enemy];
   const me = s.clans[s.playerClanId];
+  const ownCommander = ch(s, r.playerCommanderId),
+    enemyCommander = ch(s, r.enemyCommanderId);
   return (
     <Modal title={r.won ? 'Victory in Battle' : 'Defeat in Battle'} icon={r.won ? 'win' : 'lose'} onClose={() => act(dismiss(p.uid))}>
       <div className="battle">
@@ -122,6 +124,12 @@ function BattleView({ p }: { p: { uid: string; report: BattleReport } }) {
           <div className="bad">-{r.enemyLosses} ships</div>
         </div>
       </div>
+      {(ownCommander || enemyCommander) && (
+        <div className="grid" style={{ marginTop: 12 }}>
+          {ownCommander && <CharCard c={ownCommander} size={38} traitsMax={0} sub={r.personal ? 'Led your fleet in person' : 'Commanded your fleet'} />}
+          {enemyCommander && <CharCard c={enemyCommander} size={38} traitsMax={0} sub="Commanded the opposing fleet" />}
+        </div>
+      )}
       <p className={r.won ? 'good' : 'bad'} style={{ textAlign: 'center', fontWeight: 700 }}>
         {r.won ? 'The enemy line breaks!' : 'Your fleet is driven back.'} War score {r.scoreChange > 0 ? '+' : ''}
         {r.scoreChange} → {r.newScore}

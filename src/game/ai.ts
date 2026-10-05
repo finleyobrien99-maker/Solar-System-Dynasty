@@ -33,6 +33,7 @@ import { aiIntrigueTick } from './aiIntrigue';
 import { aiDynastyTick } from './aiDynasty';
 import { battleWeariness, warStrengthFactor, aiMayBreakTruce, breakTruce, makeTruce, mayAttack, truceOf } from './peace';
 import { allMentorships, allWardships, aiWardsTick } from './wards';
+import { commandedBattleFates, commanderOf, commandersTick, leadFactor } from './commanders';
 import { aiAmbition, ambitionHouse, AMBITION_AGGRESSION, type AmbitionKind } from './aiAmbition';
 import { aiAffairsTick, aiArrests, aiMarriages, alliesAbandon, betrayPact, captivesTick, kinFleet, pactMap, takeCaptive, wouldBetray } from './aiCourt';
 import { neighbourPlanets, PLANET_BY_ID } from './planets';
@@ -222,12 +223,14 @@ function tickAiWars(s: GameState): void {
     // Kin by marriage stand by each other, more readily in defence than in attack.
     def += kinFleet(s, d.id, a.id, pacts, 0.25);
     const att = a.fleet + kinFleet(s, a.id, d.id, pacts, 0.15);
-    const attStrength = att * warStrengthFactor(s, a.id),
-      defStrength = def * warStrengthFactor(s, d.id);
+    const attStrength = att * warStrengthFactor(s, a.id) * leadFactor(s, a.id),
+      defStrength = def * warStrengthFactor(s, d.id) * leadFactor(s, d.id);
     const pAtt = attStrength / Math.max(1, attStrength + defStrength);
+    const [ac, dc, af, df] = [commanderOf(s, a.id)?.id, commanderOf(s, d.id)?.id, a.fleet, d.fleet];
+    const [attackerRuler, defenderRuler] = [a.headId, d.headId];
     const attWins = chance(s, pAtt);
-    recordDeed(s, a.headId, attWins ? 'battlesWon' : 'battlesLost');
-    recordDeed(s, d.headId, attWins ? 'battlesLost' : 'battlesWon');
+    recordDeed(s, attackerRuler, attWins ? 'battlesWon' : 'battlesLost');
+    recordDeed(s, defenderRuler, attWins ? 'battlesLost' : 'battlesWon');
     w.progress += attWins ? int(s, 25, 45) : -int(s, 25, 45);
     const oldAtt = a.fleet,
       oldDef = d.fleet;
@@ -235,13 +238,29 @@ function tickAiWars(s: GameState): void {
     d.fleet = Math.round(d.fleet * range(s, 0.85, 0.95));
     battleWeariness(s, a.id, oldAtt, oldAtt - a.fleet);
     battleWeariness(s, d.id, oldDef, oldDef - d.fleet);
+    // Each side's commander, as they stood before the battle, after the real losses (commanders.ts).
+    const fates = commandedBattleFates(s, {
+      id: `${w.id}@${s.year}`,
+      attacker: a.id,
+      defender: d.id,
+      attackerCommanderId: ac,
+      defenderCommanderId: dc,
+      attackerWon: attWins,
+      attackerShips: af,
+      attackerLosses: af - a.fleet,
+      defenderShips: df,
+      defenderLosses: df - d.fleet,
+      danger: 0.5,
+    });
+    for (const f of fates) if (f.died || f.captured) log(s, f.note, 'news');
+
     if (w.progress >= 100) {
       const wasCapital = target.capital;
       setOwner(s, target, a.id);
-      recordDeed(s, a.headId, 'warsWon');
-      recordDeed(s, d.headId, 'warsLost');
-      recordDeed(s, a.headId, 'regionsTaken', 1, target.id);
-      if (wasCapital) recordDeed(s, a.headId, 'capitalsTaken', 1, target.planetId);
+      recordDeed(s, attackerRuler, 'warsWon');
+      recordDeed(s, defenderRuler, 'warsLost');
+      recordDeed(s, attackerRuler, 'regionsTaken', 1, target.id);
+      if (wasCapital) recordDeed(s, attackerRuler, 'capitalsTaken', 1, target.planetId);
       done(true);
       // Losing land is not forgotten.
       const [ah, dh] = [ch(s, a.headId), ch(s, d.headId)];
@@ -253,15 +272,15 @@ function tickAiWars(s: GameState): void {
       else log(s, `House ${a.name} took ${target.name} (${p.name}) from House ${d.name}.`, 'news');
     } else if (w.progress <= -100 || s.year - w.started >= 5) {
       if (w.progress <= -100) {
-        recordDeed(s, d.headId, 'warsWon');
-        recordDeed(s, d.headId, 'defensiveWins');
-        recordDeed(s, a.headId, 'warsLost');
+        recordDeed(s, defenderRuler, 'warsWon');
+        recordDeed(s, defenderRuler, 'defensiveWins');
+        recordDeed(s, attackerRuler, 'warsLost');
         const [ah, dh] = [ch(s, a.headId), ch(s, d.headId)];
         if (alive(ah) && alive(dh)) addFeeling(s, ah.id, dh.id, { why: 'Humiliated us in war', value: -15, decay: 1 });
         takeCaptive(s, d.id, a.id, 0.4);
       } else {
-        recordDeed(s, a.headId, 'peaceTreaties');
-        recordDeed(s, d.headId, 'peaceTreaties');
+        recordDeed(s, attackerRuler, 'peaceTreaties');
+        recordDeed(s, defenderRuler, 'peaceTreaties');
       }
       done(true);
       log(s, `House ${d.name} beat off House ${a.name}'s attack on ${target.name}.`, 'news');
@@ -392,6 +411,7 @@ export function aiTick(s: GameState): void {
   aiMarriages(s);
   aiAffairsTick(s);
   opinionDrift(s);
+  commandersTick(s);
   tickAiWars(s);
   if (chance(s, 0.3)) startAiWar(s);
   aggressionOnPlayer(s);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clanRegions, dynastyMembers, ruler } from './core';
+import { clanRegions, dynastyMembers, ruler, setOwner } from './core';
 import { acceptSuitor, generateSuitors } from './family';
 import { inheritGenetics } from './genetics';
 import { chance, type Seeded } from './rng';
@@ -51,6 +51,8 @@ describe('dynasty growth', () => {
     const sizes: Record<string, number> = {};
     for (const growth of ['capped', 'uncapped'] as const) {
       const s = newGame(77, growth);
+      // Compare birth caps over equal lifetimes; conquest must not stop one population early.
+      for (const region of Object.values(s.regions)) setOwner(s, region, s.playerClanId);
       const bot: Seeded = { seed: 5 };
       for (let y = 0; y < 150 && !s.gameOver; y++) {
         drain(s, bot);
@@ -72,6 +74,8 @@ describe('dynasty growth', () => {
         drain(s, bot);
         ageUp(s);
       }
+      expect(s.gameOver).toBeUndefined();
+      expect(s.year).toBe(s.startYear + 150);
       sizes[growth] = dynastyMembers(s).length;
     }
     // eslint-disable-next-line no-console

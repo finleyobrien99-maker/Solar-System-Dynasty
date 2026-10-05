@@ -30,6 +30,7 @@ import { killCharacter } from './life';
 import { councilStat } from './council';
 import { remember } from './memory';
 import { takeCaptive } from './aiCourt';
+import { commandFactor, commanderOf, onCommandedBattle, personalCommand } from './commanders';
 
 export const CB_INFO: Record<CasusBelli, { name: string; desc: string }> = {
   claim: { name: 'Press Claim', desc: 'You hold a claim on this region. No prestige penalty.' },
@@ -190,6 +191,15 @@ export function playerSide(s: GameState, war: War, personal: boolean): Side {
       helpers.push(`House ${v.name} (${v.cadetOf === s.playerClanId ? 'cadet' : 'vassal'}, ${add})`);
     }
   }
+  // A named commander leads any battle you don't lead yourself, on their own Command and traits alone:
+  // no council seat or VIP bonus (commanders.ts). Without one, the admiral advises as before.
+  const general = personal ? undefined : commanderOf(s, s.playerClanId);
+  if (general) {
+    let gmod = 1 + itemSum(s, 'fleetPct');
+    if (homePlanet(s) === 'mars') gmod += 0.15;
+    if (s.year - r.born < 16) gmod -= 0.2; // regency
+    return { ships, strength: ships * commandFactor(s, general) * gmod * warStrengthFactor(s, s.playerClanId), helpers };
+  }
   // An admiral commands any battle you don't lead yourself, if they're better at it.
   const cmd = personal ? effStats(s, r).cmd : Math.max(effStats(s, r).cmd, councilStat(s, 'admiral'));
   let mod = 1 + traitSum(r, 'fleetPct') + itemSum(s, 'fleetPct') + councilStat(s, 'admiral') * 0.01;
@@ -223,8 +233,10 @@ export function enemySide(s: GameState, war: War): Side {
       ships += add;
     }
   }
-  const cmd = head && alive(head) ? effStats(s, head).cmd : 4;
-  let mod = 1 + (head ? traitSum(head, 'fleetPct') : 0);
+  // Their named commander leads if they have one (commanders.ts); otherwise their lord.
+  const general = commanderOf(s, enemy.id);
+  const cmd = general ? personalCommand(s, general) : head && alive(head) ? effStats(s, head).cmd : 4;
+  let mod = 1 + (general ? traitSum(general, 'fleetPct') : head ? traitSum(head, 'fleetPct') : 0);
   if (enemy.planetId === 'mars') mod += 0.15;
   return { ships, strength: ships * (1 + cmd * 0.04) * mod * warStrengthFactor(s, enemy.id), helpers };
 }
@@ -232,17 +244,22 @@ export function enemySide(s: GameState, war: War): Side {
 // ── Battles ───────────────────────────────────────────────────────────────
 
 export function canFightBattle(s: GameState, war: War): boolean {
-  return war.lastPlayerBattle !== s.year && s.fleet > 0;
+  return !s.gameOver && war.lastPlayerBattle !== s.year && s.fleet > 0;
 }
 
 export function fightBattle(s: GameState, warId: string, aiInitiated = false): BattleReport | undefined {
   const war = s.wars.find((w) => w.id === warId);
   if (!war || (!aiInitiated && !canFightBattle(s, war))) return undefined;
   const enemy = s.clans[war.enemy];
-  const actorId = s.rulerId;
-  const personal = !aiInitiated && s.leadPersonally && s.year - ruler(s).born >= 16;
+  const actorId = s.rulerId,
+    enemyActorId = enemy.headId;
+  const personal = !aiInitiated && s.leadPersonally && !ruler(s).prisonerOf && s.year - ruler(s).born >= 16;
   const ps = playerSide(s, war, personal);
   const es = enemySide(s, war);
+  // Who actually leads each side, snapshotted before anyone can fall. A ruler leading in person keeps the old roll below, so nobody rolls twice.
+  const ownCommander = personal ? undefined : commanderOf(s, s.playerClanId)?.id;
+  const theirCommander = commanderOf(s, enemy.id)?.id;
+  const [ownShips, theirShips] = [s.fleet, enemy.fleet];
   const pStr = ps.strength * range(s, 0.75, 1.25);
   const eStr = es.strength * range(s, 0.75, 1.25) * (aiInitiated ? 1.05 : 1);
   const won = pStr >= eStr;
@@ -288,6 +305,21 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
     }
   }
 
+  // Named commanders on both sides earn their reputations, and risk wounds, capture or death (commanders.ts).
+  const fateNotes = onCommandedBattle(s, {
+    id: `${warId}@${s.year}${aiInitiated ? ':defence' : ''}`,
+    attacker: aiInitiated ? enemy.id : s.playerClanId,
+    defender: aiInitiated ? s.playerClanId : enemy.id,
+    attackerCommanderId: aiInitiated ? theirCommander : ownCommander,
+    defenderCommanderId: aiInitiated ? ownCommander : theirCommander,
+    attackerWon: aiInitiated ? !won : won,
+    attackerShips: aiInitiated ? theirShips : ownShips,
+    attackerLosses: aiInitiated ? enemyLosses : playerLosses,
+    defenderShips: aiInitiated ? ownShips : theirShips,
+    defenderLosses: aiInitiated ? playerLosses : enemyLosses,
+  });
+  if (fateNotes.length) note = [note, ...fateNotes].filter(Boolean).join(' ');
+
   const report: BattleReport = {
     warId,
     enemy: enemy.id,
@@ -301,6 +333,8 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
     scoreChange,
     newScore: war.score,
     personal,
+    playerCommanderId: personal ? actorId : ownCommander,
+    enemyCommanderId: theirCommander,
     note,
   };
   s.pending.push({ kind: 'battle', uid: newId(s, 'b'), report });
@@ -309,12 +343,12 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
     `${won ? 'Victory' : 'Defeat'} against House ${enemy.name}${aiInitiated ? ' (they attacked)' : ''}: you lost ${playerLosses} ships, they lost ${enemyLosses}.`,
     won ? 'good' : 'bad',
   );
-  if (war.score >= 100) endWar(s, war, 'win', actorId);
-  else if (war.score <= -100) endWar(s, war, 'lose', actorId);
+  if (war.score >= 100) endWar(s, war, 'win', actorId, enemyActorId);
+  else if (war.score <= -100) endWar(s, war, 'lose', actorId, enemyActorId);
   return report;
 }
 
-export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white', actorId = s.rulerId): void {
+export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white', actorId = s.rulerId, enemyActorId = s.clans[war.enemy]?.headId): void {
   if (!s.wars.some((w) => w.id === war.id)) return;
   s.wars = s.wars.filter((w) => w.id !== war.id);
   const enemy = s.clans[war.enemy];
@@ -323,16 +357,16 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
   makeTruce(s, clan.id, war.enemy);
   if (outcome === 'white') {
     recordDeed(s, actorId, 'peaceTreaties');
-    recordDeed(s, enemy.headId, 'peaceTreaties');
+    recordDeed(s, enemyActorId, 'peaceTreaties');
     log(s, `White peace with House ${enemy.name}. Nobody gains anything.`, 'war');
     notice(s, 'Peace', `The war with House ${enemy.name} ends in a white peace.`, { icon: 'peace' });
     return;
   }
   recordDeed(s, actorId, outcome === 'win' ? 'warsWon' : 'warsLost');
-  recordDeed(s, enemy.headId, outcome === 'win' ? 'warsLost' : 'warsWon');
+  recordDeed(s, enemyActorId, outcome === 'win' ? 'warsLost' : 'warsWon');
   if (outcome === 'win' && !war.playerAttacker) recordDeed(s, actorId, 'defensiveWins');
-  if (outcome === 'lose' && war.playerAttacker) recordDeed(s, enemy.headId, 'defensiveWins');
-  if (outcome === 'lose' && war.cb === 'revolt') recordDeed(s, enemy.headId, 'independence');
+  if (outcome === 'lose' && war.playerAttacker) recordDeed(s, enemyActorId, 'defensiveWins');
+  if (outcome === 'lose' && war.cb === 'revolt') recordDeed(s, enemyActorId, 'independence');
   // The winner may carry off the loser's lord or kin, whichever side you're on.
   const captive = outcome === 'win' ? takeCaptive(s, clan.id, enemy.id, 0.25) : takeCaptive(s, enemy.id, clan.id, 0.3);
   if (captive && outcome === 'win')
@@ -409,8 +443,8 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
   }
   if (region && region.owner === s.playerClanId) {
     setOwner(s, region, enemy.id);
-    recordDeed(s, enemy.headId, 'regionsTaken', 1, region.id);
-    if (region.capital) recordDeed(s, enemy.headId, 'capitalsTaken', 1, region.planetId);
+    recordDeed(s, enemyActorId, 'regionsTaken', 1, region.id);
+    if (region.capital) recordDeed(s, enemyActorId, 'capitalsTaken', 1, region.planetId);
     notice(s, 'Region Lost', `House ${enemy.name} takes ${region.name} from you.`, { icon: 'lose', tone: 'bad' });
     log(s, `You lost ${region.name} to House ${enemy.name}.`, 'bad');
   }

@@ -8,7 +8,9 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { compressToUTF16, decompressFromBase64 } from 'lz-string';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { endWar } from './war';
+import { endWar, fightBattle } from './war';
+import { createCharacter } from './character';
+import { appointCommander, commandersTick } from './commanders';
 import { SAVE_VERSION } from './core';
 import type { Seeded } from './rng';
 import { deleteSave, exportSave, importSave, listSaves, migrate, MIGRATIONS, NewerSaveError, readBackup, readSave, writeSave } from './save';
@@ -111,6 +113,22 @@ describe.runIf(WRITE)('freeze peace and campaign weariness', () => {
       if (name === 'peace-oath') endWar(s, war, 'white');
       writeFileSync(file, exportSave(s) + '\n');
     }
+  });
+});
+
+describe.runIf(WRITE)('freeze a commanded battle', () => {
+  it('freezes real appointments and the leaders snapshotted in a pending report', () => {
+    const file = new URL(`save-v${SAVE_VERSION}-commanded-battle.json`, DIR);
+    if (existsSync(file)) return;
+    const { s, war } = peaceCampaign(),
+      head = s.characters[s.rulerId];
+    const child = createCharacter(s, { clanId: s.playerClanId, planetId: 'mars', born: s.year - 25, motherId: head.id });
+    head.childrenIds.push(child.id);
+    appointCommander(s, s.playerClanId, child.id);
+    commandersTick(s);
+    s.year++;
+    expect(fightBattle(s, war.id)?.playerCommanderId).toBe(child.id);
+    writeFileSync(file, exportSave(s) + '\n');
   });
 });
 

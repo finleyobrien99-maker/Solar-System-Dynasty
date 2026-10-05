@@ -456,6 +456,18 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               At +100 you win the region (or independence). At -100 you lose. Allies send 30% of their fleets; loyal vassals 20%. If a vassal is attacked by an
               outsider, their liege helps them.
             </p>
+            <h3>Named commanders</h3>
+            <p>
+              Appoint a free person aged 16–70 from your close family or council on Realm. Their own Command and fleet traits lead the battle; each point of
+              Command adds 4% strength. They gain a personal record and can earn a name. Your ruler can still lead personally; one person receives one
+              consequence roll for each actual battle. The report remembers who fought even after death or succession.
+            </p>
+            <p>
+              A commander's danger multiplier is 0.5 plus five times the share of their own participating ships lost, capped at 2.5. Base rolls, in order: 1.2%
+              death; on surviving defeat, 4% capture (danger capped at 2); then 5% wounds. Multiply those risks by danger. A winner who survives without a new
+              wound or capture and lacks War Hero has a 12% chance to earn it. AI-against-AI engagements use half danger. Captures vacate the post; wounds and
+              grief stay with real people. Civil wars use the loyal commander and actual claimant, with surviving ships returned to their original houses.
+            </p>
             <h3>War weariness</h3>
             <p>
               Each house gains 3 weariness per active campaign each cycle, capped at 9 for three or more wars. Actual battles add 3 plus 20 times the fraction

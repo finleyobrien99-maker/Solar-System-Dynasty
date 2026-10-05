@@ -241,6 +241,9 @@ export interface BattleReport {
   scoreChange: number;
   newScore: number;
   personal: boolean;
+  /** Actual leaders before battle deaths or succession; old reports may omit them. */
+  playerCommanderId?: string;
+  enemyCommanderId?: string;
   note?: string;
 }
 

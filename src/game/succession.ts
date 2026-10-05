@@ -1,4 +1,5 @@
 // Contested adult inheritance. Every fleet contribution is physically debited.
+import { commandFactor, commanderOf, onCommandedBattle } from './commanders';
 import { battleWeariness, warStrengthFactor } from './peace';
 import { ageOf, alive, ch, childrenOf, clanRank, clanRegions, effStats, fullName, log, newId, notice, siblingsOf, vassalsOf } from './core';
 import { councilStat, ROLE_KEYS } from './council';
@@ -123,6 +124,7 @@ function report(s: GameState, c: SuccessionCrisis, title: string, text: string, 
 }
 /** Surviving ships return to exactly the houses that contributed them. */
 function close(s: GameState, c: SuccessionCrisis): void {
+  if (!s.successionCrises.some((x) => x.id === c.id)) return;
   for (const p of c.contributions) if (s.clans[p.clanId]) setFleet(s, p.clanId, fleets(s, p.clanId) + p.ships);
   s.successionCrises = s.successionCrises.filter((x) => x.id !== c.id);
 }
@@ -296,10 +298,13 @@ function battle(s: GameState, c: SuccessionCrisis): void {
     rebel = rebelFleet(c);
   const inc = s.characters[c.incumbentId],
     claim = s.characters[c.claimantId];
+  const general = commanderOf(s, c.clanId);
+  const loyalLeader = general ?? inc;
   const cmd = Math.max(effStats(s, inc).cmd, c.clanId === s.playerClanId ? councilStat(s, 'admiral') : 0);
+  const loyalCommand = general ? commandFactor(s, general) : 1 + cmd * 0.04;
   const contributions = c.contributions.map((p) => ({ ...p }));
   const rebelStrength = c.contributions.reduce((n, p) => n + p.ships * warStrengthFactor(s, p.clanId), 0);
-  const win = loyal * warStrengthFactor(s, c.clanId) * (1 + cmd * 0.04) * (0.8 + int(s, 0, 40) / 100) >= rebelStrength * (1 + effStats(s, claim).cmd * 0.04);
+  const win = loyal * warStrengthFactor(s, c.clanId) * loyalCommand * (0.8 + int(s, 0, 40) / 100) >= rebelStrength * commandFactor(s, claim);
   const loyalLoss = Math.min(loyal, Math.ceil((loyal * int(s, win ? 6 : 18, win ? 14 : 30)) / 100));
   const rebelLoss = Math.min(rebel, Math.ceil((rebel * int(s, win ? 18 : 6, win ? 30 : 14)) / 100));
   setFleet(s, c.clanId, loyal - loyalLoss);
@@ -316,12 +321,34 @@ function battle(s: GameState, c: SuccessionCrisis): void {
   battleWeariness(s, c.clanId, ownShips, ownLosses);
   c.score += win ? 35 : -35;
   recordDeed(s, inc, win ? 'battlesWon' : 'battlesLost');
-  recordDeed(s, claim, win ? 'battlesLost' : 'battlesWon');
   log(
     s,
     `Succession battle in House ${s.clans[c.clanId].name}: ${win ? inc.name : claim.name} wins. Loyalists lose ${loyalLoss} ships; rebels lose ${rebelLoss}. Crown support: ${c.score}.`,
     c.clanId === s.playerClanId ? 'war' : 'news',
   );
+  const notes = onCommandedBattle(s, {
+    id: c.id + '@' + s.year,
+    attacker: c.clanId,
+    defender: c.clanId,
+    attackerCommanderId: loyalLeader.id,
+    defenderCommanderId: claim.id,
+    attackerWon: win,
+    attackerShips: loyal,
+    attackerLosses: loyalLoss,
+    defenderShips: rebel,
+    defenderLosses: rebelLoss,
+  });
+  for (const note of notes) log(s, note, c.clanId === s.playerClanId ? 'war' : 'news');
+  // A death can run succession and already return the surviving detached ships.
+  if (!s.successionCrises.includes(c)) return;
+  if (!alive(inc) || inc.prisonerOf) {
+    concede(s, c);
+    return;
+  }
+  if (!alive(claim) || claim.prisonerOf) {
+    uphold(s, c, claim.name + ' can no longer pursue the rival claim. Surviving ships return to their houses.');
+    return;
+  }
   if (!rebelFleet(c) || c.score >= 70)
     uphold(s, c, `${inc.name} defeats the rival claim. ${claim.name} is imprisoned; surviving rebel ships return to their houses.`, true);
   else if (!fleets(s, c.clanId) || c.score <= -70) concede(s, c);
