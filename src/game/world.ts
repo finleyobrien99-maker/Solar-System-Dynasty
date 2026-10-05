@@ -105,6 +105,7 @@ function emptyState(seed: number): GameState {
     relations: {},
     secrets: [],
     hooks: [],
+    successionCrises: [],
     stats: { battlesWon: 0, battlesLost: 0, schemes: 0, children: 0, peakRank: 1 },
     started: false,
   };
@@ -434,7 +435,11 @@ export function startGame(s: GameState, o: StartOpts): GameState {
   for (const c of Object.values(s.characters)) {
     if (c.clanId === clan.id) {
       const sp = c.spouseId ? s.characters[c.spouseId] : undefined;
-      if (sp && sp.clanId !== clan.id) delete s.characters[sp.id];
+      if (sp && sp.clanId !== clan.id) {
+        // A foreign head can be married to somebody in this household. Keep their throne intact.
+        if (s.clans[sp.clanId]?.headId === sp.id) sp.spouseId = undefined;
+        else delete s.characters[sp.id];
+      }
       delete s.characters[c.id];
     }
   }

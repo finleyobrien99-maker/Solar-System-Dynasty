@@ -34,6 +34,7 @@ export interface TraitDef {
 // One trait per line, so the table reads like a table.
 // prettier-ignore
 const T: TraitDef[] = [
+  { id: 'fulfilled', name: 'Fulfilled', cat: 'acquired', stats: { dip: 1 }, good: true, desc: 'Kept their coronation vow. +1 Diplomacy. A personal achievement, never inherited.' },
   // ── Genetic: intellect ladder
   { id: 'dim', name: 'Dim', cat: 'genetic', group: 'intellect', level: -2, all: -4, good: false, mutation: 2, desc: 'Struggles to follow a conversation, let alone a war.' },
   { id: 'slow', name: 'Slow', cat: 'genetic', group: 'intellect', level: -1, all: -2, good: false, mutation: 4, desc: 'Gets there in the end. Usually.' },

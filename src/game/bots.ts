@@ -6,6 +6,8 @@
 // The roadmap (§17) wants Passive, Builder, Warmonger, Breeder and Schemer
 // bots, plus a VIP "God" bot as a sanity check. The first four are here.
 
+import { manageCrisis } from './succession';
+import { ambitionChoices, chooseAmbition } from './ambitions';
 import { ageOf, alive, childrenOf, clanRank, clanRegions, dynastyMembers, homePlanet, planetRegions, ruler } from './core';
 import { appoint, candidates, ROLE_KEYS } from './council';
 import { fleetCap } from './economy';
@@ -76,6 +78,8 @@ function arrangeMatch(s: GameState, c: Character | undefined, score: (x: Charact
 
 /** The bare minimum to keep a dynasty alive: a married ruler and a matched heir. */
 function secureLine(s: GameState, score?: (x: Character) => number): void {
+  const choice = ambitionChoices(s)[0];
+  if (choice) chooseAmbition(s, choice);
   const r = ruler(s);
   if (ageOf(s, r) >= 16) arrangeMatch(s, r, score);
   arrangeMatch(s, currentHeir(s), score);
@@ -202,6 +206,7 @@ export const BOTS: Record<BotId, Bot> = {
     name: 'Builder',
     blurb: 'Economy first: council, development, trade, a modest fleet, time with the children. Fights only with a clear edge.',
     turn: (s) => {
+      manageCrisis(s, s.playerClanId);
       s.leadPersonally = false;
       secureLine(s);
       tendFamily(s);
@@ -219,6 +224,7 @@ export const BOTS: Record<BotId, Bot> = {
     name: 'Warmonger',
     blurb: 'Fleet first and always at war, ruler leading from the front.',
     turn: (s) => {
+      manageCrisis(s, s.playerClanId, true);
       s.leadPersonally = true;
       secureLine(s);
       fillCouncil(s);
@@ -234,6 +240,7 @@ export const BOTS: Record<BotId, Bot> = {
     name: 'Breeder',
     blurb: 'Matches close family for genes, tends the Gene Vault and Gene-Forge, defends but never attacks.',
     turn: (s) => {
+      manageCrisis(s, s.playerClanId);
       s.leadPersonally = false;
       secureLine(s, geneScore);
       tendFamily(s);

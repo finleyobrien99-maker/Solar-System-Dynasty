@@ -1,3 +1,5 @@
+import { AmbitionSection } from '../sections/AmbitionSection';
+import { SuccessionSection } from '../sections/SuccessionSection';
 import { AbdicateSection } from '../sections/AbdicateSection';
 import { useId, useState } from 'react';
 import { ageOf, alive, ch, charTitle, clanRank, fullName, lifespan, playerClan, ruler } from '../../game/core';
@@ -74,6 +76,9 @@ export function LifeTab() {
           </div>
         </div>
       </div>
+
+      <AmbitionSection />
+      <SuccessionSection />
 
       <div className="cols section">
         <div className="stack">

@@ -1,3 +1,5 @@
+import { finishAmbition } from './ambitions';
+import { beginSuccessionCrisis, successionCrisis } from './succession';
 import { observeReputation } from './epithets';
 // Birth, growing up, health, death and succession.
 
@@ -47,6 +49,7 @@ export function killCharacter(s: GameState, id: string, cause: string): void {
     return;
   }
   observeReputation(s, c);
+  finishAmbition(s, c);
   c.died = s.year;
   c.deathCause = cause;
   c.loverId = undefined;
@@ -409,14 +412,19 @@ export function succeed(s: GameState, deadId: string): void {
   const clan = playerClan(s);
   const dead = s.characters[deadId];
   const last = s.dynasty.rulers[s.dynasty.rulers.length - 1];
-  if (last && last.id === deadId) last.to = s.year;
+  if (last && last.id === deadId) {
+    last.to = s.year;
+    last.end = alive(dead) ? 'abdication' : 'death';
+  }
+  finishAmbition(s, dead);
   if (!heir) {
     s.gameOver = { reason: `${dead.name} died with no heir. The bloodline of House ${clan.name} has ended.`, year: s.year };
     return;
   }
   s.rulerId = heir.id;
   clan.headId = heir.id;
-  heir.prisonerOf = undefined;
+  // Taking the crown opens your own cells; it cannot release a hostage held abroad.
+  if (heir.prisonerOf === clan.id) heir.prisonerOf = undefined;
   // The new ruler cannot simultaneously serve as their own councillor.
   for (const role of ROLE_KEYS) if (s.council[role] === heir.id) delete s.council[role];
   if (s.dynasty.designatedHeir === heir.id) s.dynasty.designatedHeir = undefined;
@@ -426,6 +434,7 @@ export function succeed(s: GameState, deadId: string): void {
   s.dynasty.rulers.push({ id: heir.id, name: heir.name, from: s.year, title: '' });
   s.pending.push({ kind: 'succession', uid: newId(s, 's'), deadId, heirId: heir.id });
   log(s, `${heir.name} is now head of House ${clan.name}${ageOf(s, heir) < 16 ? ' under a regency council' : ''}.`, 'info');
+  beginSuccessionCrisis(s, deadId, heir.id);
 }
 
 /** A non-player clan picks a new head when the old one dies. */
@@ -445,6 +454,10 @@ export function aiSucceed(s: GameState, clanId: string): void {
     });
   }
   clan.headId = heir.id;
+  if (old) {
+    finishAmbition(s, old);
+    beginSuccessionCrisis(s, old.id, heir.id);
+  }
   clan.opinion = Math.round(clan.opinion * 0.5);
   if (!clanRegions(s, clanId).length) return;
   // Grudges are inherited along with the house.
@@ -459,6 +472,7 @@ export function retiredRuler(s: GameState, id: string): boolean {
 export function abdicationBlocker(s: GameState): string | null {
   if (s.gameOver || !alive(ruler(s))) return 'Your dynasty has ended.';
   if (s.pending.length) return 'Resolve the current events first.';
+  if (successionCrisis(s)) return 'Settle the disputed inheritance first.';
   if (ageOf(s, ruler(s)) < 16) return 'A regent cannot abdicate for a child.';
   if (ruler(s).prisonerOf) return 'You cannot abdicate while imprisoned.';
   const heir = currentHeir(s);

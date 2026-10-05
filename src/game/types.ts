@@ -52,7 +52,36 @@ export interface Character {
   marriedIn?: boolean; // joined their spouse's household; children go to the spouse's house
   prisonerOf?: string; // clan id holding them
   reputation?: Reputation; // lifetime deeds and dated earned epithets; not inherited
+  ambition?: RulerAmbition;
   cloneOf?: string; // id of the character this one was cloned from
+}
+
+export type AmbitionKind = 'dynasty' | 'builder' | 'warhero' | 'scholar' | 'geneticist' | 'patron' | 'prosperous' | 'peacemaker' | 'conqueror';
+export interface RulerAmbition {
+  kind: AmbitionKind;
+  year: number;
+  baseline: number;
+  progress: number;
+  status: 'active' | 'fulfilled' | 'failed';
+  lastYear: number;
+  ended?: number;
+}
+export interface SuccessionCrisis {
+  id: string;
+  clanId: string;
+  predecessorId: string;
+  incumbentId: string;
+  claimantId: string;
+  started: number;
+  deadline: number;
+  stage: 'dispute' | 'civil-war';
+  reasons: string[];
+  votes: { id: string; side: 'incumbent' | 'claimant'; reason: string }[];
+  backerIds: string[];
+  contributions: { clanId: string; ships: number }[];
+  score: number;
+  heard?: boolean;
+  lastBattle?: number;
 }
 
 export interface SigilSpec {
@@ -126,6 +155,7 @@ export interface RulerRecord {
   from: number;
   to?: number;
   title: string;
+  end?: 'death' | 'abdication' | 'deposed';
 }
 
 export interface Dynasty {
@@ -361,6 +391,7 @@ export interface GameState {
   relations: Record<string, Record<string, Relation>>;
   secrets: Secret[];
   hooks: Hook[];
+  successionCrises: SuccessionCrisis[];
   vip?: VipState;
   scenario?: ScenarioId;
   stats: { battlesWon: number; battlesLost: number; schemes: number; children: number; peakRank: number };

@@ -1,5 +1,6 @@
 // A ruler's deeds belong to that person, never to their dynasty or successor.
 // No dice, stat bonuses or fabricated AI actions: both sides use the same rules.
+import { observeAmbition } from './ambitions';
 import { ageOf, alive, ch, fullName, log, notice } from './core';
 import { DEED_LABELS, EPITHETS, type Deed, type EpithetDef, type Reputation } from './epithetDefs';
 import { marriageMood, relationsOf } from './relations';
@@ -75,8 +76,9 @@ export function recordDeed(s: GameState, c: Character | string | undefined, deed
     seen.push(uniqueId);
   }
   r.deeds[deed] = (r.deeds[deed] ?? 0) + amount;
-  if (deed === 'warsStarted') r.peaceStreak = 0;
+  if (deed === 'warsStarted') breakPeace(s, who.id);
   awardEpithets(s, who);
+  observeAmbition(s, who);
 }
 /** A war interrupts peace even if it is settled before the next yearly tick. */
 export function breakPeace(s: GameState, id: string): void {
@@ -84,6 +86,7 @@ export function breakPeace(s: GameState, id: string): void {
   if (!alive(c)) return;
   const r = reputation(s, c);
   if (r) r.peaceStreak = 0;
+  if (c.ambition?.status === 'active' && c.ambition.kind === 'peacemaker') c.ambition.progress = 0;
 }
 function peak(r: Reputation, deed: Deed, value: number): void {
   r.deeds[deed] = Math.max(r.deeds[deed] ?? 0, value);
@@ -106,6 +109,7 @@ export function observeReputation(s: GameState, c: Character): void {
   peak(r, 'friends', relationsOf(s, c).filter((rel) => rel.kind === 'friend').length);
 
   awardEpithets(s, c);
+  observeAmbition(s, c);
 }
 /** Observe one real cycle per living ruler, once only, before deaths or succession. */
 export function epithetsTick(s: GameState): void {

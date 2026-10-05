@@ -1,3 +1,4 @@
+import { kinship } from '../../game/ancestry';
 import { ageOf, ch, clanRank } from '../../game/core';
 import { acceptSuitor, refreshSuitors, suitorRefreshCost } from '../../game/family';
 import { PLANET_BY_ID } from '../../game/planets';
@@ -35,6 +36,7 @@ export function SuitorModal() {
         {sl.list.map((sug, i) => {
           const c = sug.char;
           const clan = s.clans[c.clanId];
+          const kin = target ? kinship(s, target, c) : undefined;
           const genes = c.traits.filter((t) => TRAITS[t]?.cat === 'genetic');
           const goodGenes = genes.filter((t) => TRAITS[t].good).length;
           const badGenes = genes.filter((t) => TRAITS[t].good === false).length;
@@ -65,6 +67,14 @@ export function SuitorModal() {
               <div style={{ margin: '8px 0' }}>
                 <TraitList c={c} s={s} />
               </div>
+              {kin && (
+                <div className={kin.close ? 'card flat bad' : 'muted'} style={{ margin: '8px 0', fontSize: 'var(--font-size-0_8rem)' }}>
+                  {kin.coefficient > 0
+                    ? (kin.close ? 'Close family: ' : 'Related: ') + kin.label.toLowerCase() + ' · ' + (kin.coefficient * 100).toFixed(2) + '%'
+                    : kin.label + ' (five generations)'}
+                  <InfoDot text="This is the prospective children's estimated inbreeding coefficient: independent paths to shared ancestors, using up to five generations of known parents. Shared traits or surnames do not establish kinship. Missing ancestry stays unknown. This warning does not yet alter inheritance or health." />
+                </div>
+              )}
               <StatBlock s={s} c={c} />
               <div className="spread" style={{ marginTop: 'var(--space-8px)' }}>
                 <span className="muted">{sug.prestigeCost ? `${sug.prestigeCost} prestige` : 'No cost'}</span>

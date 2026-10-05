@@ -72,13 +72,14 @@ describe('starting scenarios', () => {
     expect(deposed.every((c) => memorySum(c) < 0)).toBe(true);
   });
 
-  it('every scenario plays 60 cycles; only a governor who never lifts a finger can fall', () => {
+  it('powerful scenarios play 60 unattended cycles; a governor can lose land or let the bloodline end', () => {
     for (const sc of ['governor', 'viceroy', 'monarch', 'emperor'] as ScenarioId[]) {
       const s = start(sc, { family: 'kids', age: 34 }, 21);
       play(s, 60);
-      // A governor who builds no ships and answers nothing is fair game for an
-      // ambitious neighbour; a house that starts with real power should not be.
-      const fell = sc === 'governor' && /lost every last region/.test(s.gameOver?.reason ?? '');
+      // This run arranges no marriages and builds no ships. An unmanaged governor
+      // can lose their land or leave an unmarried heir who dies without children.
+      // The higher-power seeded scenarios must still survive the full run.
+      const fell = sc === 'governor' && /lost every last region|died with no heir/.test(s.gameOver?.reason ?? '');
       if (!fell) expect(s.year).toBeGreaterThan(2550);
     }
   });

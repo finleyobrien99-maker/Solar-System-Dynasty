@@ -41,7 +41,7 @@ export function generateSuitors(s: GameState, forId: string): void {
     const lo = mode === 'marry' ? Math.max(16, age - 8) : Math.max(0, age - 3);
     const hi = mode === 'marry' ? Math.max(lo, Math.min(age + 6, 60)) : Math.min(15, age + 3);
     const theirAge = int(s, lo, Math.max(lo, hi));
-    const highborn = chance(s, 0.35);
+    let highborn = chance(s, 0.35);
     const c = createCharacter(s, {
       gender,
       born: s.year - theirAge,
@@ -52,6 +52,12 @@ export function generateSuitors(s: GameState, forId: string): void {
       geneticCount: chance(s, 0.45) ? 1 : chance(s, 0.45) ? 2 : chance(s, 0.3) ? 3 : 0,
     });
     if (theirAge < 16) c.traits = randomPersonality(s, 1, c.traits);
+    // Record the offered parentage before previewing, without adding an unaccepted child.
+    const head = s.characters[clan.headId];
+    if (highborn && head && ageOf(s, head) - theirAge >= 16) {
+      if (head.gender === 'M') c.fatherId = head.id;
+      else c.motherId = head.id;
+    } else highborn = false;
     // Keep candidates out of the world until one is chosen.
     delete s.characters[c.id];
     const rank = clanRank(s, clan.id);
@@ -87,11 +93,10 @@ export function acceptSuitor(s: GameState, index: number): boolean {
   s.characters[c.id] = c;
   const clan = s.clans[c.clanId];
   if (suitor.highborn && clan) {
-    const head = s.characters[clan.headId];
-    if (head && ageOf(s, head) - ageOf(s, c) >= 16) {
-      if (head.gender === 'M') c.fatherId = head.id;
-      else c.motherId = head.id;
-      head.childrenIds.push(c.id);
+    // Preview parentage remains the same even if the house has changed head.
+    for (const parentId of [c.fatherId, c.motherId]) {
+      const parent = ch(s, parentId);
+      if (parent && !parent.childrenIds.includes(c.id)) parent.childrenIds.push(c.id);
     }
     clan.allied = true;
     remember(s, clan.id, `Married ${c.name} into their house`, 30, 0.02);

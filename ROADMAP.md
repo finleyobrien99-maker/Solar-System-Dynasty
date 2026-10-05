@@ -289,6 +289,7 @@ This is the bit no other game does. Make it *deep*.
 - See section 16.1 for the data model.
 
 ### 2.2 Inbreeding and genetic diversity `P0` `M`
+- **Warning slice complete, October 2026:** prospective marriage warnings use real recorded ancestry, including parent IDs whose old records were pruned, up to five generations. Full siblings/parent-child show 25%, half-siblings 12.5%, first cousins 6.25% for ordinary pedigrees. Ancestral inbreeding corrections, cached full pedigrees and inheritance/health effects remain.
 - Compute a consanguinity coefficient (Wright's F) from the family tree, with caching. High F raises the chance that recessive bad alleles pair up (Gene-Rot, Sickly, Barren, Lunatic, Brittle Bones).
 - This is the natural brake on "marry your cousin to keep Genius". Make it visible: the suitor list shows a **Kinship** warning and the predicted risk.
 - Add a "Bloodline diversity" stat to the Bloodline tab.
@@ -397,6 +398,7 @@ Content is the cheapest depth there is. This phase builds the machine and then f
   - **Commission a Monument**
 
 ### 3.4 Ambitions per ruler `P1` `M`
+- **First playable slice, October 2026:** choose one of three personality-suited coronation vows from nine goals (family, building, battle, study, genetics, charity, income, peace and conquest). Only the person's new deeds count. Success pays 80-120 prestige once and earns Fulfilled (+1 Diplomacy, never inherited). Death, abdication or deposition records the unfinished vow in the memorial. AI heads choose goals supported by their own actual actions and receive their own rewards. Renown and named rival/planet-specific goals remain.
 - When a ruler takes the throne, pick 1 of 3 ambitions suited to their traits ("Unite Mars", "Sire five children", "Become a War Hero", "Sequence Ageless", "Destroy House Dragunov"). Success gives prestige, renown and a lasting trait. Failure at death shows in the obituary.
 
 ### 3.5 The Chronicle `P2` `M`
@@ -779,12 +781,12 @@ Grav-ball tournament, zero-g ballet, asteroid racing, deep-space hunt (Leviathan
 
 ## Phase 12: Realistic politics and warfare (Fin's brief)
 
-Fin, Oct 2026: "a realistic political/warfare phone game like a medieval life game." The earlier phases are sci-fi-heavy (genes, ships). This phase is the medieval spine: you are a person inside a feudal web, not a god. Rule for all of it: **AI houses use the same rules** (see 8.1). Most items need a save change; v4 now stores independent AI bloodline programmes, so the next schema change needs v5. Items marked **Fin's call** change balance.
+Fin, Oct 2026: "a realistic political/warfare phone game like a medieval life game." The earlier phases are sci-fi-heavy (genes, ships). This phase is the medieval spine: you are a person inside a feudal web, not a god. Rule for all of it: **AI houses use the same rules** (see 8.1). Most items need a save change; v6 now stores adult succession disputes and personal coronation vows; the next schema change needs v7. Items marked **Fin's call** change balance.
 
 ### Feudal structure
 - **12.1 Oaths and truces `P0` `M` (Fin's call).** Every deal is an oath with an expiry: fealty, truce, marriage pledge, hostage exchange. After any war a truce of N cycles blocks new wars between the same houses; breaking an oath costs prestige and every house's opinion, plus a long grudge (the `oathsBroken` deed and `betrayPact` already exist). This is also the cleanest fix for "war is far too easy": no hit-and-run war spam.
 - **12.2 Feudal contracts `P1` `M`.** Replace the flat 15% tribute with levy size, tax and crown authority per vassal. Vassals who dislike you send fewer ships, or none, when you call them (the `call_to_arms` event already works the other way round).
-- **12.3 Succession crises `P0` `L`.** A weak or disputed heir at a ruler's death starts a chain: claimants, a council vote, a regent who may not step down, then civil war. Add succession laws that split the realm among children (gavelkind) or let vassals elect. Builds on 6.6 and 2.6.
+- **12.3 Succession crises `P0` `L`.** **Adult inheritance slice shipped in this update:** actual children/siblings may contest a real death, with explained personality/grievance risk capped at 35%. Named councillors take sides, actual vassals back claims, and the new ruler has two cycles for a paid settlement, one hearing, a personal hook or concession. Unsettled claims detach real ships into a civil war; casualties and surviving returns are accounted to their original houses. Losing changes the ruler and continues the dynasty. AI houses use their own resources and no player VIP bonuses. Save v6 freezes both an active dispute and civil war. Foreign-hostage heirs retain custody on inheriting; early new-game cleanup no longer deletes a foreign head, and affected saves recover once through ordinary house succession. Named regents, elective laws and partition remain.  A weak or disputed heir at a ruler's death starts a chain: claimants, a council vote, a regent who may not step down, then civil war. Add succession laws that split the realm among children (gavelkind) or let vassals elect. Builds on 6.6 and 2.6.
 - **12.4 Fosterage and wards `P1` `M`.** Children are fostered at other courts from age 6 to 16 and bond with their foster family (a lasting feeling in `relations.ts`). Hostages are the same system with teeth.
 - **12.5 Marriage contracts `P1` `M`.** Dowry or bride price, claims for the children, infant betrothals as alliances. Breaking a betrothal is an insult (a feud). AI proposals come with terms.
 - **12.6 Justice cards `P1` `S`.** **First slice complete locally (Oct 2026):** ten petitions in eventsPetitions.ts: boundary dispute, widow's accusation, unpaid debt, broken promise, dock beating, heresy charge, smuggling, duel death, inheritance quarrel and assembly insult. Named nobles remember rulings; justice/arbitrary deeds feed earned names. Real house payments are capped at available funds. Commoner accusations and a fair duel never create murder proof. Broader feudal court authority and follow-up cases remain.
@@ -976,8 +978,8 @@ Why this order: the DSL, relations, secrets and genotype are the multipliers. Ev
 10. 🟡 `1.7` Ruler memorials and epithets done; personal life logs, obituary ratings and regnal numbers remain. **S**
 11. 🟡 `3.3` Abdicate done; Move Capital and Hold a Tournament remain. **S**
 12. ✅ `1.5` Secrets and hooks MVP (affair and murder proof, investigation/spymaster discovery, one-use cash or marriage favours). **M** (combined with noble dossiers and ten petitions locally; see 1.5)
-13. `2.2` Consanguinity coefficient with the Kinship warning in suitors. Works before the full genotype by approximating with trait-groups. **S**
-14. `3.4` Ruler ambitions (pick 1 of 3 at coronation, with rewards). **S**
+13. 🟡 `2.2` Kinship warnings in suitors now use actual recorded parents and independent ancestral paths over five generations. Highborn parentage is visible before acceptance and remains stable if the court changes head. Missing ancestry is not invented; shared traits and surnames never imply a relationship. This is an estimate without ancestral inbreeding correction; genotype penalties and bloodline diversity remain. **S**
+14. ✅ `3.4` Personal coronation ambitions: three suited choices, nine goals, real progress, one reward and a remembered outcome. **S**
 15. `3.6` 30 new events across childhood, court and planet-specific categories. **M** (done Oct 2026: see 3.6)
 
 ---

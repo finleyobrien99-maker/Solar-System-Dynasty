@@ -16,6 +16,9 @@ import { ageUp } from './tick';
 import { killCharacter } from './life';
 import type { GameState, ScenarioId } from './types';
 import { createWorld, rollRuler, scenarioHouses, startGame } from './world';
+import { disputedInheritance } from './testScenarios';
+import { successionTick } from './succession';
+import { ambitionChoices, chooseAmbition } from './ambitions';
 
 const DIR = new URL('./__fixtures__/', import.meta.url);
 const WRITE = import.meta.env.MODE === 'fixtures';
@@ -82,7 +85,34 @@ describe.runIf(WRITE)('freeze fixture saves', () => {
   });
 });
 
+describe.runIf(WRITE)('freeze contested inheritance', () => {
+  it('freezes a disputed crown and a civil war with an active personal vow', () => {
+    for (const name of ['dispute', 'civil-war']) {
+      const file = new URL(`save-v${SAVE_VERSION}-${name}.json`, DIR);
+      if (existsSync(file)) continue;
+      const { s, crisis } = disputedInheritance();
+      chooseAmbition(s, ambitionChoices(s)[0]);
+      if (name === 'civil-war') {
+        s.year = crisis.deadline;
+        successionTick(s);
+      }
+      writeFileSync(file, exportSave(s) + '\n');
+    }
+  });
+});
+
 describe('save migrations', () => {
+  it('keeps foreign rulers alive when replacing the starting household, and recovers legacy missing heads once', () => {
+    const s = createWorld(31),
+      house = scenarioHouses(s, 'mars', 'viceroy')[0];
+    startGame(s, { clanId: house.id, ruler: rollRuler(31, 'mars', 'F'), focus: 'dip', scenario: 'viceroy' });
+    for (const clan of Object.values(s.clans)) expect(s.characters[clan.headId]).toBeTruthy();
+    const foreign = Object.values(s.clans).find((c) => c.id !== s.playerClanId)!;
+    delete s.characters[foreign.headId];
+    migrate(s);
+    expect(s.characters[foreign.headId]).toBeTruthy();
+    expect(migrate(structuredClone(s))).toEqual(s);
+  });
   it('has a migration step for every version bump', () => {
     for (let v = 2; v <= SAVE_VERSION; v++) expect(MIGRATIONS[v], `MIGRATIONS[${v}]`).toBeTypeOf('function');
   });

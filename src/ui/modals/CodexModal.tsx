@@ -51,6 +51,36 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               children are born, rivals scheme, wars rage. When your ruler dies you carry on as their heir. Your goal is whatever you want: rule a planet, unite
               the system on the Solar Throne, or breed the most perfect bloodline the stars have ever seen.
             </p>
+            <h3>A ruler's purpose</h3>
+            <p>
+              Choose one of three coronation vows on Life. They suit your ruler's personality and measure their own deeds after the choice: children, building,
+              battle, study, research, charity, income, peace or conquest. Success gives 80–120 prestige and Fulfilled (+1 Diplomacy); death, retirement or
+              deposition records an unfinished vow in their memorial. Your heir chooses their own.
+            </p>
+            <h3>A disputed inheritance</h3>
+            <p>
+              When a ruler dies, a free adult child or sibling can contest a free adult heir. Ambition, neglect, hostility and being passed over raise the risk;
+              closeness and contentment lower it. The strongest potential claimant gets one roll, capped at 35%. Check Succession outlook on Life before the
+              handover.
+            </p>
+            <p>
+              You have two cycles to act. A settlement costs 120 + 60 per rank and guarantees withdrawal. A council hearing uses a 50% base, +2.5% per point of
+              Diplomacy advantage and +8% or −8% per living councillor's support, capped at 15–85%. It can be tried once. A usable personal hook forces
+              withdrawal and is consumed. Conceding costs 20% prestige and continues play as the claimant.
+            </p>
+            <p>
+              Unsettled claims become civil wars. Rebels take 30% of the house fleet and 35% from up to three backing vassals, physically removing those ships
+              from their fleets. Battles use ships, Command (+4% per point) and an 80–120% loyalist roll. Winning adds 35 support, losing removes 35: at +70 the
+              claimant is imprisoned, at −70 or an empty loyal fleet the crown changes hands. Battles cost real ships and happen once per cycle, automatically
+              on Age Up if needed. After six war cycles, support and surviving fleets decide. Surviving rebel ships return to the houses that contributed them.
+              AI houses use their own money, councillors and fleets.
+            </p>
+            <h3>Know your family</h3>
+            <p>
+              The matchmaker checks five generations of recorded parents. Close-family warnings come from real shared ancestors, never matching genes or
+              surnames. It shows the prospective children's estimated inbreeding coefficient: 25% for full siblings or parent/child, 12.5% for half-siblings,
+              6.25% for first cousins. Unknown ancestry stays unknown. This first warning does not yet change inheritance or health.
+            </p>
             <h3>The tabs</h3>
             <ul>
               <li>

@@ -1,3 +1,4 @@
+import { AmbitionRecord } from './AmbitionSection';
 import { alive } from '../../game/core';
 import { rulerLegacy } from '../../game/legacy';
 import { retiredRuler } from '../../game/life';
@@ -32,6 +33,7 @@ export function RulerLegacy({ c }: { c: Character }) {
             </div>
           ))}
         </div>
+        <AmbitionRecord c={c} />
         <h4 style={{ marginTop: 'var(--space-14px)' }}>Known for</h4>
         {legacy.highlights.length ? (
           <div className="grid tight">

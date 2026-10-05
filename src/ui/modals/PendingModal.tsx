@@ -156,15 +156,23 @@ function SuccessionView({ p }: { p: Extract<Pending, { kind: 'succession' }> }) 
     );
   }
   const locked = heir.traits.filter((t) => s.dynasty.locked.includes(t));
+  const deposed = dead && s.dynasty.rulers.find((r) => r.id === dead.id && r.to !== undefined)?.end === 'deposed';
   return (
-    <Modal title={alive(dead) ? 'The Throne Passes to a New Generation' : 'The Ruler is Dead. Long Live the Ruler!'} icon="crown" focusTitle>
+    <Modal
+      title={deposed ? 'A Rival Takes the Crown' : alive(dead) ? 'The Throne Passes to a New Generation' : 'The Ruler is Dead. Long Live the Ruler!'}
+      icon="crown"
+      focusTitle
+    >
       <div className="row" style={{ justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
         {dead && (
           <div style={{ textAlign: 'center' }}>
             <Face c={dead} size={110} />
             <div className="muted">{fullName(s, dead)}</div>
             <div className="dim" style={{ fontSize: '0.78rem' }}>
-              {alive(dead) ? 'Retired, aged ' + ageOf(s, dead) : dead.born + '–' + dead.died + ' · ' + dead.deathCause}
+              {alive(dead)
+                ? (s.dynasty.rulers.find((r) => r.id === dead.id && r.to !== undefined)?.end === 'deposed' ? 'Deposed, aged ' : 'Retired, aged ') +
+                  ageOf(s, dead)
+                : dead.born + '–' + dead.died + ' · ' + dead.deathCause}
             </div>
           </div>
         )}

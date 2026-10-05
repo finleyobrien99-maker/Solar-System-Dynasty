@@ -379,6 +379,12 @@ export function prune(s: GameState): void {
     if (c.motherId) keep.add(c.motherId);
   }
   for (const clan of Object.values(s.clans)) keep.add(clan.headId);
+  for (const crisis of s.successionCrises) {
+    keep.add(crisis.predecessorId);
+    keep.add(crisis.claimantId);
+    keep.add(crisis.incumbentId);
+    for (const vote of crisis.votes) keep.add(vote.id);
+  }
   for (const secret of s.secrets) {
     keep.add(secret.otherId); // Victim/lover ancestry is needed when old evidence is exposed.
     if (secret.betrayedId) keep.add(secret.betrayedId);

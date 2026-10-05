@@ -18,6 +18,8 @@ import { Sigil } from '../../svg/Sigil';
 import { Btn, CharCard, InfoDot, Modal, Opinion, Section, TraitChip } from '../components';
 import { useGame } from '../store';
 import { MemoryList } from '../sections/GrudgeSection';
+import { successionCrisis, rebelFleet } from '../../game/succession';
+import { AmbitionRecord } from '../sections/AmbitionSection';
 import { isRival } from '../../game/memory';
 import { aiAmbition } from '../../game/aiAmbition';
 import { pactsOf } from '../../game/aiCourt';
@@ -40,10 +42,18 @@ export function ClanModal({ id }: { id: string }) {
   const mine = clan.isPlayer;
   const atWar = s.wars.some((w) => w.enemy === id);
   const ambition = aiAmbition(s, clan);
+  const crisis = successionCrisis(s, id);
   const kin = [...pactsOf(s, id)].map((k) => s.clans[k]);
 
   return (
     <Modal title={`House ${clan.name}`} onClose={() => openClan(undefined)} wide>
+      {crisis && (
+        <div className="card flat bad" style={{ marginBottom: 'var(--space-12px)' }}>
+          {ch(s, crisis.claimantId)?.name} contests the crown.{' '}
+          {crisis.stage === 'civil-war' ? 'Civil war: ' + rebelFleet(crisis) + ' rebel ships.' : 'Settlement deadline: ' + crisis.deadline + '.'}
+        </div>
+      )}
+      {head?.ambition && <AmbitionRecord c={head} />}
       <div className="row top wrap" style={{ gap: 'var(--space-14px)' }}>
         <Sigil spec={clan.sigil} size={84} />
         <div className="grow stack" style={{ gap: 'var(--space-4px)' }}>

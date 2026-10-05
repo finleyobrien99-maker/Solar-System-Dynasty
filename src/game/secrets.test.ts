@@ -1,3 +1,4 @@
+import { SAVE_VERSION } from './core';
 import { describe, expect, it } from 'vitest';
 import { aiPlans, runAiScheme } from './aiIntrigue';
 import { beginAffair, exposeAffair } from './aiCourt';
@@ -201,7 +202,7 @@ describe('real evidence and personal leverage', () => {
     delete (s as Partial<GameState>).secrets;
     delete (s as Partial<GameState>).hooks;
     const migrated = migrate(s);
-    expect(migrated.version).toBe(5);
+    expect(migrated.version).toBe(SAVE_VERSION);
     expect(migrated.secrets.every((x) => x.kind === 'affair')).toBe(true);
     const once = structuredClone(migrated);
     expect(migrate({ ...structuredClone(migrated), version: 4 })).toEqual(once);

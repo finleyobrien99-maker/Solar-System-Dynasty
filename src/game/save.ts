@@ -11,6 +11,7 @@ import { initialiseHouseGenetics } from './houseGenetics';
 import { compressToBase64, decompressFromBase64, decompressFromUTF16 } from 'lz-string';
 import { mirror } from '../native';
 import { deflateString, inflateString } from './codec';
+import { aiSucceed } from './life';
 import { clanTitle, ruler, SAVE_VERSION } from './core';
 import { hashString } from './rng';
 import type { GameState } from './types';
@@ -227,6 +228,19 @@ export class NewerSaveError extends Error {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MIGRATIONS: Record<number, (s: any) => void> = {
+  // Existing reigns may choose a vow; no historical disputes or achievements are invented.
+  6: (s) => {
+    s.successionCrises ??= [];
+    // An old, unaccepted highborn offer had its parent assigned only on acceptance.
+    for (const offer of s.suitors?.list ?? []) {
+      const c = offer.char,
+        head = s.characters[s.clans[c.clanId]?.headId];
+      if (offer.highborn && !c.fatherId && !c.motherId && head && c.born - head.born >= 16) {
+        if (head.gender === 'M') c.fatherId = head.id;
+        else c.motherId = head.id;
+      }
+    }
+  },
   5: (s) => initialiseSecrets(s),
   4: (s) => initialiseHouseGenetics(s),
   // Lifetime reputations start counting real deeds from this update.
@@ -244,6 +258,9 @@ export function migrate(s: GameState): GameState {
   if (from === 1) backfillV1(s);
   for (let v = from + 1; v <= SAVE_VERSION; v++) MIGRATIONS[v](s);
   s.version = SAVE_VERSION;
+  // Early new-game cleanup could delete a foreign spouse who was also a house head.
+  // Recover that house through its normal succession, once, rather than leaving a dangling ID.
+  for (const clan of Object.values(s.clans)) if (clan.id !== s.playerClanId && !s.characters[clan.headId]) aiSucceed(s, clan.id);
   return s;
 }
 

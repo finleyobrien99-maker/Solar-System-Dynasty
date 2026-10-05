@@ -83,7 +83,11 @@ export function CharacterModal({ id }: { id: string }) {
             </div>
             <div className="row wrap" style={{ marginTop: 'var(--space-6px)' }}>
               <ClanBadge clanId={c.clanId} />
-              {retiredRuler(s, c.id) && <span className="pill gold">Retired ruler</span>}
+              {retiredRuler(s, c.id) && (
+                <span className="pill gold">
+                  {s.dynasty.rulers.find((r) => r.id === c.id && r.to !== undefined)?.end === 'deposed' ? 'Deposed ruler' : 'Retired ruler'}
+                </span>
+              )}
               {c.bastard && <span className="pill red">Unsanctioned birth</span>}
               {living && c.prisonerOf === s.playerClanId && <span className="pill red">Held by your house</span>}
               {s.dynasty.designatedHeir === c.id && <span className="pill gold">Designated heir</span>}
