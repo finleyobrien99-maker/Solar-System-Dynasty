@@ -12,12 +12,13 @@ import { named } from './eventBits';
 import { pr, type EventCtx, type EventDef } from './eventKit';
 import { currentHeir } from './life';
 import { int, pick } from './rng';
+import { isAway } from './wards';
 import type { Character, Clan, GameState } from './types';
 
 // ── Who comes before you (cheap: houses on your worlds and close family) ──
 
 function freeAdult(s: GameState, c: Character | undefined, min = 18): c is Character {
-  return alive(c) && !c.prisonerOf && ageOf(s, c) >= min && c.id !== s.rulerId;
+  return alive(c) && !c.prisonerOf && !isAway(s, c) && ageOf(s, c) >= min && c.id !== s.rulerId;
 }
 
 /** Landed AI houses on the worlds where you hold land, with a free adult lord. */

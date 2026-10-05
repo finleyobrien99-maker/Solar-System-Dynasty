@@ -31,6 +31,7 @@ import { capOpinion, grudgeOpinion, isRival, opinionCeiling } from './memory';
 import { addFeeling, feelingsSum, murdered, opinionOf } from './relations';
 import { aiIntrigueTick } from './aiIntrigue';
 import { aiDynastyTick } from './aiDynasty';
+import { aiWardsTick } from './wards';
 import { aiAmbition, ambitionHouse, AMBITION_AGGRESSION, type AmbitionKind } from './aiAmbition';
 import { aiAffairsTick, aiArrests, aiMarriages, alliesAbandon, betrayPact, captivesTick, kinFleet, pactMap, takeCaptive, wouldBetray } from './aiCourt';
 import { neighbourPlanets, PLANET_BY_ID } from './planets';
@@ -361,6 +362,7 @@ export function aiTick(s: GameState): void {
   rivalPlots(s);
   aiIntrigueTick(s);
   aiArrests(s);
+  aiWardsTick(s);
   captivesTick(s);
   alliesAbandon(s);
   revolts(s);

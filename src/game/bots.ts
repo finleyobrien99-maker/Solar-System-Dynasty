@@ -18,6 +18,7 @@ import { createViceroy, developCost, developRegion, forgeSolarThrone, recruitShi
 import { neglectedFor, spendTime, timeLeft } from './relations';
 import { pick, type Seeded } from './rng';
 import { openRoute } from './trade';
+import { appointMentor, canBeMentored, fosterOptions, mentorBlocker, mentorCandidates, mentorshipOf, sendAsWard, teachingOf, wardshipOf } from './wards';
 import { isHeritable, TRAITS } from './traits';
 import type { Character, GameState, Region } from './types';
 import { canFightBattle, cbOptions, declareWar, fightBattle, offerPeace, warBlocker } from './war';
@@ -188,6 +189,27 @@ function tendFamily(s: GameState): void {
   for (const k of kids) if (timeLeft(s) > 0) spendTime(s, k.id, 'dinner');
 }
 
+/**
+ * Give every child of fostering age the best mentor with room for a pupil
+ * and, if `foster`, send one younger child who isn't the heir to the most
+ * willing court that would raise them (wave 2 wards and mentors).
+ */
+function raiseChildren(s: GameState, foster: boolean): void {
+  const heir = currentHeir(s);
+  const kids = childrenOf(s, ruler(s)).filter((k) => canBeMentored(s, k) && !wardshipOf(s, k.id));
+  for (const k of kids) {
+    if (mentorshipOf(s, k.id)) continue;
+    const best = mentorCandidates(s, k.id)
+      .filter((m) => !mentorBlocker(s, k.id, m.id))
+      .sort((a, b) => teachingOf(s, b).level - teachingOf(s, a).level)[0];
+    if (best) appointMentor(s, k.id, best.id);
+  }
+  if (!foster || childrenOf(s, ruler(s)).some((k) => wardshipOf(s, k.id))) return;
+  const young = kids.find((k) => k.id !== heir?.id && ageOf(s, k) <= 10);
+  const court = young && fosterOptions(s, young.id)[0];
+  if (young && court && court.chance >= 0.6) sendAsWard(s, young.id, court.clan.id);
+}
+
 // ── The bots ──────────────────────────────────────────────────────────────
 
 export const BOTS: Record<BotId, Bot> = {
@@ -205,6 +227,7 @@ export const BOTS: Record<BotId, Bot> = {
       s.leadPersonally = false;
       secureLine(s);
       tendFamily(s);
+      raiseChildren(s, true);
       fillCouncil(s);
       develop(s, 150);
       recruitTo(s, 0.6, 150);
@@ -237,6 +260,7 @@ export const BOTS: Record<BotId, Bot> = {
       s.leadPersonally = false;
       secureLine(s, geneScore);
       tendFamily(s);
+      raiseChildren(s, false);
       // Hand-pick matches for close family; auto-matchmaking handles distant kin, as for a player.
       for (const c of dynastyMembers(s)) if (ageOf(s, c) >= 16 && isCloseFamily(s, c)) arrangeMatch(s, c, geneScore);
       fillCouncil(s);

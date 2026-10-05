@@ -29,6 +29,7 @@ import { FoundCadetPanel } from '../sections/CadetSection';
 import { roleOf, ROLES } from '../../game/council';
 import { RelationshipsSection } from '../sections/RelationshipsSection';
 import { DossierSection } from '../sections/DossierSection';
+import { UpbringingSection } from '../sections/UpbringingSection';
 import { VipEditor } from '../vip/VipEditor';
 
 function Links({ label, people }: { label: string; people: Character[] }) {
@@ -121,6 +122,7 @@ export function CharacterModal({ id }: { id: string }) {
       <RelationshipsSection c={c} />
       <DossierSection c={c} />
       <SecretsSection key={c.id} c={c} />
+      <UpbringingSection key={'upbringing-' + c.id} c={c} />
 
       {living && isDynasty && c.edu && (
         <div className="card flat" style={{ marginTop: 'var(--space-8px)' }}>
