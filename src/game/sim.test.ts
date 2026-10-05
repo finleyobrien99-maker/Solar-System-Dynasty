@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { setImmediate } from 'node:timers/promises';
+import { afterEach, describe, expect, it } from 'vitest';
 import { clanRegions, dynastyMembers, ruler, setOwner } from './core';
 import { acceptSuitor, generateSuitors } from './family';
 import { inheritGenetics } from './genetics';
@@ -8,6 +9,10 @@ import { botTurn, checkInvariants, drain } from './testkit';
 import { ageUp } from './tick';
 import type { Character, GameState } from './types';
 import { createWorld, rollRuler, startGame } from './world';
+
+// Long synchronous simulations must let the worker receive progress replies between tests.
+// Otherwise a whole file can exceed the runner RPC deadline even though every assertion passes.
+afterEach(() => setImmediate());
 
 function newGame(seed: number, growth: 'capped' | 'uncapped' = 'uncapped'): GameState {
   const s = createWorld(seed);

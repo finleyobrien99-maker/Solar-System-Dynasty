@@ -6,6 +6,7 @@
 
 /// <reference types="node" />
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { setImmediate } from 'node:timers/promises';
 import { compressToUTF16, decompressFromBase64 } from 'lz-string';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { endWar, fightBattle } from './war';
@@ -22,6 +23,10 @@ import { createWorld, rollRuler, scenarioHouses, startGame } from './world';
 import { peaceCampaign, disputedInheritance } from './testScenarios';
 import { successionTick } from './succession';
 import { ambitionChoices, chooseAmbition } from './ambitions';
+
+// Long synchronous simulations must let the worker receive progress replies between tests.
+// Otherwise a whole file can exceed the runner RPC deadline even though every assertion passes.
+afterEach(() => setImmediate());
 
 const DIR = new URL('./__fixtures__/', import.meta.url);
 const WRITE = import.meta.env.MODE === 'fixtures';
