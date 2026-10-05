@@ -66,7 +66,7 @@ test('appoint a commander, see who leads the enemy, and a real battle goes on th
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
 
   await page.getByRole('button', { name: 'Launch battle', exact: true }).first().click();
-  const report = page.getByRole('dialog').last();
+  const report = page.getByRole('dialog', { name: /Victory in Battle|Defeat in Battle/ });
   await expect(report).toContainText(/Victory in Battle|Defeat in Battle/);
   await expect(report).toContainText(son.name);
   await expect(report).toContainText(theirs.name);
@@ -74,6 +74,19 @@ test('appoint a commander, see who leads the enemy, and a real battle goes on th
   await page.mouse.move(0, 0);
   await page.screenshot({ path: info.outputPath('named-battle.png'), animations: 'disabled' });
   expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  await report.getByRole('button', { name: /Commanded your fleet/ }).click();
+  const ownProfile = page.getByRole('dialog', { name: new RegExp(son.name) });
+  await expect(report).toHaveCount(0);
+  await expect(ownProfile.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
+  await page.screenshot({ path: info.outputPath('commander-profile.png'), animations: 'disabled' });
+  await ownProfile.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(report).toContainText(son.name);
+  await report.getByRole('button', { name: /Commanded the opposing fleet/ }).click();
+  const rivalProfile = page.getByRole('dialog', { name: new RegExp(theirs.name) });
+  await expect(report).toHaveCount(0);
+  await expect(rivalProfile.getByRole('button', { name: 'Close', exact: true })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(report).toContainText(theirs.name);
   await page.reload();
   await page.getByRole('button', { name: /^Continue:/ }).click();
   await expect(page.getByRole('dialog').last()).toContainText(son.name);

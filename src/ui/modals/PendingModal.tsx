@@ -97,7 +97,9 @@ function Fleet({ n, color, flip, seed }: { n: number; color: string; flip?: bool
 }
 
 function BattleView({ p }: { p: { uid: string; report: BattleReport } }) {
-  const { s, act } = useGame();
+  const { s, act, ui } = useGame();
+  // Let linked profiles take focus without dismissing or mutating the saved report.
+  if (ui.panels.length > 0) return null;
   const r = p.report;
   const enemy = s.clans[r.enemy];
   const me = s.clans[s.playerClanId];
