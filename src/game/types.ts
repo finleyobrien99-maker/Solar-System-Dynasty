@@ -1,4 +1,5 @@
 import type { Reputation } from './epithetDefs';
+import type { RealmCallAnswer } from './diplomacyTypes';
 
 // Core data shapes for the whole game. Everything in GameState must be plain
 // JSON (no classes, no functions) so saves round-trip cleanly.
@@ -236,6 +237,10 @@ export interface War {
   lastPlayerBattle?: number;
   lastAiOperation?: number;
   coalition?: FleetContribution[];
+  /** Houses of the defender's realm who answered its call (realmDefence.ts): physical loans, never touched by league expiry. */
+  realmAid?: FleetContribution[];
+  /** Every realm house's answer and reasons, as given when the war began. */
+  realmCalls?: RealmCallAnswer[];
   siege?: SiegeResult;
 }
 
@@ -248,6 +253,8 @@ export interface AiWar {
   progress: number; // -100..100 from attacker's view
   lastOperation?: number;
   coalition?: FleetContribution[];
+  realmAid?: FleetContribution[];
+  realmCalls?: RealmCallAnswer[];
   siege?: SiegeResult;
 }
 

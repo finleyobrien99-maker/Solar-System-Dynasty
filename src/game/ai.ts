@@ -42,7 +42,8 @@ import { aiAffairsTick, aiArrests, aiMarriages, alliesAbandon, betrayPact, capti
 import { neighbourPlanets, PLANET_BY_ID } from './planets';
 import { chance, clamp, int, pick, range, weighted } from './rng';
 import type { AiWar, Clan, GameState } from './types';
-import { aiDeclareWar, atWarWith } from './war';
+import { aiDeclareWar, atWarWith, callRealm, realmHelpers } from './war';
+import { recordPlanetConquest } from './realmDefence';
 import { fleetTarget } from './world';
 
 export const GRACE_YEARS = 3;
@@ -212,8 +213,7 @@ export function declareHouseWar(s: GameState, attackerId: string, regionId: stri
   const oath = !!truceOf(s, attackerId, defender.id);
   if (oath && (!breakOath || !breakTruce(s, attackerId, defender.id))) return false;
   recallAid(s, defender.id);
-  const coalition = coalitionCall(s, attackerId, defender.id);
-  const war: AiWar = { id: newId(s, 'aw'), attacker: attackerId, defender: defender.id, target: regionId, started: s.year, progress: 0, coalition };
+  const war: AiWar = { id: newId(s, 'aw'), attacker: attackerId, defender: defender.id, target: regionId, started: s.year, progress: 0, coalition: [] };
   s.aiWars.push(war);
   recordDeed(s, lord, 'warsStarted');
   breakPeace(s, defender.headId);
@@ -222,6 +222,9 @@ export function declareHouseWar(s: GameState, attackerId: string, regionId: stri
   log(s, `House ${attacker.name} (${PLANET_BY_ID[attacker.planetId].name}) declares war on House ${defender.name} over ${target.name}.`, 'news');
   const friends = [...(pacts.get(defender.id) ?? [])].filter((id) => id !== attackerId && !pacts.get(id)?.has(attackerId)).map((id) => s.clans[id].name);
   if (friends.length) log(s, `House ${defender.name}'s kin by marriage (${friends.map((n) => `House ${n}`).join(', ')}) send ships to defend them.`, 'news');
+  // The defender's realm answers first; its helpers are then not asked again by a league.
+  Object.assign(war, callRealm(s, war.id, attackerId, defender.id, regionId, 'conquest'));
+  war.coalition = coalitionCall(s, attackerId, defender.id, realmHelpers(war));
   return true;
 }
 
@@ -256,12 +259,8 @@ export function tickAiWars(s: GameState): void {
             .filter((p) => p.sent > 0)
             .map((p) => p.clanId),
         ]);
-        const liege = liegeOf(s, d.id);
         let def = d.fleet;
-        if (liege && liege !== a.id && liegeOf(s, a.id) !== liege && liege !== s.playerClanId && !excluded.has(liege)) {
-          def += s.clans[liege].fleet * 0.3;
-          excluded.add(liege); // A relative who is also liege sends one contingent.
-        }
+        // A liege's help is no longer an invisible share of its fleet: the realm answers with real ships (realmAid).
         def += kinFleet(s, d.id, a.id, pacts, 0.25, excluded);
         const att = a.fleet + kinFleet(s, a.id, d.id, pacts, 0.15, excluded);
         const attStrength = att * warStrengthFactor(s, a.id) * leadFactor(s, a.id),
@@ -317,6 +316,7 @@ export function tickAiWars(s: GameState): void {
       const wasCapital = target.capital;
       setOwner(s, target, a.id);
       recordExpansion(s, a.id, target);
+      recordPlanetConquest(s, a.id, target);
       recordDeed(s, attackerRuler, 'warsWon');
       recordDeed(s, defenderRuler, 'warsLost');
       recordDeed(s, attackerRuler, 'regionsTaken', 1, target.id);

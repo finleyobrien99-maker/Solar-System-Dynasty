@@ -1,5 +1,48 @@
 # Realm defence (Wave 5, slice 1): engine handoff to Codex
 
+## Integrated (Claude, after Codex's session ran out) - 5 October 2026
+
+Fin asked Claude to carry on Codex's lane. On `ui-foundations` in `C:\Users\finle\planetdynasty-ui`:
+
+- **97ba6c5** commits Codex's uncommitted groundwork as Codex left it: the `warAid.ts` ledger, the Houses view, the war participants panel, and the house profile showing the current ruler and any regent. Two fixes made its own browser checks pass: the filter labels no longer wrap their selects, and the profile-order test gives its house real war weariness. A backup of the untouched work is in Claude's scratchpad (`codex-wip-backup`).
+- **Merge of 9f803aa** brings in the engine below. **The integration commit** follows the wiring steps:
+  - **Declarations.** `declareWar`, `aiDeclareWar` and `declareHouseWar` call `callRealm` before `coalitionCall`, which now excludes realm helpers. Accepted answers are reserved through `reserveAid` into `realmAid`, and answers are saved as `realmCalls`.
+  - **Your answer.** `answerRealm` reserves your ships when you answer a call.
+  - **No more ghost bonuses.** The abstract 40% and 30% liege shares are removed. In a defensive war your realm was called to, your vassals add no abstract share.
+  - **Conquest and tick.** `recordPlanetConquest` sits beside each `recordExpansion`, and `realmDefenceTick` runs in the tick.
+  - **Events.** The realm-call event is registered.
+  - **Screens:**
+    - the System region panel shows "Who will defend House X" (`RealmForecast.tsx`);
+    - Realm war cards list the realm's answers alongside league pledges;
+    - a new **Realm duties** section shows your loans to AI wars and united worlds.
+  - **Harness.** It counts realm answers per run.
+- **Save data.** War and AiWar gain optional `realmAid` and `realmCalls`. **SAVE_VERSION is still 8.** Old saves simply lack the fields, and every frozen v1–v8 save still plays and round-trips. Per your contract, v9 should be bumped once with slice 2's state. That is the one open decision before any release: bump now with an empty migration, or wait.
+- **Tests changed to the new rules:**
+  - three unit tests (a truce count and campaign weariness in `peace.test.ts`, and expected defender ships in `warfare.wiring.test.ts`) now count realm participants;
+  - the warfare assault browser test starts near victory and expects capital threat (12 + 20, capped).
+
+  The rest are new: `realmWiring.test.ts` (8) and `e2e/realms.spec.ts` (2 × desktop/phone).
+
+### Integrated checks
+
+- `npm run check`: **737** passed, five fixture-writer skips. `npm run e2e` on 4233: **106** passed at 1280px and 390px. Forecast, defenders, call event and duties inspected at both widths.
+- **Balance**, same 20 seeds × 150 (80 games), against the regents baseline:
+
+  | Bot | Regents baseline | With realm defence |
+  |---|---|---|
+  | Passive endings by cycle 100 | 5% | 5% |
+  | Breeder endings by cycle 100 | 5% | 5% |
+  | Builder reaching Sovereign | 75% | 80% |
+  | Warmonger reaching Sovereign | 100% | 100% |
+  | Builder battles lost (median) | 4 | 5 |
+  | Warmonger battles lost (median) | 8 | 12.5 |
+  | Realm answers per run (answered / refused / blocked) | – | Passive 37.3 / 19.6 / 5.4, Builder 33.5 / 21.5 / 16.1, Warmonger 20.7 / 16.3 / 16.4, Breeder 36.8 / 19.7 / 5.7 |
+
+  Events: 138 distinct, none over 3%.
+- **Speed**, same saved 10k state (cycle 181), alternated: Age Up median 218/204/232 ms before, 197/193/229 ms after. Within noise.
+- **Not pushed. Phone game not rebuilt.**
+
+
 Claude, 5 October 2026, on `phase-0-foundations` from `71fb1e3`. Built to Codex's WAVE-5-CONTRACT.md: Claude's commit adds only new engine modules, an unregistered event and tests. **No shared file is edited.** War, AI, tick, types, save and UI wiring below is Codex's. Fin approved: sovereigns always answer, vassals get explained odds, a world attacked repeatedly unites, defenders send half their fleet.
 
 ## Files

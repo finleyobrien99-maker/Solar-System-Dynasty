@@ -1,6 +1,7 @@
 import { committedShips } from '../../game/coalitions';
 import { CoalitionsSection } from '../sections/CoalitionsSection';
-import { WarParticipantsSection } from '../sections/WarParticipantsSection';
+import { WarParticipantsSection, type WarParticipantRow } from '../sections/WarParticipantsSection';
+import { RealmDutiesSection } from '../sections/RealmDutiesSection';
 import { SiegeSection } from '../sections/SiegeSection';
 import { WarWearinessSection } from '../sections/WarWearinessSection';
 import { truceOf, OATH_BREAK_COST } from '../../game/peace';
@@ -214,16 +215,32 @@ export function RealmTab() {
                   </div>
                 </div>
                 <WarParticipantsSection
+                  title="Defenders"
                   defending={w.playerAttacker ? 'House ' + enemy.name : 'your house'}
-                  rows={(w.coalition ?? []).map((loan) => ({
-                    clanId: loan.clanId,
-                    source: 'coalition',
-                    answer: 'accepted',
-                    reasons: [],
-                    sent: loan.sent,
-                    remaining: loan.ships,
-                    leaderId: loan.commanderId,
-                  }))}
+                  rows={[
+                    ...(w.realmCalls ?? []).map((a): WarParticipantRow => {
+                      const loan = w.realmAid?.find((p) => p.clanId === a.clanId);
+                      return {
+                        clanId: a.clanId,
+                        source: 'realm',
+                        answer: a.answer,
+                        reasons: a.reasons,
+                        sent: loan?.sent ?? 0,
+                        remaining: loan?.ships ?? 0,
+                        chance: a.chance > 0 && a.chance < 1 ? a.chance : undefined,
+                        leaderId: loan?.commanderId,
+                      };
+                    }),
+                    ...(w.coalition ?? []).map((loan): WarParticipantRow => ({
+                      clanId: loan.clanId,
+                      source: 'coalition',
+                      answer: 'accepted',
+                      reasons: [],
+                      sent: loan.sent,
+                      remaining: loan.ships,
+                      leaderId: loan.commanderId,
+                    })),
+                  ]}
                 />
                 <div className="btn-row" style={{ marginTop: 'var(--space-10px)' }}>
                   <Btn
@@ -253,6 +270,7 @@ export function RealmTab() {
       </Section>
 
       <CoalitionsSection />
+      <RealmDutiesSection />
       <WarWearinessSection />
       <TrucesSection />
 

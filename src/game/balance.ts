@@ -41,6 +41,8 @@ export interface RunResult {
   battlesLost: number;
   deaths: Record<string, number>; // causes of death in the dynasty
   events: Record<string, number>; // event id -> times answered
+  /** Realm calls in every war of the run, AI wars included (realmDefence.ts): answers by kind, counted once per war. */
+  realm: { accepted: number; refused: number; blocked: number; pending: number };
 }
 
 const GRADES = ['-', 'F', 'D', 'C', 'B', 'A', 'S'];
@@ -75,13 +77,24 @@ export function playRun(bot: BotId, seed: number, cycles: number, every = 10): R
   const onEvent = (id: string) => (events[id] = (events[id] ?? 0) + 1);
   const reached: RunResult['reached'] = {};
   const samples = [sample(s, 0)];
+  const realm: RunResult['realm'] = { accepted: 0, refused: 0, blocked: 0, pending: 0 };
+  const counted = new Set<string>();
+  const countRealm = () => {
+    for (const w of [...s.wars, ...s.aiWars]) {
+      if (counted.has(w.id) || !w.realmCalls) continue;
+      counted.add(w.id);
+      for (const a of w.realmCalls) realm[a.answer]++;
+    }
+  };
   let cycle = 0;
   while (cycle < cycles && !s.gameOver) {
     answerPending(s, rng, onEvent);
     if (s.gameOver) break;
     BOTS[bot].turn(s, rng);
+    countRealm();
     answerPending(s, rng, onEvent);
     ageUp(s);
+    countRealm();
     cycle++;
     const rank = clanRank(s, s.playerClanId);
     for (const k of [2, 3, 4] as const) if (rank >= k) reached[k] ??= cycle;
@@ -118,6 +131,7 @@ export function playRun(bot: BotId, seed: number, cycles: number, every = 10): R
     battlesLost: s.stats.battlesLost,
     deaths,
     events,
+    realm,
   };
 }
 
@@ -178,6 +192,8 @@ export interface BotSummary {
   eventsPerCycle: number;
   topEvent: string;
   topEventShare: number;
+  /** Mean realm answers per run: accepted / refused / blocked. */
+  realmCalls: string;
 }
 
 export function summariseBot(bot: BotId, runs: RunResult[]): BotSummary {
@@ -198,6 +214,7 @@ export function summariseBot(bot: BotId, runs: RunResult[]): BotSummary {
     avgReign: mean(runs.map((r) => r.avgReign).filter(Boolean)),
     avgRulerLifespan: mean(runs.map((r) => r.avgRulerLifespan).filter(Boolean)),
     battlesWon: median(runs.map((r) => r.battlesWon)),
+    realmCalls: (['accepted', 'refused', 'blocked'] as const).map((k) => mean(runs.map((r) => r.realm?.[k] ?? 0))).join(' / '),
     battlesLost: median(runs.map((r) => r.battlesLost)),
     gradeAt50: medianGrade(runs.flatMap((r) => at(r, 50)?.grade ?? [])),
     bestGradeBy150: GRADES[Math.max(0, ...runs.flatMap((r) => r.samples.filter((x) => x.cycle <= 150).map((x) => gradeRank(x.grade))))],
@@ -440,6 +457,7 @@ export function markdown(runs: RunResult[], cycles: number): string {
   row('Best grade by 150', (x) => x.bestGradeBy150);
   row('Events per cycle', (x) => x.eventsPerCycle);
   row('Most common event', (x) => `${x.topEvent} (${n(x.topEventShare)}%)`);
+  row('Realm calls answered / refused / blocked (mean)', (x) => x.realmCalls);
 
   const deaths: Record<string, number> = {};
   for (const r of runs) for (const [k, v] of Object.entries(r.deaths)) deaths[k] = (deaths[k] ?? 0) + v;

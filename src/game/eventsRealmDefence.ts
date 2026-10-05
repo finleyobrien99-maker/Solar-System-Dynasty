@@ -7,7 +7,8 @@ import { canAct, fullName } from './core';
 import { defineEvent, type Ctx } from './dsl';
 import type { EventDef } from './eventKit';
 import { PLANET_BY_ID } from './planets';
-import { answerBlocker, answerRealmCall, pendingRealmCall, realmOf, REALM_SHARE, TOKEN_SHARE } from './realmDefence';
+import { answerBlocker, pendingRealmCall, realmOf, REALM_SHARE, TOKEN_SHARE } from './realmDefence';
+import { answerRealm } from './war';
 import type { GameState } from './types';
 
 function house(s: GameState, id: string): string {
@@ -48,7 +49,7 @@ export const REALM_DEFENCE_EVENTS: EventDef[] = [
         label: 'Send half the fleet',
         needs: [{ test: free, why: 'You cannot send ships now' }],
         then: {
-          do: [{ run: (c) => void answerRealmCall(c.s, war(c), true, REALM_SHARE), text: (c) => `${c.data.half} ships sail to the realm's defence` }],
+          do: [{ run: (c) => void answerRealm(c.s, war(c), true, REALM_SHARE), text: (c) => `${c.data.half} ships sail to the realm's defence` }],
           text: (c) => `The fleet sails within the day. ${house(c.s, String(c.data.defender))} will not forget who came.`,
         },
       },
@@ -58,7 +59,7 @@ export const REALM_DEFENCE_EVENTS: EventDef[] = [
         then: {
           do: [
             {
-              run: (c) => void answerRealmCall(c.s, war(c), true, TOKEN_SHARE),
+              run: (c) => void answerRealm(c.s, war(c), true, TOKEN_SHARE),
               text: (c) => `${c.data.token} ships go; your liege notices how few`,
             },
           ],
@@ -68,7 +69,7 @@ export const REALM_DEFENCE_EVENTS: EventDef[] = [
       {
         label: 'Stay home',
         then: {
-          do: [{ run: (c) => void answerRealmCall(c.s, war(c), false), text: 'Your liege will remember who stayed home' }],
+          do: [{ run: (c) => void answerRealm(c.s, war(c), false), text: 'Your liege will remember who stayed home' }],
           text: 'Your fleet stays in dock. Somebody else can bleed for the realm this time.',
         },
       },

@@ -106,7 +106,9 @@ describe('campaign wiring', () => {
       expect(warWeariness(s, h.id)).toBe(3);
       if (playerTarget) {
         const w = s.wars[0];
-        expect(playerSide(s, w, false).ships).toBe(s.fleet + 50);
+        // The pledged league house, plus your own realm answering an outsider's attack (realmDefence.ts).
+        const realm = (w.realmAid ?? []).reduce((n, p) => n + p.ships, 0);
+        expect(playerSide(s, w, false).ships).toBe(s.fleet + 50 + realm);
         fightBattle(s, w.id, true);
         endWar(s, w, 'white');
       } else {

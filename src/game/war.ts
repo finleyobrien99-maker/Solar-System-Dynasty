@@ -1,5 +1,19 @@
 import { coalitionCall, recordExpansion } from './coalitions';
-import { aidBattleNotes, aidStrength, aidLosses, aidTruces, committedShips, recallAid, releaseAid, snapshotAid, warContributions } from './warAid';
+import { answerRealmCall, realmCall, recordPlanetConquest } from './realmDefence';
+import type { RealmCallAnswer } from './diplomacyTypes';
+import {
+  homeFleet,
+  reserveAid,
+  aidBattleNotes,
+  aidStrength,
+  aidLosses,
+  aidTruces,
+  committedShips,
+  recallAid,
+  releaseAid,
+  snapshotAid,
+  warContributions,
+} from './warAid';
 import { siegeOptions as baseSiegeOptions, siegeBlocker, performSiege, chooseAiSiege, type SiegeOption } from './siege';
 import { battleWeariness, warStrengthFactor, breakTruce, makeTruce, OATH_BREAK_COST, truceBreakBlocker, truceOf } from './peace';
 import { breakPeace, recordDeed } from './epithets';
@@ -29,7 +43,7 @@ import { canAfford, costText, pay, type Cost } from './genetics';
 import { PLANET_BY_ID } from './planets';
 import { chance, clamp, range } from './rng';
 import { addTrait } from './traits';
-import type { BattleReport, CasusBelli, GameState, Region, SiegeKind, SiegeResult, War } from './types';
+import type { BattleReport, CasusBelli, FleetContribution, GameState, Region, SiegeKind, SiegeResult, War } from './types';
 import { killCharacter } from './life';
 import { councilStat } from './council';
 import { remember } from './memory';
@@ -113,11 +127,14 @@ export function declareWar(s: GameState, regionId: string, cb: CasusBelli, break
   remember(s, enemy.id, cb === 'conquest' ? 'Attacked us without any cause' : `Made war on us over ${region.name}`, cb === 'conquest' ? -30 : -15);
   s.feuds = s.feuds.filter((f) => f !== enemy.id || cb !== 'feud');
   recallAid(s, enemy.id);
-  const coalition = coalitionCall(s, s.playerClanId, enemy.id);
-  s.wars.push({ id: newId(s, 'w'), enemy: enemy.id, playerAttacker: true, target: regionId, cb, score: 0, started: s.year, coalition });
+  const war: War = { id: newId(s, 'w'), enemy: enemy.id, playerAttacker: true, target: regionId, cb, score: 0, started: s.year, coalition: [] };
+  s.wars.push(war);
   recordDeed(s, ruler(s), 'warsStarted');
   breakPeace(s, enemy.headId);
   log(s, `War! You declared a ${CB_INFO[cb].name} on House ${enemy.name} for ${region.name}.`, 'war');
+  // The defender's realm answers first; its helpers are then not asked again by a league.
+  Object.assign(war, callRealm(s, war.id, s.playerClanId, enemy.id, regionId, cb));
+  war.coalition = coalitionCall(s, s.playerClanId, enemy.id, realmHelpers(war));
   return true;
 }
 
@@ -156,8 +173,8 @@ export function aiDeclareWar(s: GameState, enemyId: string, cb: CasusBelli, targ
   if (!target || target.owner !== s.playerClanId || (cb === 'revolt' && liegeOf(s, enemyId) !== s.playerClanId)) return false;
   if (truceOf(s, enemyId, s.playerClanId) && (!breakOath || !breakTruce(s, enemyId, s.playerClanId))) return false;
   recallAid(s, s.playerClanId);
-  const coalition = cb === 'revolt' ? [] : coalitionCall(s, enemyId, s.playerClanId);
-  s.wars.push({ id: newId(s, 'w'), enemy: enemyId, playerAttacker: false, target: targetRegionId, cb, score: 0, started: s.year, coalition });
+  const war: War = { id: newId(s, 'w'), enemy: enemyId, playerAttacker: false, target: targetRegionId, cb, score: 0, started: s.year, coalition: [] };
+  s.wars.push(war);
   recordDeed(s, enemy.headId, 'warsStarted');
   if (cb === 'revolt') recordDeed(s, enemy.headId, 'rebellions');
   breakPeace(s, s.rulerId);
@@ -168,6 +185,48 @@ export function aiDeclareWar(s: GameState, enemyId: string, cb: CasusBelli, targ
     tone: 'bad',
     portraitId: enemy.headId,
   });
+  if (cb !== 'revolt') {
+    Object.assign(war, callRealm(s, war.id, enemyId, s.playerClanId, targetRegionId, cb));
+    war.coalition = coalitionCall(s, enemyId, s.playerClanId, realmHelpers(war));
+  }
+  return true;
+}
+
+// ── Realm defence (realmDefence.ts decides; these reserve the real ships) ──
+
+/** Call the defender's realm and reserve the ships of every house that answers. Returns what the war saves. */
+export function callRealm(
+  s: GameState,
+  warId: string,
+  attackerId: string,
+  defenderId: string,
+  regionId: string,
+  cb: CasusBelli,
+): { realmCalls: RealmCallAnswer[]; realmAid: FleetContribution[] } {
+  const realmCalls = realmCall(s, { warId, attackerId, defenderId, regionId, cb });
+  const realmAid: FleetContribution[] = [];
+  for (const a of realmCalls) {
+    if (a.answer !== 'accepted') continue;
+    const loan = reserveAid(s, a.clanId, Math.min(a.proposedShips, homeFleet(s, a.clanId)));
+    if (loan) realmAid.push(loan);
+  }
+  return { realmCalls, realmAid };
+}
+
+/** Houses already lending ships to this war's realm defence. */
+export function realmHelpers(war: { realmAid?: FleetContribution[] }): Set<string> {
+  return new Set((war.realmAid ?? []).filter((p) => p.sent > 0).map((p) => p.clanId));
+}
+
+/** Your answer to your realm's call, with the ships really sent. False when nothing changed. */
+export function answerRealm(s: GameState, warId: string, accept: boolean, share?: number): boolean {
+  const answer = answerRealmCall(s, warId, accept, share);
+  if (!answer) return false;
+  const war = s.aiWars.find((w) => w.id === warId);
+  if (answer.answer === 'accepted' && war) {
+    const loan = reserveAid(s, s.playerClanId, Math.min(answer.proposedShips, s.fleet));
+    if (loan) (war.realmAid ??= []).push(loan);
+  }
   return true;
 }
 
@@ -199,8 +258,10 @@ export function playerSide(s: GameState, war: War, personal: boolean): Side {
       }
     }
   }
+  // In a defence your realm was called to, each vassal already answered with real ships or not at all (realmDefence.ts).
+  const called = new Set(war.playerAttacker ? [] : (war.realmCalls ?? []).map((a) => a.clanId));
   for (const v of vassalsOf(s, s.playerClanId)) {
-    if (v.id === war.enemy || v.opinion <= 0 || used.has(v.id) || committedShips(s, v.id)) continue;
+    if (v.id === war.enemy || v.opinion <= 0 || used.has(v.id) || called.has(v.id) || committedShips(s, v.id)) continue;
     const add = Math.round(v.fleet * (v.cadetOf === s.playerClanId ? 0.35 : 0.2));
     if (add > 0) {
       ships += add;
@@ -243,17 +304,8 @@ export function enemySide(s: GameState, war: War): Side {
       .filter((p) => p.sent > 0)
       .map((p) => p.clanId),
   );
-  const liege = liegeOf(s, enemy.id);
   const target = s.regions[war.target];
-  if (liege && liege !== s.playerClanId && !used.has(liege) && !committedShips(s, liege) && war.cb !== 'revolt' && war.cb !== 'independence') {
-    // A sovereign defends its vassals from outsiders, not from internal feuds.
-    const sameRealm = liegeOf(s, s.playerClanId) === liege;
-    if (!sameRealm) {
-      const add = Math.round(s.clans[liege].fleet * 0.4);
-      ships += add;
-      helpers.push(`House ${s.clans[liege].name} (liege, ${add})`);
-    }
-  }
+  // A liege's help is no longer an invisible share of its fleet: the realm answers with real ships (realmAid).
   if (war.cb === 'independence' && target === undefined) {
     // The liege calls in its other vassals.
     for (const v of vassalsOf(s, enemy.id)) {
@@ -446,6 +498,7 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
       remember(s, enemy.id, wasCapital ? `Stole our throne, ${region.name}` : `Took ${region.name} from us`, wasCapital ? -55 : -35, 0.025);
       setOwner(s, region, clan.id);
       recordExpansion(s, clan.id, region, war.cb);
+      recordPlanetConquest(s, clan.id, region, war.cb);
       recordDeed(s, actorId, 'regionsTaken', 1, region.id);
       if (wasCapital) recordDeed(s, actorId, 'capitalsTaken', 1, region.planetId);
       s.claims = s.claims.filter((c) => c !== region.id);
@@ -494,6 +547,7 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
   if (region && region.owner === s.playerClanId) {
     setOwner(s, region, enemy.id);
     recordExpansion(s, enemy.id, region, war.cb);
+    recordPlanetConquest(s, enemy.id, region, war.cb);
     recordDeed(s, enemyActorId, 'regionsTaken', 1, region.id);
     if (region.capital) recordDeed(s, enemyActorId, 'capitalsTaken', 1, region.planetId);
     notice(s, 'Region Lost', `House ${enemy.name} takes ${region.name} from you.`, { icon: 'lose', tone: 'bad' });

@@ -123,6 +123,8 @@ test('explicit player pledge lends real ships, survives reload and withdrawal re
 test('assault produces one real battle and remembers every coalition casualty after reload', async ({ page }, info) => {
   const errors = watch(page),
     { s } = coalitionCampaign();
+  // Realm defenders (realmDefence.ts) make the opening battles closer: start near victory so one won assault ends the war.
+  s.wars[0].score = 85;
   await load(page, s);
   await page.getByRole('button', { name: 'Assault', exact: true }).click();
   await page.getByRole('button', { name: 'Tap again to assault', exact: true }).click();
@@ -149,7 +151,9 @@ test('assault produces one real battle and remembers every coalition casualty af
   await expect(page.getByRole('heading', { name: /^Wars \(0\)/ })).toBeVisible();
   const after = await stored(page);
   expect(after.wars).toHaveLength(0);
-  expect(after.houseThreat[s.playerClanId]).toBe(s.houseThreat[s.playerClanId] + 12);
+  // A justified conquest adds 12 threat, a throne-region 20 more, capped at 100 (coalitions.ts).
+  const capital = s.regions[s.wars[0].target].capital;
+  expect(after.houseThreat[s.playerClanId]).toBe(Math.min(100, s.houseThreat[s.playerClanId] + 12 + (capital ? 20 : 0)));
   for (const p of s.wars[0].coalition!) expect(after.clans[p.clanId].fleet).toBeGreaterThan(s.clans[p.clanId].fleet);
   expect(errors).toEqual([]);
 });

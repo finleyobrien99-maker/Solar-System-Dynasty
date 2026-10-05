@@ -53,7 +53,11 @@ describe('house peace oaths', () => {
       endWar(s, war, outcome);
       expect(truceLeft(s, s.playerClanId, enemy.id)).toBe(TRUCE_CYCLES);
       expect(truceOf(s, enemy.id, s.playerClanId)).toEqual(truceOf(s, s.playerClanId, enemy.id));
-      expect(s.truces).toHaveLength(1);
+      const principal = (t: { a: string; b: string }) => [t.a, t.b].includes(enemy.id) && [t.a, t.b].includes(s.playerClanId);
+      expect(s.truces.filter(principal)).toHaveLength(1);
+      // Realm defenders who actually sailed (realmDefence.ts) get their own truce with you; nobody else does.
+      const sailed = new Set((war.realmAid ?? []).filter((p) => p.sent > 0).map((p) => p.clanId));
+      expect(s.truces.filter((t) => !principal(t)).every((t) => sailed.has(t.a === s.playerClanId ? t.b : t.a))).toBe(true);
       const after = structuredClone(s);
       endWar(s, war, outcome);
       expect(s).toEqual(after);
@@ -227,7 +231,8 @@ describe('war weariness follows real houses and losses', () => {
     peaceTick(s);
     expect(warWeariness(s, s.playerClanId)).toBe(3);
     expect(warWeariness(s, enemy.id)).toBe(3);
-    expect(warWeariness(s, other.id)).toBe(0);
+    // Only a house that actually sailed to the realm's defence (realmDefence.ts) shares the campaign.
+    expect(warWeariness(s, other.id)).toBe(s.wars[0].realmAid?.some((p) => p.clanId === other.id && p.ships > 0) ? 3 : 0);
     s.wars.push({ ...s.wars[0], id: 'second', enemy: other.id });
     peaceTick(s);
     expect(warWeariness(s, s.playerClanId)).toBe(9);

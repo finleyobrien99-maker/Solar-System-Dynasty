@@ -19,11 +19,11 @@
 // touching callers.
 
 import { pactMap, type Pacts } from './aiCourt';
-import { committedShips } from './coalitions';
 import { ageOf, alive, ch, clanRegions, hasTrait, liegeOf, log, regentHolding, ruler } from './core';
 import type { RealmCallAnswer, RealmCallOffer, RealmRole, Reason } from './diplomacyTypes';
 import { clearFlag, getFlag, setFlag } from './eventKit';
 import { truceOf } from './peace';
+import { committedShips } from './warAid';
 import { PLANET_BY_ID } from './planets';
 import { addFeeling, opinionOf } from './relations';
 import { chance, clamp } from './rng';
@@ -139,11 +139,9 @@ interface Ctx {
   pacts: Pacts;
 }
 
-/** Ships already out of a house's home fleet: league loans and realm loans. */
+/** Ships already out of a house's home fleet: league loans and realm loans alike (warAid.ts). */
 function lent(s: GameState, id: string): number {
-  let n = committedShips(s, id);
-  for (const w of [...s.wars, ...s.aiWars] as RealmWar[]) for (const p of w.realmAid ?? []) if (p.clanId === id) n += Math.max(0, p.ships);
-  return n;
+  return committedShips(s, id);
 }
 
 function atWar(s: GameState, id: string): boolean {

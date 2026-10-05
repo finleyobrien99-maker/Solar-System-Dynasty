@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
 import { Tabs } from '../Tabs';
 import { HousesSection } from '../sections/HousesSection';
+import { RealmForecast } from '../sections/RealmForecast';
 import { canAfford, costText } from '../../game/genetics';
 import { OATH_BREAK_COST, truceOf } from '../../game/peace';
 import { ch, clanRank, clanRegions, liegeOf, planetRegions, planetSovereign } from '../../game/core';
@@ -64,6 +65,7 @@ function RegionPanel({ regionId }: { regionId: string }) {
             <div className="muted">{block}</div>
           ) : (
             <div className="stack" style={{ gap: 'var(--space-6px)' }}>
+              <RealmForecast regionId={reg.id} defenderId={owner.id} cb={opts.find((o) => o.ok)?.cb} />
               {opts.map((o) => (
                 <div key={o.cb} className="spread wrap">
                   <span>
