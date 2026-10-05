@@ -27,6 +27,7 @@ import { useGame } from '../store';
 import { FoundCadetPanel } from '../sections/CadetSection';
 import { roleOf, ROLES } from '../../game/council';
 import { RelationshipsSection } from '../sections/RelationshipsSection';
+import { DossierSection } from '../sections/DossierSection';
 import { VipEditor } from '../vip/VipEditor';
 
 function Links({ label, people }: { label: string; people: Character[] }) {
@@ -117,6 +118,7 @@ export function CharacterModal({ id }: { id: string }) {
       {(c.reputation || s.dynasty.rulers.some((r) => r.id === c.id)) && <RulerLegacy c={c} />}
       <EpithetsSection c={c} />
       <RelationshipsSection c={c} />
+      <DossierSection c={c} />
 
       {living && isDynasty && c.edu && (
         <div className="card flat" style={{ marginTop: 'var(--space-8px)' }}>
