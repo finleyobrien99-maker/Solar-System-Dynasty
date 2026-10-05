@@ -224,6 +224,10 @@ Childhood events already exist (shaping personality). Deepen them:
 - Personality is "locked in" at 16, with a summary card ("Kravan grew up Brave, Paranoid and Ambitious, thanks to his spymaster tutor and his sister's bullying").
 
 ### 1.5 Secrets and hooks `P0` `L`
+- **First slice complete locally (Codex, Oct 2026):** saved affair/murder evidence, personal discovery, one-use hooks, paid investigation (40 credits, once per cycle) and passive spymaster discovery. Player and AI use real evidence and their own resources; ordinary blackmail no longer invents dirt or money. Hooks buy payment or a guarded adult marriage, respect captivity/betrothals/ancestry/heads/heirs, and leave resentment. Exposure applies betrayal/grief once and destroys all leverage. Character profiles offer every action through act(); undiscovered AI lovers are hidden. Knowledge is personal and not inherited. Save v5 migrates living affairs only, never reconstructs murders from traits; all frozen v1-v5 saves load and round-trip. Claude's dossier/petition branch is separate and still needs its secrets adapter before combined integration.
+- **Measured against fb15ca6, same 20 seeds x 150 cycles:** Passive endings by 100: 15% -> 20%; Breeder: 10% -> 5% (still not below the target); Builder Sovereign: 85% -> 85%; Warmonger: 100% -> 95%. Median final living dynasty: 58.5 -> 78.5 / 84.5 -> 80.5 / 73 -> 95 / 288.5 -> 236. Events average 1.40 per cycle and no event exceeds 3%. AI investigations spend real credits and alter the seeded sequence; these small samples do not prove a survival or war-balance fix. No war tuning or parked AI-spending branch included.
+- **Serial 10k benchmark:** Age Up 106.5 -> 118.2 ms, state copy 77.1 -> 78.2 ms, autosave 245 -> 264 ms, saved size 1,354 -> 1,361 KB. Different generated checkpoints (cycle 209/188), desktop only; the mid-phone timing budget remains unproven. Reports are outside the repo in the temporary solar-dynasty-secrets-before/final folders.
+- **Remaining:** other secret kinds, strength tiers, votes/war favours, richer investigations and long schemes. This is an MVP, not the whole list below.
 - Secrets: affairs, illegitimate children, murders, heresy, a secret clone, gene crimes (illegal splices), debts, cowardice in battle.
 - Secrets can be **discovered** via schemes, spymasters and events. A discovered secret creates a **hook** (weak or strong) that can be spent to force favours: marriage, a vote, a gift, joining a war.
 - The player also has secrets the AI can find, which is how you get blackmailed.
@@ -931,7 +935,7 @@ export interface Story { id: string; def: string; stage: number; actors: Record<
 - [x] **VIP off with an overfull vault:** existing traits stay active; the Bloodline tab now explains how many to release, links to the vault filter, and caps the displayed bar at 100%.
 - [x] **Immortal VIP rulers block succession forever.** Abdicate on Life hands over to a free adult heir while the old ruler stays alive (3.3).
 - [ ] **Suitors live outside `s.characters`** (in `s.suitors`). The editor handles it via `findChar`, but anything new that looks up characters must remember this.
-- [ ] **Bundle size:** React is split into its own chunk (0.6), but the growing AI/event engine puts the game chunk back over 500 kB (~562 kB / 183 kB gzipped). Consider lazy loading the Codex and character tools without breaking offline or the single-file phone build.
+- [ ] **Bundle size:** React is split into its own chunk (0.6), but the growing AI/event engine puts the game chunk back over 500 kB (~576 kB / 187 kB gzipped). Consider lazy loading the Codex and character tools without breaking offline or the single-file phone build.
 - [x] **No ESLint/Prettier** (0.7). Both run in CI.
 - [ ] **Single `fleet` number for the player**, separate `clan.fleet` for the AI (will be replaced by 5.1).
 - [x] **Trait colours alone** distinguish categories (accessibility, 9.6). Category glyphs and accessible labels now identify them.
@@ -968,7 +972,7 @@ Why this order: the DSL, relations, secrets and genotype are the multipliers. Ev
 9. ✅ `1.1` 15 relationship events (friendship, rivalry, romance) using the DSL. **M**
 10. 🟡 `1.7` Ruler memorials and epithets done; personal life logs, obituary ratings and regnal numbers remain. **S**
 11. 🟡 `3.3` Abdicate done; Move Capital and Hold a Tournament remain. **S**
-12. `1.5` Secrets and hooks MVP (affair and murder secrets, discovery by spymaster, spending a hook to force a marriage). **M**
+12. 🟡 `1.5` Secrets and hooks MVP (affair and murder secrets, discovery by spymaster, spending a hook to force a marriage). **M** (Codex engine/actions complete locally; Claude dossier adapter/integration pending)
 13. `2.2` Consanguinity coefficient with the Kinship warning in suitors. Works before the full genotype by approximating with trait-groups. **S**
 14. `3.4` Ruler ambitions (pick 1 of 3 at coronation, with rewards). **S**
 15. `3.6` 30 new events across childhood, court and planet-specific categories. **M** (done Oct 2026: see 3.6)

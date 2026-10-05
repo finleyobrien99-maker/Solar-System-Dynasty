@@ -5,6 +5,7 @@
 // with the same consequences as any other murder. Shuffled into the main
 // deck in events.ts.
 
+import { consumeHook, exposeSecret, hookBlocker, hooksOf, recordAffair, secretLabel, secretsKnownTo } from './secrets';
 import { ageOf, alive, canAct, ch, clanRank, clanRegions, fullName, hasTrait, ruler } from './core';
 import { defineEvent, type Ctx, type Outcome } from './dsl';
 import { recordDeed } from './epithets';
@@ -16,11 +17,8 @@ import type { Character, GameState } from './types';
 
 /** Something the ruler would pay to keep quiet, if anything. */
 export function secretOf(s: GameState): string | undefined {
-  const r = ruler(s);
-  const lover = ch(s, r.loverId);
-  if (alive(lover)) return `your affair with ${lover.name}`;
-  if (hasTrait(r, 'kinslayer')) return 'how your kin really died';
-  return undefined;
+  const secret = secretsKnownTo(s).find((x) => x.subjectId === s.rulerId && x.exposedYear === undefined);
+  return secret ? secretLabel(s, secret) : undefined;
 }
 
 function aiHeads(s: GameState): Character[] {
@@ -32,7 +30,12 @@ function aiHeads(s: GameState): Character[] {
 
 /** Lords who'd stoop to blackmail you: greedy, deceitful or ambitious, and no friend of yours. */
 function blackmailers(s: GameState): Character[] {
-  return aiHeads(s).filter((h) => (hasTrait(h, 'greedy') || hasTrait(h, 'deceitful') || hasTrait(h, 'ambitious')) && (s.clans[h.clanId]?.opinion ?? 0) <= -10);
+  return aiHeads(s).filter(
+    (h) =>
+      (hasTrait(h, 'greedy') || hasTrait(h, 'deceitful') || hasTrait(h, 'ambitious')) &&
+      (s.clans[h.clanId]?.opinion ?? 0) <= -10 &&
+      hooksOf(s, h.id).some((x) => x.targetId === s.rulerId),
+  );
 }
 
 /** Lustful lords who might take up with the ruler's spouse. */
@@ -92,48 +95,70 @@ export const INTRIGUE_EVENTS: EventDef[] = [
     setup: ({ s, subject, data }) => {
       data.clan = subject!.clanId;
       data.amount = 100 + clanRank(s, subject!.clanId) * 50;
-      data.secret = secretOf(s) ?? 'your secrets';
+      const hook = hooksOf(s, subject!.id).find((x) => x.targetId === s.rulerId)!;
+      data.hookId = hook.id;
+      data.secretId = hook.secretId;
+      data.secret = secretLabel(
+        s,
+        s.secrets.find((x) => x.id === hook.secretId)!,
+        subject!.id,
+      );
     },
     text: ({ s, subject, data }) =>
       `A sealed letter from ${fullName(s, subject!)}: ${pr(subject).he} knows about ${data.secret}, and ${data.amount} credits will keep ${pr(subject).him} quiet.`,
     options: [
       {
         label: 'Pay them',
-        needs: [{ have: 'credits', n: 'amount' }],
+        needs: [
+          { have: 'credits', n: 'amount' },
+          {
+            test: (c) =>
+              !!c.subject && !hookBlocker(c.s, String(c.data.hookId), c.subject.id) && c.s.hooks.some((x) => x.id === c.data.hookId && x.targetId === c.r.id),
+            why: 'This demand no longer has usable evidence.',
+          },
+        ],
         then: {
           do: [
-            { lose: 'credits', n: { data: 'amount' } },
             {
               run: (c) => {
-                const k = c.s.clans[String(c.data.clan)];
-                if (k) k.credits += Number(c.data.amount);
+                if (!consumeHook(c.s, String(c.data.hookId), c.subject!.id)) return;
+                const amount = Number(c.data.amount);
+                c.s.credits -= amount;
+                c.s.clans[String(c.data.clan)].credits += amount;
                 recordDeed(c.s, c.subject!, 'blackmails');
               },
-              text: '',
+              text: (c) => `-${c.data.amount} credits; their hook is spent`,
             },
-            { feel: -40, from: 'root', to: 'subject', why: 'Blackmailed me', decay: 0.3 },
           ],
-          text: (c) => `You pay. ${c.subject!.name} smiles, and you suspect this will not be the last letter.`,
+          text: (c) => `You pay. ${c.subject!.name} smiles, but this piece of evidence cannot buy a second favour.`,
         },
       },
       {
         label: 'Call their bluff',
         then: {
           roll: { base: 0.4, per: { stat: 'int', n: 0.04 } },
-          pass: { do: [{ gain: 'prestige', n: 10 }], text: "You laugh in their envoy's face. Nothing is ever printed. +10 prestige." },
-          fail: {
+          pass: {
             do: [
-              { lose: 'prestige', n: 30 },
+              { gain: 'prestige', n: 10 },
               {
                 run: (c) => {
-                  const r = c.r;
-                  const sp = ch(c.s, r.spouseId);
-                  if (alive(sp) && alive(ch(c.s, r.loverId))) addFeeling(c.s, sp.id, r.id, { why: 'Has a lover', value: -40, decay: 2, key: 'lover' });
+                  consumeHook(c.s, String(c.data.hookId), c.subject!.id);
                 },
-                text: (c) => (alive(ch(c.s, c.r.loverId)) && alive(ch(c.s, c.r.spouseId)) ? 'and your spouse finds out' : ''),
+                text: 'their hook is spent',
               },
             ],
-            text: (c) => `It was not a bluff. Every newsfeed in the system is talking about ${c.data.secret}. -30 prestige.`,
+            text: "You laugh in their envoy's face. Nothing is ever printed. +10 prestige.",
+          },
+          fail: {
+            do: [
+              {
+                run: (c) => {
+                  exposeSecret(c.s, String(c.data.secretId), c.subject!.id);
+                },
+                text: 'they publish the evidence; prestige and family relationships suffer',
+              },
+            ],
+            text: (c) => `It was not a bluff. Every newsfeed in the system is talking about ${c.data.secret}. All hooks on this secret are worthless now.`,
           },
         },
       },
@@ -144,7 +169,7 @@ export const INTRIGUE_EVENTS: EventDef[] = [
           pass: killed('silenced'),
           fail: {
             do: [...caughtOut!, { lose: 'prestige', n: 20 }],
-            text: 'Your assassin is caught. Now they have two secrets to sell. -20 prestige.',
+            text: 'Your assassin is caught. They still hold the evidence, and your attack has made a bitter enemy. -20 prestige.',
           },
           text: (c) => `${c.subject!.name} has a fatal accident on the way to the printers.`,
         },
@@ -167,6 +192,7 @@ export const INTRIGUE_EVENTS: EventDef[] = [
       const sp = ch(s, r.spouseId)!;
       sp.loverId = subject!.id;
       subject!.loverId = sp.id;
+      recordAffair(s, sp, subject!, [r.id]);
       data.clan = subject!.clanId;
       addFeeling(s, r.id, sp.id, { why: 'Betrayed me', value: -30, decay: 1, key: 'betrayed' });
       addFeeling(s, r.id, subject!.id, { why: 'Seduced my spouse', value: -50, decay: 0.5, key: 'seduced' });

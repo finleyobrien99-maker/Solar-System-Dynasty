@@ -1,3 +1,4 @@
+import { learnSecret, recordAffair } from './secrets';
 import { describe, expect, it } from 'vitest';
 import { createCharacter } from './character';
 import { alive, ch, clanRegions, ruler } from './core';
@@ -29,6 +30,8 @@ const SETUP: Record<string, (s: GameState) => void> = {
     const [k, h] = aiHouse(s);
     h.traits.push('greedy');
     k.opinion = -40;
+    const secret = recordAffair(s, ruler(s), lover)[0];
+    learnSecret(s, secret.id, h.id);
   },
   seducer: (s) => {
     const sp = s.characters[ruler(s).spouseId!];
@@ -53,7 +56,9 @@ describe('AI lords use your own tools on you', () => {
         def.choices.forEach((choice, i) => {
           const t = structuredClone(s);
           const ctx = buildCtx(t, t.pending[t.pending.length - 1] as typeof p);
+          const before = JSON.stringify(t);
           expect(choice.describe(ctx), `${def.id} #${i}`).not.toMatch(/undefined|NaN|someone/);
+          expect(JSON.stringify(t)).toBe(before);
           if (choice.available && !choice.available(ctx)) return;
           expect(choice.run(ctx)).not.toMatch(/undefined|NaN/);
         });
@@ -73,6 +78,9 @@ describe('AI lords use your own tools on you', () => {
     const amount = Number(ctx.data.amount);
     expect(s.credits).toBe(mine - amount);
     expect(theirs.credits).toBe(before + amount);
+    expect(s.hooks).toBeDefined();
+    expect(s.hooks.find((x) => x.id === ctx.data.hookId)?.usedYear).toBe(s.year);
+    expect(def.when!(s)).toBe(false);
   });
 
   it('a seducer really takes up with your spouse, and forgiving ends it', () => {

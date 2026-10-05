@@ -7,6 +7,7 @@
 // epithets. The player hears about it as news. Plots against the player
 // still come from sworn rivals (ai.ts) and from events.
 
+import { consumeHook, hooksOf } from './secrets';
 import { ageOf, alive, ch, clanRank, clanRegions, effStats, fullName, hasTrait, isCloseKin, log } from './core';
 import { pactMap, pactsOf, type Pacts } from './aiCourt';
 import { aiAmbition, ambitionHouse, type AmbitionKind } from './aiAmbition';
@@ -76,7 +77,7 @@ export function aiPlans(s: GameState, k: Clan, pacts: Pacts = pactMap(s)): AiPla
     if (hate >= 60 || blood) plans.push({ kind: 'assassinate', target: t, score: hate - 50 + merciless + (blood ? 40 : 0) + (avenging ? 30 : 0) });
     const breaking = other.id === aimHouse && aim.kind !== 'security';
     if (war || hate >= 60 || breaking) plans.push({ kind: 'sabotage', target: t, score: hate - 40 + (war ? 25 : 0) + (breaking ? 30 : 0) });
-    if ((has('greedy') || has('deceitful')) && other.credits >= 100)
+    if ((has('greedy') || has('deceitful')) && other.credits >= 100 && hooksOf(s, head.id).some((h) => h.targetId === t.id))
       plans.push({ kind: 'blackmail', target: t, score: 15 + hate / 3 + (has('greedy') ? 10 : 0) });
     const spouse = ch(s, t.spouseId);
     if (has('lustful') && alive(spouse) && spouse.gender !== head.gender && !alive(ch(s, head.loverId)) && ageOf(s, spouse) >= 18)
@@ -104,6 +105,11 @@ function house(s: GameState, c: Character): string {
 export function runAiScheme(s: GameState, k: Clan, plan: AiPlan): boolean {
   const head = s.characters[k.headId];
   const t = plan.target;
+  if (!head || !alive(head) || k.credits < AI_SCHEME_COST[plan.kind] || !alive(t) || t.prisonerOf) return false;
+  if (plan.kind === 'blackmail') {
+    const hook = hooksOf(s, head.id).find((h) => h.targetId === t.id);
+    if (!hook || !consumeHook(s, hook.id, head.id)) return false;
+  }
   k.credits -= AI_SCHEME_COST[plan.kind];
   const success = chance(s, aiSchemeOdds(s, head, plan));
   const caught = chance(s, (success ? 0.2 : 0.55) - effStats(s, head).int * 0.015);
@@ -152,6 +158,13 @@ export function runAiScheme(s: GameState, k: Clan, plan: AiPlan): boolean {
         lovers(s, head, t);
         if (caught) {
           cuckolded(s, t, head.id);
+          // A printed scandal is public evidence, not fresh leverage.
+          for (const secret of s.secrets)
+            if (
+              secret.kind === 'affair' &&
+              ((secret.subjectId === head.id && secret.otherId === t.id) || (secret.subjectId === t.id && secret.otherId === head.id))
+            )
+              secret.exposedYear ??= s.year;
           log(s, `Scandal: ${fullName(s, t)} is having an affair with ${fullName(s, head)}.`, 'news');
         }
       }

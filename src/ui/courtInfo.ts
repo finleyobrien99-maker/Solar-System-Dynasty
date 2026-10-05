@@ -1,4 +1,5 @@
 // Read-only court facts shared by cards and profiles. Viewing them never advances the game.
+import { secretsKnownTo } from '../game/secrets';
 import { captiveRansom } from '../game/aiCourt';
 import { alive, ch } from '../game/core';
 import type { Character, GameState } from '../game/types';
@@ -12,22 +13,21 @@ export function captivityInfo(s: GameState, c: Character) {
   return { captor, amount: quoted ? quote : captiveRansom(s, c), quoted };
 }
 
+export function knownRomance(s: GameState, a: Character, b: Character): boolean {
+  return (
+    a.id === s.rulerId ||
+    b.id === s.rulerId ||
+    secretsKnownTo(s).some((x) => x.kind === 'affair' && ((x.subjectId === a.id && x.otherId === b.id) || (x.subjectId === b.id && x.otherId === a.id)))
+  );
+}
+
 export function affairInfo(s: GameState, c: Character) {
   const lover = ch(s, c.loverId);
-  if (!alive(c) || !alive(lover)) return undefined;
-  let married = false,
-    exposed = false;
-  for (const [partner, other] of [
-    [c, lover],
-    [lover, c],
-  ]) {
-    const spouse = ch(s, partner.spouseId);
-    if (!alive(spouse) || spouse.spouseId !== partner.id) continue;
-    married = true;
-    // A recorded discovery of this pair, or the player's spouse learning they have a lover.
-    exposed ||=
-      (s.relations[spouse.id]?.[other.id]?.feelings ?? []).some((f) => f.key === 'seduced:' + partner.id) ||
-      (s.relations[spouse.id]?.[partner.id]?.feelings ?? []).some((f) => f.key === 'lover' && f.value < 0);
-  }
-  return { lover, status: !married ? 'Lovers' : exposed ? 'Exposed affair' : 'No discovery recorded' };
+  if (!alive(c) || !alive(lover) || !knownRomance(s, c, lover)) return undefined;
+  const evidence = secretsKnownTo(s).filter(
+    (x) => x.kind === 'affair' && ((x.subjectId === c.id && x.otherId === lover.id) || (x.subjectId === lover.id && x.otherId === c.id)),
+  );
+  const married = alive(ch(s, c.spouseId)) || alive(ch(s, lover.spouseId));
+  const exposed = evidence.some((x) => x.exposedYear !== undefined);
+  return { lover, status: !married ? 'Lovers' : exposed ? 'Exposed affair' : 'Known private affair' };
 }

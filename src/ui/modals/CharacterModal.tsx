@@ -1,3 +1,4 @@
+import { SecretsSection } from '../sections/SecretsSection';
 import { affairInfo } from '../courtInfo';
 import { retiredRuler } from '../../game/life';
 import { RulerLegacy } from '../sections/RulerLegacy';
@@ -108,7 +109,7 @@ export function CharacterModal({ id }: { id: string }) {
         <div className="card flat" style={{ marginBottom: 'var(--space-8px)' }}>
           <Links label="Lover" people={[affair.lover]} />
           <span className={affair.status === 'Exposed affair' ? 'bad' : 'muted'}>{affair.status}</span>
-          <InfoDot text="An affair is exposed when a living spouse has a recorded discovery of these lovers. No discovery recorded means nobody has recorded finding them out yet. These links show the simulation's relationships, including other houses." />
+          <InfoDot text="This link appears only when you are a participant or know evidence about these lovers. Private evidence can buy a favour; public evidence cannot." />
         </div>
       )}
       <Links label="Betrothed" people={c.betrothedId && s.characters[c.betrothedId] ? [s.characters[c.betrothedId]] : []} />
@@ -117,6 +118,7 @@ export function CharacterModal({ id }: { id: string }) {
       {(c.reputation || s.dynasty.rulers.some((r) => r.id === c.id)) && <RulerLegacy c={c} />}
       <EpithetsSection c={c} />
       <RelationshipsSection c={c} />
+      <SecretsSection key={c.id} c={c} />
 
       {living && isDynasty && c.edu && (
         <div className="card flat" style={{ marginTop: 'var(--space-8px)' }}>

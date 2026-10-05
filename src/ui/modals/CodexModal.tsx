@@ -147,8 +147,8 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
             </p>
             <h3>Affairs</h3>
             <p>
-              Lovers can give you unsanctioned children. They cannot inherit unless legitimised for 150 prestige. Character profiles link to lovers and say
-              whether a spouse has discovered the affair; other houses have love lives too.
+              Lovers can give you unsanctioned children. They cannot inherit unless legitimised for 150 prestige. Character profiles link to lovers you know
+              about and say whether a spouse has discovered the affair; other houses have love lives too.
             </p>
             <h3>Captive relatives</h3>
             <p>
@@ -413,6 +413,22 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
         )}
         {page === 'intrigue' && (
           <>
+            <h3>Secrets and hooks</h3>
+            <p>
+              Open a character profile to investigate. One investigation per ruler per cycle costs 40 credits even when nothing is found. The chance is 35%,
+              plus 3.5 percentage points per Intrigue advantage and 1 point per spymaster Intrigue, capped at 10-85%. Your spymaster can also uncover one piece
+              of proof each cycle (4% plus 0.6 points per Intrigue, capped at 20%).
+            </p>
+            <p>
+              Only actual affairs and murders create evidence. A private discovery gives that person one hook. Spend it to demand payment (20 credits and a
+              scheme action; the hook is spent even on refusal), or arrange a marriage with a ruler's grown child. No captive, existing marriage, betrothal,
+              close kin, house head or heir can be taken. The new spouse joins your court and resents the coercion; it buys no friendship or automatic alliance.
+            </p>
+            <p>
+              Expose proof to damage the culprit's prestige (15 for an affair, 30 for murder) and inform the betrayed family. Exposure destroys all leverage on
+              that secret. Hooks are personal, expire with death and do not pass to your heir. AI rulers investigate with their own money and knowledge and can
+              use the same favours against your house.
+            </p>
             <h3>Schemes</h3>
             <p>
               Up to 3 per cycle. Your Intrigue against the target's decides the odds; Deceitful, psionics, Venusian birth and relics help, while Paranoid and

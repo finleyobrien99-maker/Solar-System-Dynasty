@@ -1,3 +1,4 @@
+import { initialiseSecrets } from './secrets';
 import { initialiseReputations } from './epithets';
 import { initialiseHouseGenetics } from './houseGenetics';
 // Bulletproof saves.
@@ -226,6 +227,7 @@ export class NewerSaveError extends Error {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MIGRATIONS: Record<number, (s: any) => void> = {
+  5: (s) => initialiseSecrets(s),
   4: (s) => initialiseHouseGenetics(s),
   // Lifetime reputations start counting real deeds from this update.
   3: (s) => initialiseReputations(s),

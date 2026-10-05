@@ -298,6 +298,32 @@ export interface StoryFlag {
   data: Record<string, string | number>;
 }
 
+/** Proof of something that actually happened, separate from suspicions. */
+export interface Secret {
+  id: string;
+  kind: 'affair' | 'murder';
+  subjectId: string;
+  otherId: string;
+  subjectName: string;
+  otherName: string;
+  /** The spouse betrayed at the time, not a later marriage. */
+  betrayedId?: string;
+  year: number;
+  knownTo: string[];
+  exposedYear?: number;
+  exposedBy?: string;
+}
+
+/** Personal, single-use leverage. A successor does not inherit it. */
+export interface Hook {
+  id: string;
+  secretId: string;
+  holderId: string;
+  targetId: string;
+  year: number;
+  usedYear?: number;
+}
+
 export interface GameState {
   version: number;
   seed: number;
@@ -333,6 +359,8 @@ export interface GameState {
   flags?: Record<string, StoryFlag>;
   /** relations[a][b]: how a feels about b. Sparse: only pairs with history. */
   relations: Record<string, Record<string, Relation>>;
+  secrets: Secret[];
+  hooks: Hook[];
   vip?: VipState;
   scenario?: ScenarioId;
   stats: { battlesWon: number; battlesLost: number; schemes: number; children: number; peakRank: number };

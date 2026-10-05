@@ -130,17 +130,23 @@ for (const exposed of [false, true])
         .click();
       const dialog = page.getByRole('dialog').last(),
         link = dialog.getByRole('button', { name: lover.name, exact: true });
-      await expect(dialog).toContainText(exposed ? 'Exposed affair' : 'No discovery recorded');
-      await link.scrollIntoViewIfNeeded();
+      if (exposed) await expect(dialog).toContainText('Exposed affair');
+      else {
+        await expect(dialog).not.toContainText('Selene');
+        await expect(link).toHaveCount(0);
+      }
+      if (exposed) await link.scrollIntoViewIfNeeded();
       await page.mouse.move(0, 0);
       await page.screenshot({ path: info.outputPath(exposed ? 'exposed-affair.png' : 'secret-affair.png'), animations: 'disabled' });
-      await link.click();
-      await expect(
-        page
-          .getByRole('dialog')
-          .last()
-          .getByRole('heading', { name: lover.name + ' ' + s.clans[lover.clanId].name, exact: true }),
-      ).toBeVisible();
+      if (exposed) {
+        await link.click();
+        await expect(
+          page
+            .getByRole('dialog')
+            .last()
+            .getByRole('heading', { name: lover.name + ' ' + s.clans[lover.clanId].name, exact: true }),
+        ).toBeVisible();
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
       await expect.poll(async () => page.evaluate(() => localStorage.getItem('solar-dynasty:auto'))).not.toBeNull();
       await page.reload();
@@ -167,7 +173,8 @@ for (const exposed of [false, true])
         .first()
         .locator('.nm')
         .click();
-      await expect(page.getByRole('dialog').last()).toContainText(exposed ? 'Exposed affair' : 'No discovery recorded');
+      if (exposed) await expect(page.getByRole('dialog').last()).toContainText('Exposed affair');
+      else await expect(page.getByRole('dialog').last()).not.toContainText('Selene');
       expect(failures).toEqual([]);
     },
   );

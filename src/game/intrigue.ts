@@ -4,6 +4,7 @@ import { isCloseKin, recordDeed } from './epithets';
 import { ageOf, alive, ch, clanRank, effStats, fullName, homePlanet, itemSum, liegeOf, log, notice, playerClan, ruler, traitSum, vassalsOf } from './core';
 import { canAfford, pay, type Cost } from './genetics';
 import { killCharacter } from './life';
+import { consumeHook, hooksOf, recordMurder } from './secrets';
 import { addFeeling, attempted, blackmailed, cuckolded, executed, lovers, murdered } from './relations';
 import { chance, clamp, int } from './rng';
 import { addTrait } from './traits';
@@ -22,7 +23,7 @@ export const SCHEMES: Record<SchemeKind, { name: string; desc: string; cost: Cos
     target: 'char',
   },
   sabotage: { name: 'Sabotage Shipyards', desc: "Wreck a rival clan's fleet in dock. Destroys 20-35% of their ships.", cost: { credits: 90 }, target: 'clan' },
-  blackmail: { name: 'Blackmail', desc: 'Dig up dirt on a clan head and make them pay for your silence.', cost: { credits: 20 }, target: 'clan' },
+  blackmail: { name: 'Blackmail', desc: 'Spend a known hook on a clan head to demand payment from their treasury.', cost: { credits: 20 }, target: 'clan' },
   fabricate: {
     name: 'Forge a Claim',
     desc: 'Forge old records proving a region is rightfully yours. Gives a war justification.',
@@ -99,6 +100,11 @@ export function schemeBlocker(s: GameState, kind: SchemeKind, targetId: string):
     if (!alive(t)) return 'Target is dead.';
     if (t.id === s.rulerId) return 'Not yourself!';
   }
+  if (kind === 'blackmail') {
+    const clan = s.clans[targetId];
+    if (!clan || clan.isPlayer || clan.credits <= 0) return 'Choose another house with money to pay.';
+    if (!hooksOf(s).some((h) => h.targetId === clan.headId)) return 'You need an unspent hook on this ruler. Investigate first.';
+  }
   if (kind === 'seduce') {
     const t = s.characters[targetId];
     const r = ruler(s);
@@ -117,6 +123,7 @@ export function schemeBlocker(s: GameState, kind: SchemeKind, targetId: string):
 
 export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boolean {
   if (schemeBlocker(s, kind, targetId)) return false;
+  if (kind === 'blackmail') consumeHook(s, hooksOf(s).find((h) => h.targetId === s.clans[targetId].headId)!.id);
   pay(s, SCHEMES[kind].cost);
   s.cooldowns[`schemes@${s.year}`] = (s.cooldowns[`schemes@${s.year}`] ?? 0) + 1;
   s.cooldowns[`scheme:${kind}:${targetId}`] = s.year + 1;
@@ -147,6 +154,7 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
         recordDeed(s, r, 'assassinations');
         recordDeed(s, r, 'cruelty');
         if (isCloseKin(r, t)) recordDeed(s, r, 'kinslayings');
+        recordMurder(s, r, t, caught);
         killCharacter(s, t.id, 'assassinated');
         if (caught) {
           remember(s, t.clanId, `Murdered ${wasHead ? 'our lord ' : ''}${t.name}`, wasHead ? -80 : nearLord ? -70 : -55, undefined, true);
@@ -194,7 +202,8 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
     case 'blackmail': {
       const clan = s.clans[targetId];
       if (success) {
-        const amount = int(s, 80, 160) + clanRank(s, clan.id) * 50;
+        const amount = Math.min(clan.credits, int(s, 80, 160) + clanRank(s, clan.id) * 50);
+        clan.credits -= amount;
         s.credits += amount;
         remember(s, clan.id, 'Blackmailed us', -40, undefined, true);
         const head = ch(s, clan.headId);
@@ -202,8 +211,8 @@ export function runScheme(s: GameState, kind: SchemeKind, targetId: string): boo
         title = 'They Paid Up';
         text = `${fullName(s, ch(s, clan.headId)!)} pays ${amount} credits to keep their secrets buried.`;
       } else {
-        title = 'Nothing to Find';
-        text = `House ${clan.name} is cleaner than you thought.`;
+        title = 'They Refused';
+        text = `House ${clan.name} refused to pay. Your hook is spent, but you can still publish the evidence.`;
       }
       if (caught) {
         remember(s, clan.id, 'Tried to blackmail us', -25);

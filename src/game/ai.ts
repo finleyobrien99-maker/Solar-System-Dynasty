@@ -1,3 +1,4 @@
+import { recordMurder } from './secrets';
 import { breakPeace, isCloseKin, recordDeed } from './epithets';
 // The rest of the solar system: rival houses grow, marry, feud, and sometimes
 // come for you.
@@ -27,7 +28,7 @@ import { grossRegionIncome } from './economy';
 import { aiSucceed, isCloseFamily, killCharacter, currentHeir } from './life';
 import { councilStat } from './council';
 import { capOpinion, grudgeOpinion, isRival, opinionCeiling } from './memory';
-import { addFeeling, feelingsSum, opinionOf } from './relations';
+import { addFeeling, feelingsSum, murdered, opinionOf } from './relations';
 import { aiIntrigueTick } from './aiIntrigue';
 import { aiDynastyTick } from './aiDynasty';
 import { aiAmbition, ambitionHouse, AMBITION_AGGRESSION, type AmbitionKind } from './aiAmbition';
@@ -299,6 +300,11 @@ function rivalPlots(s: GameState): void {
       recordDeed(s, head, 'cruelty');
       if (isCloseKin(head, target)) recordDeed(s, head, 'kinslayings');
       killCharacter(s, target.id, `assassinated by agents of House ${rival.name}`);
+      // Immortality can prevent the death; a failed killing is not murder evidence.
+      if (!alive(target)) {
+        recordMurder(s, head, target, caught);
+        if (caught) murdered(s, target, head.id, true);
+      }
     } else {
       notice(
         s,
@@ -373,6 +379,10 @@ export function prune(s: GameState): void {
     if (c.motherId) keep.add(c.motherId);
   }
   for (const clan of Object.values(s.clans)) keep.add(clan.headId);
+  for (const secret of s.secrets) {
+    keep.add(secret.otherId); // Victim/lover ancestry is needed when old evidence is exposed.
+    if (secret.betrayedId) keep.add(secret.betrayedId);
+  }
   for (const c of Object.values(s.characters)) {
     if (c.died !== undefined && !c.reputation?.earned.length && !keep.has(c.id) && c.died < s.year - 2) delete s.characters[c.id];
   }

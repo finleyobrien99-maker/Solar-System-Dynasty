@@ -8,6 +8,7 @@
 // other death. Allies who come to hate you walk away. No save change: pacts
 // are read off the family trees and captives off `prisonerOf`.
 
+import { recordAffair } from './secrets';
 import { aiAmbition } from './aiAmbition';
 import { geneticMatchWeight } from './houseGenetics';
 import { createCharacter } from './character';
@@ -443,6 +444,7 @@ function married(s: GameState, c: Character): boolean {
 export function beginAffair(s: GameState, a: Character, b: Character): void {
   a.loverId = b.id;
   b.loverId = a.id;
+  recordAffair(s, a, b);
   for (const [x, y] of [
     [a, b],
     [b, a],
@@ -465,6 +467,7 @@ function exposed(s: GameState, a: Character, b: Character): boolean {
 
 /** The affair comes out: each betrayed spouse turns on their partner and on the lover. Lords make the news. */
 export function exposeAffair(s: GameState, a: Character, b: Character): void {
+  recordAffair(s, a, b, [], true);
   for (const [x, y] of [
     [a, b],
     [b, a],

@@ -1,3 +1,4 @@
+import { learnSecret } from '../game/secrets';
 import { describe, expect, it } from 'vitest';
 import { beginAffair, captiveRansom, exposeAffair } from '../game/aiCourt';
 import { createCharacter } from '../game/character';
@@ -47,15 +48,29 @@ describe('court facts shown to the player', () => {
     const b = createCharacter(s, { clanId: k.id, planetId: k.planetId, faithId: k.faithId, gender: 'F', born: s.year - 30 });
     beginAffair(s, a, b);
     const before = JSON.stringify(s);
-    expect(affairInfo(s, a)).toMatchObject({ lover: b, status: 'No discovery recorded' });
+    expect(affairInfo(s, a)).toMatchObject({ lover: b, status: 'Known private affair' });
     expect(JSON.stringify(s)).toBe(before);
     // Discovering another lover must not falsely expose this pair.
     addFeeling(s, a.spouseId!, 'someone-else', { key: 'seduced:' + a.id, why: 'An old affair', value: -50, decay: 0.5 });
-    expect(affairInfo(s, a)?.status).toBe('No discovery recorded');
+    expect(affairInfo(s, a)?.status).toBe('Known private affair');
     exposeAffair(s, a, b);
     expect(affairInfo(s, a)?.status).toBe('Exposed affair');
     expect(affairInfo(s, b)?.status).toBe('Exposed affair');
   });
+  it('hides unknown AI lovers until real evidence is learned, without mutating the state', () => {
+    const s = game(),
+      k = Object.values(s.clans).find((x) => !x.isPlayer)!;
+    const a = s.characters[k.headId],
+      b = createCharacter(s, { clanId: k.id, gender: a.gender === 'M' ? 'F' : 'M', born: s.year - 25, planetId: k.planetId });
+    beginAffair(s, a, b);
+    const before = JSON.stringify(s);
+    expect(affairInfo(s, a)).toBeUndefined();
+    expect(JSON.stringify(s)).toBe(before);
+    const secret = s.secrets.find((x) => x.subjectId === a.id)!;
+    learnSecret(s, secret.id, s.rulerId);
+    expect(affairInfo(s, a)?.status).toBe('Known private affair');
+  });
+
   it('distinguishes unmarried lovers from affairs and hides dead or missing lovers', () => {
     const s = game(),
       a = ruler(s),

@@ -1,3 +1,4 @@
+import { knownRomance } from '../courtInfo';
 import { useId, useState } from 'react';
 import { alive, fullName, ruler } from '../../game/core';
 import { opinionLines, relationsOf, spendTime, TIME_KINDS, TIME_PER_CYCLE, timeBlocker, timeLeft, timeValue, type TimeKind } from '../../game/relations';
@@ -10,7 +11,7 @@ const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 
 export function RelationshipsSection({ c }: { c: Character }) {
   const { s, openChar } = useGame();
-  const relations = relationsOf(s, c);
+  const relations = relationsOf(s, c).filter(({ other, kind }) => kind !== 'lover' || knownRomance(s, c, other));
   return (
     <Section
       title="Relationships"

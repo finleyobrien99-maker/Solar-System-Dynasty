@@ -1,3 +1,4 @@
+import { secretsTick } from './secrets';
 import { epithetsTick, recordDeed } from './epithets';
 // Ageing up one cycle: the heartbeat of the game.
 
@@ -56,6 +57,7 @@ export function ageUp(s: GameState): void {
   councilTick(s);
   forgeTick(s);
   aiTick(s);
+  secretsTick(s); // Discover evidence after new AI deeds, before blackmail letters are selected.
   tickPlayerWars(s);
   tradeTick(s);
   if (s.gameOver) return;

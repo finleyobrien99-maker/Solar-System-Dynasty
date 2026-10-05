@@ -1,3 +1,4 @@
+import { learnSecret, recordMurder } from './secrets';
 // Realism: some things can't be bought back. Murder a lord's wife, get
 // caught, then spend twenty years being charming and generous: he and his
 // house should still hate you. An ordinary insult, though, can be mended.
@@ -122,6 +123,10 @@ describe('grudges that stick', () => {
       const s = charmingRuler();
       const k = marriedHouse(s);
       s.seed = seed;
+      const headWithSecret = s.characters[k.headId];
+      const victim = createCharacter(s, { clanId: k.id, born: s.year - 30, planetId: k.planetId });
+      victim.died = s.year;
+      learnSecret(s, recordMurder(s, headWithSecret, victim).id, s.rulerId);
       if (!runScheme(s, 'blackmail', k.id)) continue;
       found = true;
       const head = s.characters[k.headId];

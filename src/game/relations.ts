@@ -1,3 +1,4 @@
+import { recordAffair, recordMurder } from './secrets';
 import { breakFaithfulness, recordDeed } from './epithets';
 // Personal relationships (ROADMAP §1.1, numbers from deep dives §C).
 //
@@ -158,6 +159,7 @@ export function spendTime(s: GameState, targetId: string, kind: TimeKind): boole
 
 /** The ruler's spouse learns of a lover. */
 export function lovers(s: GameState, r: Character, lover: Character): void {
+  recordAffair(s, r, lover, alive(ch(s, r.spouseId)) ? [r.spouseId!] : []);
   breakFaithfulness(r);
   breakFaithfulness(ch(s, r.spouseId));
   breakFaithfulness(lover);
@@ -199,6 +201,8 @@ export function executed(s: GameState, victim: Character, byId = s.rulerId): voi
  * hate them for life; if only suspected, they mistrust them for a while.
  */
 export function murdered(s: GameState, victim: Character, byId: string, known: boolean): void {
+  const killer = ch(s, byId);
+  if (killer) recordMurder(s, killer, victim, known);
   if (known) grieve(s, victim, byId, `Murdered ${victim.name}`, -90, 0);
   else
     for (const k of closeKin(s, victim))

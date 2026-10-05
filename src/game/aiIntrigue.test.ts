@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { learnSecret, recordMurder } from './secrets';
 import { aiPlans, runAiScheme, type AiPlan } from './aiIntrigue';
 import { alive, ch, clanRegions } from './core';
 import { createCharacter } from './character';
@@ -76,6 +77,8 @@ describe('AI houses scheme like the player', () => {
       const s = world();
       const [a, b] = twoHouses(s);
       s.seed = seed;
+      const victim = createCharacter(s, { clanId: b.id, planetId: b.planetId, born: s.year - 30 });
+      learnSecret(s, recordMurder(s, s.characters[b.headId], victim).id, a.headId);
       const before = [a.credits, b.credits];
       if (!runAiScheme(s, a, { kind: 'blackmail', target: s.characters[b.headId], score: 50 })) continue;
       done = true;
