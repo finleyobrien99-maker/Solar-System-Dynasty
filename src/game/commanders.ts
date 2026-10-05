@@ -17,14 +17,14 @@ import { recordDeed } from './epithets';
 import { clearFlag, getFlag, setFlag } from './eventKit';
 import { isCloseFamily, killCharacter } from './life';
 import { addFeeling, closeKin } from './relations';
-import { chance, pick } from './rng';
+import { chance, clamp } from './rng';
 import { addTrait } from './traits';
 import type { Character, Clan, GameState } from './types';
 import { isAway } from './wards';
 
 const KEY = 'commander:';
-/** Story flags need a due year; an appointment has none. */
-const NEVER = 99999;
+/** An appointment has no deadline: the flag's due year 0 is a marker only (WAVE-3-CONTRACT.md). */
+const APPOINTED = 0;
 export const MIN_AGE = 16;
 export const MAX_AGE = 70;
 /** How much each point of Command adds to a fleet's strength (as for the ruler and the admiral). */
@@ -112,7 +112,7 @@ export function appointCommander(s: GameState, clanId: string, id: string): bool
   const k = s.clans[clanId];
   const old = commanderOf(s, clanId);
   if (old) addFeeling(s, old.id, leader(s, k)?.id ?? old.id, { why: 'Relieved me of command', value: -10, decay: 1, key: 'relieved' });
-  setFlag(s, KEY + clanId, NEVER, { id, since: s.year });
+  setFlag(s, KEY + clanId, APPOINTED, { id, since: s.year });
   enlist(s, s.characters[id]);
   if (k.isPlayer) log(s, `${fullName(s, s.characters[id])} takes command of the fleet.`, 'war');
   return true;
@@ -136,9 +136,46 @@ export function battleRecord(c: Character): { won: number; lost: number } {
   return { won: d.battlesWon ?? 0, lost: d.battlesLost ?? 0 };
 }
 
+// ── Who leads a given battle ──────────────────────────────────────────────
+
+/**
+ * Who leads a house's fleet in a battle: for you, the ruler when you lead in
+ * person (`personal`), otherwise your appointed commander; for AI houses,
+ * their commander. Pure: reading never changes anything. Snapshot the ID
+ * before the battle so consequences land on the person who actually fought.
+ */
+export function commanderFor(s: GameState, houseId: string, personal = false): Character | undefined {
+  const k = s.clans[houseId];
+  if (k?.isPlayer && personal) {
+    const r = ruler(s);
+    return alive(r) && !r.prisonerOf && ageOf(s, r) >= MIN_AGE ? r : undefined;
+  }
+  return commanderOf(s, houseId);
+}
+
 // ── After a battle ────────────────────────────────────────────────────────
 
+/** One battle, as the integrator saw it. Commander IDs are snapshotted before any consequence (or succession) can happen. */
+export interface CommandedBattle {
+  /** Unique per battle. Call `onCommandedBattle` exactly once for it. */
+  id: string;
+  attacker: string;
+  defender: string;
+  attackerCommanderId?: string;
+  defenderCommanderId?: string;
+  attackerWon: boolean;
+  /** Each side's own ships before the battle and the ships it actually lost; heavier losses mean more danger on the bridge. */
+  attackerShips?: number;
+  attackerLosses?: number;
+  defenderShips?: number;
+  defenderLosses?: number;
+  /** Scales every risk; AI skirmishes between other houses use 0.5. Default 1. */
+  danger?: number;
+}
+
 export interface BattleFate {
+  /** The commander it happened to. */
+  who: string;
   /** One line for the battle report. */
   note: string;
   died?: boolean;
@@ -147,55 +184,109 @@ export interface BattleFate {
   hero?: boolean;
 }
 
+/** How dangerous the battle was for one side's commander: by their own fleet's losses if known, otherwise twice as bad in defeat. */
+function riskFor(won: boolean, ships?: number, losses?: number): number {
+  if (ships && losses !== undefined) return clamp(0.5 + (losses / ships) * 5, 0.5, 2.5);
+  return won ? 1 : 2;
+}
+
 /**
- * A commander lived through (or didn't) a battle: deeds for their name, and a
- * chance of death, capture (only in defeat) or wounds, twice as likely in
- * defeat. Family grieve a death, blaming the enemy commander or lord, and kin
- * who never wanted them sent may blame their own lord too. `danger` scales the
- * risks (AI skirmishes between other houses are smaller affairs).
+ * One commander's single consequence roll for a battle: deeds for their name,
+ * then death, capture (only in defeat) or wounds, or glory. Family grieve a
+ * death, blaming the enemy commander (or lord), and kin who never wanted them
+ * sent may blame their own lord. Never call it twice for one person and battle.
  */
-export function commanderAfterBattle(s: GameState, clanId: string, won: boolean, enemyClanId: string, danger = 1): BattleFate | undefined {
-  const c = commanderOf(s, clanId);
-  if (!c) return undefined;
+function consequences(
+  s: GameState,
+  c: Character,
+  clanId: string,
+  won: boolean,
+  enemyClanId: string,
+  foeId: string | undefined,
+  risk: number,
+): BattleFate | undefined {
   const k = s.clans[clanId];
   const enemy = s.clans[enemyClanId];
-  const foe = commanderOf(s, enemyClanId) ?? (enemy ? leader(s, enemy) : undefined);
+  if (!k) return undefined;
+  const foe = ch(s, foeId) ?? (enemy ? leader(s, enemy) : undefined);
+  const lord = leader(s, k);
   // A lord leading their own fleet already has the battle on their record.
-  if (c.id !== leader(s, k)?.id) recordDeed(s, c, won ? 'battlesWon' : 'battlesLost');
+  if (c.id !== lord?.id) recordDeed(s, c, won ? 'battlesWon' : 'battlesLost');
   recordDeed(s, c, 'personalBattles');
-  const risk = (won ? 1 : 2) * danger;
   if (chance(s, 0.012 * risk)) {
-    for (const kin of closeKin(s, c)) {
-      if (alive(foe) && kin.id !== foe.id) addFeeling(s, kin.id, foe.id, { why: `Killed ${c.name} in battle`, value: -40, decay: 0.3, key: `fell:${c.id}` });
-      const lord = leader(s, k);
-      if (alive(lord) && kin.id !== lord.id && !hasTrait(c, 'brave') && !hasTrait(c, 'ambitious'))
-        addFeeling(s, kin.id, lord.id, { why: `Sent ${c.name} to die`, value: -15, decay: 0.5, key: `sent:${c.id}` });
+    const kin = closeKin(s, c);
+    for (const x of kin) {
+      if (alive(foe) && x.id !== foe.id) addFeeling(s, x.id, foe.id, { why: `Killed ${c.name} in battle`, value: -40, decay: 0.3, key: `fell:${c.id}` });
+      if (alive(lord) && lord.id !== c.id && x.id !== lord.id && !hasTrait(c, 'brave') && !hasTrait(c, 'ambitious'))
+        addFeeling(s, x.id, lord.id, { why: `Sent ${c.name} to die`, value: -15, decay: 0.5, key: `sent:${c.id}` });
     }
-    clearFlag(s, KEY + clanId);
+    if (commanderOf(s, clanId)?.id === c.id) clearFlag(s, KEY + clanId);
     // Your family will want to know how you mean to remember them (eventsCommanders.ts).
-    const mourner = closeKin(s, c).find((x) => x.clanId === k.id && x.id !== s.rulerId) ?? closeKin(s, c).find((x) => x.id !== s.rulerId);
-    if (k.isPlayer && mourner) setFlag(s, 'fallen_commander', s.year, { id: c.id, kin: mourner.id });
+    const mourner = kin.find((x) => x.clanId === k.id && x.id !== s.rulerId) ?? kin.find((x) => x.id !== s.rulerId);
+    if (k.isPlayer && c.id !== s.rulerId && mourner) setFlag(s, 'fallen_commander', s.year, { id: c.id, kin: mourner.id });
     killCharacter(s, c.id, `killed commanding the fleet of House ${k.name}`);
-    return { note: `${c.name} fell commanding the fleet.`, died: true };
+    return { note: `${fullName(s, c)} fell commanding House ${k.name}'s fleet.`, died: true, who: c.id };
   }
-  if (!won && enemy && chance(s, 0.08 * danger)) {
+  if (!won && enemy && chance(s, 0.04 * Math.min(risk, 2))) {
     c.prisonerOf = enemy.id;
     if (alive(foe)) addFeeling(s, c.id, foe.id, { why: 'Took me captive in battle', value: -30, decay: 1, key: 'captive' });
-    clearFlag(s, KEY + clanId);
-    return { note: `${c.name} was captured when the flagship was boarded.`, captured: true };
+    if (commanderOf(s, clanId)?.id === c.id) clearFlag(s, KEY + clanId);
+    return { note: `${fullName(s, c)} was captured when House ${k.name}'s flagship was boarded.`, captured: true, who: c.id };
   }
   if (chance(s, 0.05 * risk)) {
     recordDeed(s, c, 'battleWounds');
     c.traits = addTrait(c.traits, 'wounded');
     if (chance(s, 0.4)) c.traits = addTrait(c.traits, 'scarred');
     if (!won && chance(s, 0.15)) c.traits = addTrait(c.traits, 'maimed');
-    return { note: `${c.name} was wounded on the bridge.`, wounded: true };
+    return { note: `${c.name} was wounded on the bridge.`, wounded: true, who: c.id };
   }
   if (won && !c.traits.includes('war_hero') && chance(s, 0.12)) {
     c.traits = addTrait(c.traits, 'war_hero');
-    return { note: `${c.name} is hailed as a War Hero!`, hero: true };
+    return { note: `${c.name} is hailed as a War Hero!`, hero: true, who: c.id };
   }
   return undefined;
+}
+
+/**
+ * The named consequences of one battle for the commanders who actually fought
+ * it (as snapshotted), one roll each. Returns a line per notable fate, for the
+ * battle report or the news. Fleet numbers are only read, never changed.
+ */
+export function onCommandedBattle(s: GameState, b: CommandedBattle): string[] {
+  return commandedBattleFates(s, b).map((f) => f.note);
+}
+
+/** As `onCommandedBattle`, with each fate's details (died, captured, wounded, hero), e.g. to report only deaths as news. */
+export function commandedBattleFates(s: GameState, b: CommandedBattle): BattleFate[] {
+  const fates: BattleFate[] = [];
+  const danger = b.danger ?? 1;
+  const sides = [
+    {
+      house: b.attacker,
+      foeHouse: b.defender,
+      id: b.attackerCommanderId,
+      foeId: b.defenderCommanderId,
+      won: b.attackerWon,
+      ships: b.attackerShips,
+      losses: b.attackerLosses,
+    },
+    {
+      house: b.defender,
+      foeHouse: b.attacker,
+      id: b.defenderCommanderId,
+      foeId: b.attackerCommanderId,
+      won: !b.attackerWon,
+      ships: b.defenderShips,
+      losses: b.defenderLosses,
+    },
+  ];
+  for (const side of sides) {
+    const c = ch(s, side.id);
+    if (!alive(c)) continue;
+    const fate = consequences(s, c, side.house, side.won, side.foeHouse, side.foeId, riskFor(side.won, side.ships, side.losses) * danger);
+    if (fate) fates.push(fate);
+  }
+  return fates;
 }
 
 // ── AI houses ─────────────────────────────────────────────────────────────
@@ -210,17 +301,22 @@ function aiScore(s: GameState, k: Clan, c: Character): number {
   return v;
 }
 
-/** Each cycle AI houses without a fit commander appoint their best, and now and then replace a much worse one. */
-export function aiCommandersTick(s: GameState): void {
+/**
+ * Each cycle: clear appointments that no longer stand (dead, captive, grown
+ * too old, left the house), then AI houses without a commander appoint their
+ * best and now and then replace a much worse one. Your own post stays empty
+ * until you fill it.
+ */
+export function commandersTick(s: GameState): void {
   for (const k of Object.values(s.clans)) {
-    if (k.isPlayer || !clanRegions(s, k.id).length) continue;
     const current = commanderOf(s, k.id);
     if (!current && getFlag(s, KEY + k.id)) clearFlag(s, KEY + k.id);
+    if (k.isPlayer || !clanRegions(s, k.id).length) continue;
     const pool = eligibleCommanders(s, k.id);
     if (!pool.length) continue;
     const best = pool.reduce((a, b) => (aiScore(s, k, b) > aiScore(s, k, a) ? b : a));
     if (!current) {
-      setFlag(s, KEY + k.id, NEVER, { id: best.id, since: s.year });
+      setFlag(s, KEY + k.id, APPOINTED, { id: best.id, since: s.year });
       enlist(s, best);
     } else if (best.id !== current.id && aiScore(s, k, best) >= aiScore(s, k, current) + 3 && chance(s, 0.2)) appointCommander(s, k.id, best.id);
   }
@@ -235,10 +331,4 @@ export function leadFactor(s: GameState, clanId: string): number {
 /** Start a commander's own record of deeds, so their battles can earn them a name (EPITHETS.md). */
 function enlist(s: GameState, c: Character): void {
   c.reputation ??= { deeds: {}, earned: [], since: s.year, houses: [], lastYear: s.year, peaceStreak: 0, marriageStreak: 0 };
-}
-
-/** A random fit candidate, for events that need one. */
-export function anyCandidate(s: GameState, clanId: string): Character | undefined {
-  const pool = eligibleCommanders(s, clanId);
-  return pool.length ? pick(s, pool) : undefined;
 }

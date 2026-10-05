@@ -1,0 +1,349 @@
+diff --git a/e2e/commanders.spec.ts b/e2e/commanders.spec.ts
+new file mode 100644
+index 0000000..e0e5f7b
+--- /dev/null
++++ b/e2e/commanders.spec.ts
+@@ -0,0 +1,65 @@
++import { expect, test, type Page } from '@playwright/test';
++import { createCharacter } from '../src/game/character';
++import { commandersTick, commanderOf } from '../src/game/commanders';
++import { clanRegions, ruler } from '../src/game/core';
++import { hashString } from '../src/game/rng';
++import type { GameState } from '../src/game/types';
++import { createWorld, rollRuler, scenarioHouses, startGame } from '../src/game/world';
++
++/** A Mars governor at war with a neighbour, with a bold grown son who can take the fleet. */
++function fixture() {
++  const s = createWorld(131);
++  const home = scenarioHouses(s, 'mars', 'governor')[0];
++  startGame(s, { clanId: home.id, ruler: rollRuler(131, 'mars', 'F', 'Asha'), focus: 'dip', age: 50, family: 'married' });
++  Object.assign(s, { credits: 2000, prestige: 300, fleet: 120 });
++  const r = ruler(s);
++  const son = createCharacter(s, { name: 'Bram', gender: 'M', born: s.year - 24, clanId: s.playerClanId, planetId: 'mars', motherId: r.id, adultExtras: true });
++  son.base.cmd = 9;
++  r.childrenIds.push(son.id);
++  const enemy = Object.values(s.clans).find(
++    (k) => !k.isPlayer && k.planetId === 'mars' && clanRegions(s, k.id).length > 0 && !clanRegions(s, k.id).some((x) => x.capital),
++  )!;
++  s.wars.push({ id: 'w-e2e', enemy: enemy.id, playerAttacker: true, target: clanRegions(s, enemy.id)[0].id, cb: 'conquest', score: 0, started: s.year });
++  commandersTick(s);
++  s.pending = [];
++  return { s, son, enemy, theirs: commanderOf(s, enemy.id)! };
++}
++
++async function load(page: Page, s: GameState) {
++  await page.goto('/');
++  await page.getByRole('button', { name: 'Load game', exact: true }).click();
++  const data = JSON.stringify(s);
++  await page
++    .getByLabel('Import save file')
++    .setInputFiles({ name: 'commanders.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ data, checksum: hashString(data) })) });
++}
++
++test('appoint a commander, see who leads the enemy, and a real battle goes on their record', async ({ page }, info) => {
++  const failures: string[] = [];
++  page.on('pageerror', (e) => failures.push(e.message));
++  page.on('console', (e) => {
++    if (e.type() === 'error') failures.push(e.text());
++  });
++  const { s, son, enemy, theirs } = fixture();
++  await load(page, s);
++  await page.getByRole('tab', { name: /^Realm/ }).click();
++  const section = page.locator('.section').filter({ has: page.getByRole('heading', { name: /^Fleet commander/ }) });
++  await expect(section).toContainText('Nobody in command');
++  await expect(section).toContainText(`House ${enemy.name}`);
++  await expect(section).toContainText(theirs.name);
++  await section.getByLabel('Appoint a commander').selectOption(son.id);
++  await section.getByRole('button', { name: 'Give them the fleet', exact: true }).click();
++  await expect(section).toContainText('no battles yet');
++  await expect(section).toContainText('In command since');
++  await section.scrollIntoViewIfNeeded();
++  await page.mouse.move(0, 0);
++  await page.screenshot({ path: info.outputPath('commander.png'), animations: 'disabled' });
++  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
++
++  await page.getByRole('button', { name: 'Launch battle', exact: true }).first().click();
++  const report = page.getByRole('dialog').last();
++  await expect(report).toContainText(/Victory in Battle|Defeat in Battle/);
++  await report.getByRole('button', { name: 'Continue', exact: true }).click();
++  await expect(section).toContainText(/won 1, lost 0|won 0, lost 1|Nobody in command/);
++  expect(failures).toEqual([]);
++});
+diff --git a/src/game/ai.ts b/src/game/ai.ts
+index 8c72b1a..56fba1f 100644
+--- a/src/game/ai.ts
++++ b/src/game/ai.ts
+@@ -32,6 +32,7 @@ import { addFeeling, feelingsSum, murdered, opinionOf } from './relations';
+ import { aiIntrigueTick } from './aiIntrigue';
+ import { aiDynastyTick } from './aiDynasty';
+ import { allMentorships, allWardships, aiWardsTick } from './wards';
++import { commandedBattleFates, commanderOf, commandersTick, leadFactor } from './commanders';
+ import { aiAmbition, ambitionHouse, AMBITION_AGGRESSION, type AmbitionKind } from './aiAmbition';
+ import { aiAffairsTick, aiArrests, aiMarriages, alliesAbandon, betrayPact, captivesTick, kinFleet, pactMap, takeCaptive, wouldBetray } from './aiCourt';
+ import { neighbourPlanets, PLANET_BY_ID } from './planets';
+@@ -195,14 +196,32 @@ function tickAiWars(s: GameState): void {
+     if (liege && liege !== a.id && liegeOf(s, a.id) !== liege && liege !== s.playerClanId) def += s.clans[liege].fleet * 0.3;
+     // Kin by marriage stand by each other, more readily in defence than in attack.
+     def += kinFleet(s, d.id, a.id, pacts, 0.25);
+-    const att = a.fleet + kinFleet(s, a.id, d.id, pacts, 0.15);
++    // Each side fights as well as its named commander leads it (commanders.ts).
++    def *= leadFactor(s, d.id);
++    const att = (a.fleet + kinFleet(s, a.id, d.id, pacts, 0.15)) * leadFactor(s, a.id);
+     const pAtt = att / Math.max(1, att + def);
++    const [ac, dc, af, df] = [commanderOf(s, a.id)?.id, commanderOf(s, d.id)?.id, a.fleet, d.fleet];
+     const attWins = chance(s, pAtt);
+     recordDeed(s, a.headId, attWins ? 'battlesWon' : 'battlesLost');
+     recordDeed(s, d.headId, attWins ? 'battlesLost' : 'battlesWon');
+     w.progress += attWins ? int(s, 25, 45) : -int(s, 25, 45);
+     a.fleet = Math.round(a.fleet * range(s, 0.85, 0.95));
+     d.fleet = Math.round(d.fleet * range(s, 0.85, 0.95));
++    // Each side's commander, as they stood before the battle, after the real losses (commanders.ts).
++    const fates = commandedBattleFates(s, {
++      id: `${w.id}@${s.year}`,
++      attacker: a.id,
++      defender: d.id,
++      attackerCommanderId: ac,
++      defenderCommanderId: dc,
++      attackerWon: attWins,
++      attackerShips: af,
++      attackerLosses: af - a.fleet,
++      defenderShips: df,
++      defenderLosses: df - d.fleet,
++      danger: 0.5,
++    });
++    for (const f of fates) if (f.died || f.captured) log(s, f.note, 'news');
+     if (w.progress >= 100) {
+       const wasCapital = target.capital;
+       setOwner(s, target, a.id);
+@@ -356,6 +375,7 @@ export function aiTick(s: GameState): void {
+   aiMarriages(s);
+   aiAffairsTick(s);
+   opinionDrift(s);
++  commandersTick(s);
+   tickAiWars(s);
+   if (chance(s, 0.3)) startAiWar(s);
+   aggressionOnPlayer(s);
+diff --git a/src/game/testkit.ts b/src/game/testkit.ts
+index efb5b07..be16c32 100644
+--- a/src/game/testkit.ts
++++ b/src/game/testkit.ts
+@@ -16,6 +16,7 @@ import { chance, pick, type Seeded } from './rng';
+ import { openRoute } from './trade';
+ import type { GameState } from './types';
+ import { cbOptions, declareWar, fightBattle, warBlocker } from './war';
++import { appointCommander, eligibleCommanders } from './commanders';
+ 
+ /** Answer every pending pop-up with a random allowed choice. */
+ export function drain(s: GameState, bot: Seeded): void {
+@@ -85,6 +86,11 @@ export function botTurn(s: GameState, bot: Seeded): void {
+       if (opt) declareWar(s, reg.id, opt.cb);
+     }
+   }
++  // Put someone in command of the fleet now and then, so commanders fight, fall and get captured in long games.
++  if (chance(bot, 0.3)) {
++    const pool = eligibleCommanders(s, s.playerClanId);
++    if (pool.length) appointCommander(s, s.playerClanId, pick(bot, pool).id);
++  }
+   for (const w of s.wars.slice()) fightBattle(s, w.id);
+   const cands = vaultCandidates(s);
+   if (cands.length && chance(bot, 0.2)) lockTrait(s, cands[0]);
+diff --git a/src/game/war.ts b/src/game/war.ts
+index d64c9ed..d42244c 100644
+--- a/src/game/war.ts
++++ b/src/game/war.ts
+@@ -29,6 +29,7 @@ import { killCharacter } from './life';
+ import { councilStat } from './council';
+ import { remember } from './memory';
+ import { takeCaptive } from './aiCourt';
++import { commandFactor, commanderOf, onCommandedBattle, personalCommand } from './commanders';
+ 
+ export const CB_INFO: Record<CasusBelli, { name: string; desc: string }> = {
+   claim: { name: 'Press Claim', desc: 'You hold a claim on this region. No prestige penalty.' },
+@@ -162,6 +163,15 @@ export function playerSide(s: GameState, war: War, personal: boolean): Side {
+       helpers.push(`House ${v.name} (${v.cadetOf === s.playerClanId ? 'cadet' : 'vassal'}, ${add})`);
+     }
+   }
++  // A named commander leads any battle you don't lead yourself, on their own Command and traits alone:
++  // no council seat or VIP bonus (commanders.ts). Without one, the admiral advises as before.
++  const general = personal ? undefined : commanderOf(s, s.playerClanId);
++  if (general) {
++    let gmod = 1 + itemSum(s, 'fleetPct');
++    if (homePlanet(s) === 'mars') gmod += 0.15;
++    if (s.year - r.born < 16) gmod -= 0.2; // regency
++    return { ships, strength: ships * commandFactor(s, general) * gmod, helpers };
++  }
+   // An admiral commands any battle you don't lead yourself, if they're better at it.
+   const cmd = personal ? effStats(s, r).cmd : Math.max(effStats(s, r).cmd, councilStat(s, 'admiral'));
+   let mod = 1 + traitSum(r, 'fleetPct') + itemSum(s, 'fleetPct') + councilStat(s, 'admiral') * 0.01;
+@@ -195,8 +205,10 @@ export function enemySide(s: GameState, war: War): Side {
+       ships += add;
+     }
+   }
+-  const cmd = head && alive(head) ? effStats(s, head).cmd : 4;
+-  let mod = 1 + (head ? traitSum(head, 'fleetPct') : 0);
++  // Their named commander leads if they have one (commanders.ts); otherwise their lord.
++  const general = commanderOf(s, enemy.id);
++  const cmd = general ? personalCommand(s, general) : head && alive(head) ? effStats(s, head).cmd : 4;
++  let mod = 1 + (general ? traitSum(general, 'fleetPct') : head ? traitSum(head, 'fleetPct') : 0);
+   if (enemy.planetId === 'mars') mod += 0.15;
+   return { ships, strength: ships * (1 + cmd * 0.04) * mod, helpers };
+ }
+@@ -215,6 +227,10 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
+   const personal = !aiInitiated && s.leadPersonally && s.year - ruler(s).born >= 16;
+   const ps = playerSide(s, war, personal);
+   const es = enemySide(s, war);
++  // Who actually leads each side, snapshotted before anyone can fall. A ruler leading in person keeps the old roll below, so nobody rolls twice.
++  const ownCommander = personal ? undefined : commanderOf(s, s.playerClanId)?.id;
++  const theirCommander = commanderOf(s, enemy.id)?.id;
++  const [ownShips, theirShips] = [s.fleet, enemy.fleet];
+   const pStr = ps.strength * range(s, 0.75, 1.25);
+   const eStr = es.strength * range(s, 0.75, 1.25) * (aiInitiated ? 1.05 : 1);
+   const won = pStr >= eStr;
+@@ -258,6 +274,21 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
+     }
+   }
+ 
++  // Named commanders on both sides earn their reputations, and risk wounds, capture or death (commanders.ts).
++  const fateNotes = onCommandedBattle(s, {
++    id: `${warId}@${s.year}${aiInitiated ? ':defence' : ''}`,
++    attacker: aiInitiated ? enemy.id : s.playerClanId,
++    defender: aiInitiated ? s.playerClanId : enemy.id,
++    attackerCommanderId: aiInitiated ? theirCommander : ownCommander,
++    defenderCommanderId: aiInitiated ? ownCommander : theirCommander,
++    attackerWon: aiInitiated ? !won : won,
++    attackerShips: aiInitiated ? theirShips : ownShips,
++    attackerLosses: aiInitiated ? enemyLosses : playerLosses,
++    defenderShips: aiInitiated ? ownShips : theirShips,
++    defenderLosses: aiInitiated ? playerLosses : enemyLosses,
++  });
++  if (fateNotes.length) note = [note, ...fateNotes].filter(Boolean).join(' ');
++
+   const report: BattleReport = {
+     warId,
+     enemy: enemy.id,
+diff --git a/src/ui/tabs/RealmTab.tsx b/src/ui/tabs/RealmTab.tsx
+index 90bcaad..cd3ea01 100644
+--- a/src/ui/tabs/RealmTab.tsx
++++ b/src/ui/tabs/RealmTab.tsx
+@@ -38,6 +38,7 @@ import { Btn, CharCard, ClanBadge, CostTag, InfoDot, Opinion, Section, WarBar }
+ import { useGame } from '../store';
+ import { CouncilSection } from '../sections/CouncilSection';
+ import { TradeSection } from '../sections/TradeSection';
++import { CommanderSection } from '../sections/CommanderSection';
+ 
+ const RANKS = ['Exile', 'Governor', 'Viceroy', 'Sovereign', 'Solar Emperor'];
+ 
+@@ -253,6 +254,8 @@ export function RealmTab() {
+         </div>
+       </Section>
+ 
++      <CommanderSection />
++
+       <TradeSection />
+ 
+       <Section
+diff --git a/src/game/commanders.wiring.test.ts b/src/game/commanders.wiring.test.ts
+new file mode 100644
+index 0000000..0c3c74a
+--- /dev/null
++++ b/src/game/commanders.wiring.test.ts
+@@ -0,0 +1,99 @@
++// Battle wiring for commanders (COMMANDERS-WIRING.patch): these need the
++// war.ts hooks Codex integrates, so they travel with that patch.
++import { describe, expect, it } from 'vitest';
++import { createCharacter } from './character';
++import { appointCommander, commanderOf, commandersTick, leadFactor, personalCommand } from './commanders';
++import { alive, ch, clanRegions, ruler } from './core';
++import type { Character, Clan, GameState } from './types';
++import { enemySide, fightBattle, playerSide } from './war';
++import { createWorld, rollRuler, startGame } from './world';
++
++function world(seed = 9): GameState {
++  const s = createWorld(seed + 400);
++  const clan = Object.values(s.clans).find((c) => c.planetId === 'mars' && !clanRegions(s, c.id).some((r) => r.capital))!;
++  startGame(s, { clanId: clan.id, ruler: rollRuler(seed, 'mars', 'M', 'Oren'), focus: 'cmd', age: 45, family: 'married' });
++  Object.assign(s, { credits: 2000, prestige: 300, fleet: 100 });
++  return s;
++}
++
++function kid(s: GameState, age: number, cmd = 6): Character {
++  const r = ruler(s);
++  const c = createCharacter(s, {
++    gender: age % 2 ? 'M' : 'F',
++    born: s.year - age,
++    clanId: s.playerClanId,
++    planetId: 'mars',
++    fatherId: r.id,
++    adultExtras: age >= 16,
++  });
++  c.base.cmd = cmd;
++  c.traits = c.traits.filter((t) => !['brave', 'craven', 'ambitious'].includes(t));
++  r.childrenIds.push(c.id);
++  return c;
++}
++
++function foe(s: GameState): Clan {
++  return Object.values(s.clans).find((k) => !k.isPlayer && clanRegions(s, k.id).length > 0 && alive(ch(s, k.headId)))!;
++}
++
++function war(s: GameState, k: Clan) {
++  const w = { id: 'w-test', enemy: k.id, playerAttacker: true, target: clanRegions(s, k.id)[0].id, cb: 'conquest' as const, score: 0, started: s.year };
++  s.wars.push(w);
++  return w;
++}
++
++describe('a commander fights on their own Command', () => {
++  it('borrows no council seat: changing the admiral moves the strength only when nobody is in command', () => {
++    const s = world();
++    const k = foe(s);
++    const w = war(s, k);
++    const admiral = kid(s, 30, 12);
++    const general = kid(s, 24, 5);
++    const without = () => playerSide(s, w, false).strength;
++    s.council.admiral = undefined;
++    const plain = without();
++    s.council.admiral = admiral.id;
++    expect(without()).toBeGreaterThan(plain);
++    appointCommander(s, s.playerClanId, general.id);
++    const led = playerSide(s, w, false).strength;
++    s.council.admiral = undefined;
++    expect(playerSide(s, w, false).strength).toBe(led);
++    expect(led).toBeCloseTo(s.fleet * leadFactor(s, s.playerClanId) * 1.15, 5); // Mars +15%
++  });
++
++  it('leading in person still means the ruler leads, whoever commands', () => {
++    const s = world();
++    const w = war(s, foe(s));
++    const before = playerSide(s, w, true).strength;
++    appointCommander(s, s.playerClanId, kid(s, 24, 12).id);
++    expect(playerSide(s, w, true).strength).toBe(before);
++  });
++
++  it('the enemy fights with their commander, not just their lord', () => {
++    const s = world();
++    const k = foe(s);
++    const w = war(s, k);
++    commandersTick(s);
++    const general = commanderOf(s, k.id);
++    expect(general).toBeTruthy();
++    const before = enemySide(s, w).strength;
++    general!.base.cmd += 6;
++    expect(enemySide(s, w).strength).toBeGreaterThan(before);
++    expect(personalCommand(s, general!)).toBeGreaterThanOrEqual(6);
++  });
++
++  it('never changes how many ships there are: losses are exactly what the battle report says', () => {
++    for (let seed = 1; seed <= 20; seed++) {
++      const s = world(seed);
++      const k = foe(s);
++      const w = war(s, k);
++      appointCommander(s, s.playerClanId, kid(s, 24, 8).id);
++      commandersTick(s);
++      const [mine, theirs] = [s.fleet, k.fleet];
++      s.seed = seed * 31;
++      const report = fightBattle(s, w.id)!;
++      expect(s.fleet).toBe(mine - report.playerLosses);
++      expect(k.fleet).toBe(theirs - report.enemyLosses);
++    }
++  });
++});

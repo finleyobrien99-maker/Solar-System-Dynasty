@@ -29,7 +29,6 @@ import { killCharacter } from './life';
 import { councilStat } from './council';
 import { remember } from './memory';
 import { takeCaptive } from './aiCourt';
-import { commandFactor, commanderAfterBattle, commanderOf, personalCommand } from './commanders';
 
 export const CB_INFO: Record<CasusBelli, { name: string; desc: string }> = {
   claim: { name: 'Press Claim', desc: 'You hold a claim on this region. No prestige penalty.' },
@@ -163,15 +162,6 @@ export function playerSide(s: GameState, war: War, personal: boolean): Side {
       helpers.push(`House ${v.name} (${v.cadetOf === s.playerClanId ? 'cadet' : 'vassal'}, ${add})`);
     }
   }
-  // A named commander leads any battle you don't lead yourself, on their own Command and traits alone:
-  // no council seat or VIP bonus (commanders.ts). Without one, the admiral advises as before.
-  const general = personal ? undefined : commanderOf(s, s.playerClanId);
-  if (general) {
-    let gmod = 1 + itemSum(s, 'fleetPct');
-    if (homePlanet(s) === 'mars') gmod += 0.15;
-    if (s.year - r.born < 16) gmod -= 0.2; // regency
-    return { ships, strength: ships * commandFactor(s, general) * gmod, helpers };
-  }
   // An admiral commands any battle you don't lead yourself, if they're better at it.
   const cmd = personal ? effStats(s, r).cmd : Math.max(effStats(s, r).cmd, councilStat(s, 'admiral'));
   let mod = 1 + traitSum(r, 'fleetPct') + itemSum(s, 'fleetPct') + councilStat(s, 'admiral') * 0.01;
@@ -205,10 +195,8 @@ export function enemySide(s: GameState, war: War): Side {
       ships += add;
     }
   }
-  // Their named commander leads if they have one (commanders.ts); otherwise their lord.
-  const general = commanderOf(s, enemy.id);
-  const cmd = general ? personalCommand(s, general) : head && alive(head) ? effStats(s, head).cmd : 4;
-  let mod = 1 + (general ? traitSum(general, 'fleetPct') : head ? traitSum(head, 'fleetPct') : 0);
+  const cmd = head && alive(head) ? effStats(s, head).cmd : 4;
+  let mod = 1 + (head ? traitSum(head, 'fleetPct') : 0);
   if (enemy.planetId === 'mars') mod += 0.15;
   return { ships, strength: ships * (1 + cmd * 0.04) * mod, helpers };
 }
@@ -269,11 +257,6 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
       note = `${r.name} is hailed as a War Hero!`;
     }
   }
-
-  // Named commanders on both sides earn their reputations, and risk wounds, capture or death.
-  const fates = [personal ? undefined : commanderAfterBattle(s, s.playerClanId, won, enemy.id), commanderAfterBattle(s, enemy.id, !won, s.playerClanId)];
-  const fateNotes = fates.map((f) => f?.note).filter(Boolean);
-  if (fateNotes.length) note = [note, ...fateNotes].filter(Boolean).join(' ');
 
   const report: BattleReport = {
     warId,

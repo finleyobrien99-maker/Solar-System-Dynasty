@@ -38,7 +38,6 @@ import { Btn, CharCard, ClanBadge, CostTag, InfoDot, Opinion, Section, WarBar } 
 import { useGame } from '../store';
 import { CouncilSection } from '../sections/CouncilSection';
 import { TradeSection } from '../sections/TradeSection';
-import { CommanderSection } from '../sections/CommanderSection';
 
 const RANKS = ['Exile', 'Governor', 'Viceroy', 'Sovereign', 'Solar Emperor'];
 
@@ -253,8 +252,6 @@ export function RealmTab() {
           </label>
         </div>
       </Section>
-
-      <CommanderSection />
 
       <TradeSection />
 
