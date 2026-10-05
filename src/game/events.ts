@@ -28,6 +28,7 @@ import { COURT_EVENTS, courtingHouse, courtship } from './eventsCourt';
 import { EXPANSION_EVENTS } from './eventsExpansion';
 import { PETITION_EVENTS } from './eventsPetitions';
 import { WARD_EVENTS } from './eventsWards';
+import { COMMANDER_EVENTS } from './eventsCommanders';
 import { capOpinion } from './memory';
 import { defineEvent, regionOf, type Cond, type Ctx, type Effect, type Outcome } from './dsl';
 import { catchable, courtier, houseName, myRegionPick, named, placeName, present, rivalPick } from './eventBits';
@@ -1637,6 +1638,7 @@ export const EVENTS: EventDef[] = [
   ...EXPANSION_EVENTS,
   ...PETITION_EVENTS,
   ...WARD_EVENTS,
+  ...COMMANDER_EVENTS,
 ];
 
 export const EVENT_BY_ID: Record<string, EventDef> = Object.fromEntries(EVENTS.map((e) => [e.id, e]));

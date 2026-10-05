@@ -32,6 +32,7 @@ import { addFeeling, feelingsSum, murdered, opinionOf } from './relations';
 import { aiIntrigueTick } from './aiIntrigue';
 import { aiDynastyTick } from './aiDynasty';
 import { allMentorships, allWardships, aiWardsTick } from './wards';
+import { aiCommandersTick, commanderAfterBattle, leadFactor } from './commanders';
 import { aiAmbition, ambitionHouse, AMBITION_AGGRESSION, type AmbitionKind } from './aiAmbition';
 import { aiAffairsTick, aiArrests, aiMarriages, alliesAbandon, betrayPact, captivesTick, kinFleet, pactMap, takeCaptive, wouldBetray } from './aiCourt';
 import { neighbourPlanets, PLANET_BY_ID } from './planets';
@@ -195,11 +196,20 @@ function tickAiWars(s: GameState): void {
     if (liege && liege !== a.id && liegeOf(s, a.id) !== liege && liege !== s.playerClanId) def += s.clans[liege].fleet * 0.3;
     // Kin by marriage stand by each other, more readily in defence than in attack.
     def += kinFleet(s, d.id, a.id, pacts, 0.25);
-    const att = a.fleet + kinFleet(s, a.id, d.id, pacts, 0.15);
+    // Each side fights as well as its named commander leads it (commanders.ts).
+    def *= leadFactor(s, d.id);
+    const att = (a.fleet + kinFleet(s, a.id, d.id, pacts, 0.15)) * leadFactor(s, a.id);
     const pAtt = att / Math.max(1, att + def);
     const attWins = chance(s, pAtt);
     recordDeed(s, a.headId, attWins ? 'battlesWon' : 'battlesLost');
     recordDeed(s, d.headId, attWins ? 'battlesLost' : 'battlesWon');
+    for (const [k, won, foe] of [
+      [a, attWins, d],
+      [d, !attWins, a],
+    ] as const) {
+      const fate = commanderAfterBattle(s, k.id, won, foe.id, 0.5);
+      if (fate?.died || fate?.captured) log(s, `House ${k.name}: ${fate.note}`, 'news');
+    }
     w.progress += attWins ? int(s, 25, 45) : -int(s, 25, 45);
     a.fleet = Math.round(a.fleet * range(s, 0.85, 0.95));
     d.fleet = Math.round(d.fleet * range(s, 0.85, 0.95));
@@ -356,6 +366,7 @@ export function aiTick(s: GameState): void {
   aiMarriages(s);
   aiAffairsTick(s);
   opinionDrift(s);
+  aiCommandersTick(s);
   tickAiWars(s);
   if (chance(s, 0.3)) startAiWar(s);
   aggressionOnPlayer(s);
