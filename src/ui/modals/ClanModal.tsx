@@ -1,3 +1,5 @@
+import { committedShips } from '../../game/coalitions';
+import { CoalitionsSection } from '../sections/CoalitionsSection';
 import { ForeignCommanderSection } from '../sections/CommanderSection';
 import { WarWearinessSection } from '../sections/WarWearinessSection';
 import { TrucesSection } from '../sections/TrucesSection';
@@ -43,6 +45,8 @@ export function ClanModal({ id }: { id: string }) {
     .filter((c) => c.id !== clan.headId && c.reputation?.houses.includes(id) && c.reputation.earned.length)
     .sort((a, b) => (b.died ?? s.year) - (a.died ?? s.year));
   const mine = clan.isPlayer;
+  const homeFleet = mine ? s.fleet : clan.fleet;
+  const committed = committedShips(s, id);
   const atWar = s.wars.some((w) => w.enemy === id);
   const ambition = aiAmbition(s, clan);
   const crisis = successionCrisis(s, id);
@@ -60,6 +64,7 @@ export function ClanModal({ id }: { id: string }) {
       {!mine && <ForeignCommanderSection clanId={id} />}
       <WarWearinessSection clanId={id} />
       <TrucesSection clanId={id} />
+      <CoalitionsSection clanId={id} />
       <div className="row top wrap" style={{ gap: 'var(--space-14px)' }}>
         <Sigil spec={clan.sigil} size={84} />
         <div className="grow stack" style={{ gap: 'var(--space-4px)' }}>
@@ -70,7 +75,8 @@ export function ClanModal({ id }: { id: string }) {
           </div>
           <div className="row wrap">
             {!mine && <Opinion v={clan.opinion} />}
-            <span className="pill">{clan.fleet} ships</span>
+            <span className="pill">{homeFleet} ships at home</span>
+            {committed > 0 && <span className="pill cyan">{committed} ships committed to defence</span>}
             <span className="pill">{regions.length} regions</span>
             <span className="pill">rank {clanRank(s, id)}</span>
             {clan.allied && <span className="pill green">Allied</span>}

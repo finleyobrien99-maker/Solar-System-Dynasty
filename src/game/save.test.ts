@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { setImmediate } from 'node:timers/promises';
 import { compressToUTF16, decompressFromBase64 } from 'lz-string';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { endWar, fightBattle } from './war';
+import { conductSiege, endWar, fightBattle } from './war';
 import { createCharacter } from './character';
 import { appointCommander, commandersTick } from './commanders';
 import { SAVE_VERSION } from './core';
@@ -20,7 +20,7 @@ import { ageUp } from './tick';
 import { killCharacter } from './life';
 import type { GameState, ScenarioId } from './types';
 import { createWorld, rollRuler, scenarioHouses, startGame } from './world';
-import { peaceCampaign, disputedInheritance } from './testScenarios';
+import { coalitionCampaign, peaceCampaign, disputedInheritance } from './testScenarios';
 import { successionTick } from './succession';
 import { ambitionChoices, chooseAmbition } from './ambitions';
 
@@ -134,6 +134,18 @@ describe.runIf(WRITE)('freeze a commanded battle', () => {
     s.year++;
     expect(fightBattle(s, war.id)?.playerCommanderId).toBe(child.id);
     writeFileSync(file, exportSave(s) + '\n');
+  });
+});
+
+describe.runIf(WRITE)('freeze coalition ships and siege orders', () => {
+  it('freezes actual conquest fear, detached survivors and a paid operation', () => {
+    for (const name of ['coalition-campaign', 'siege-order']) {
+      const file = new URL(`save-v${SAVE_VERSION}-${name}.json`, DIR);
+      if (existsSync(file)) continue;
+      const { s, war } = coalitionCampaign();
+      if (name === 'siege-order') expect(conductSiege(s, war.id, 'starve')).toBeTruthy();
+      writeFileSync(file, exportSave(s) + '\n');
+    }
   });
 });
 

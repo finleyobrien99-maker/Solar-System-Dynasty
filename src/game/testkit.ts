@@ -45,6 +45,34 @@ export function checkInvariants(s: GameState): void {
     expect(fatigue).toBeGreaterThanOrEqual(0);
     expect(fatigue).toBeLessThanOrEqual(100);
   }
+
+  for (const [id, fear] of Object.entries(s.houseThreat)) {
+    expect(s.clans[id]).toBeTruthy();
+    expect(Number.isFinite(fear) && fear >= 0 && fear <= 100).toBe(true);
+  }
+  for (const league of s.coalitions) {
+    expect(s.clans[league.target]).toBeTruthy();
+    expect(league.members.length).toBeLessThanOrEqual(8);
+    expect(new Set(league.members).size).toBe(league.members.length);
+    for (const id of league.members) {
+      expect(s.clans[id]).toBeTruthy();
+      expect(id).not.toBe(league.target);
+    }
+  }
+  for (const war of [...s.wars, ...s.aiWars]) {
+    const loans = war.coalition ?? [];
+    expect(new Set(loans.map((p) => p.clanId)).size).toBe(loans.length);
+    for (const p of loans) {
+      expect(s.clans[p.clanId]).toBeTruthy();
+      expect(Number.isInteger(p.ships) && p.ships >= 0 && p.ships <= p.sent).toBe(true);
+    }
+    if (war.siege) {
+      expect(s.clans[war.siege.attacker]).toBeTruthy();
+      expect(Number.isFinite(war.siege.progress)).toBe(true);
+      expect(war.siege.cost).toBeGreaterThanOrEqual(0);
+      expect(war.siege.losses).toBeGreaterThanOrEqual(0);
+    }
+  }
   for (const t of s.routes) {
     expect(s.regions[t.from].owner).toBe(s.playerClanId);
     expect(s.clans[t.partner]).toBeTruthy();

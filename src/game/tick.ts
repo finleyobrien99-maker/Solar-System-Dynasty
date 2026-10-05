@@ -1,3 +1,4 @@
+import { coalitionsTick } from './coalitions';
 import { peaceTick } from './peace';
 import { successionTick } from './succession';
 import { ambitionsTick } from './ambitions';
@@ -27,6 +28,7 @@ export function ageUp(s: GameState): void {
   if (!canAgeUp(s)) return;
   s.year += 1;
   peaceTick(s); // Expire treaties before this cycle's declarations.
+  coalitionsTick(s); // Fear cools only if the cycle began without an offensive war.
 
   // Money first, so this cycle's events see this cycle's treasury.
   const dc = sum(creditLines(s));

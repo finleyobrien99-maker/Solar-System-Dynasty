@@ -228,6 +228,11 @@ export class NewerSaveError extends Error {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MIGRATIONS: Record<number, (s: any) => void> = {
+  // Fear and defence pledges begin with future conquests, not invented history.
+  8: (s) => {
+    s.houseThreat ??= {};
+    s.coalitions ??= [];
+  },
   // Only future peace creates a truce: never reconstruct old treaties from history.
   7: (s) => {
     s.truces ??= [];

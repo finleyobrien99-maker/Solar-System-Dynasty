@@ -108,6 +108,8 @@ function emptyState(seed: number): GameState {
     successionCrises: [],
     truces: [],
     warWeariness: {},
+    houseThreat: {},
+    coalitions: [],
     stats: { battlesWon: 0, battlesLost: 0, schemes: 0, children: 0, peakRank: 1 },
     started: false,
   };

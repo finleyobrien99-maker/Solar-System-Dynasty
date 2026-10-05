@@ -100,8 +100,8 @@ export function battleWeariness(s: GameState, clanId: string, ships: number, los
 
 export function campaignsOf(s: GameState, clanId: string): number {
   return (
-    s.wars.filter((w) => clanId === s.playerClanId || w.enemy === clanId).length +
-    s.aiWars.filter((w) => w.attacker === clanId || w.defender === clanId).length +
+    s.wars.filter((w) => clanId === s.playerClanId || w.enemy === clanId || w.coalition?.some((p) => p.clanId === clanId && p.ships > 0)).length +
+    s.aiWars.filter((w) => w.attacker === clanId || w.defender === clanId || w.coalition?.some((p) => p.clanId === clanId && p.ships > 0)).length +
     s.successionCrises.filter((c) => c.stage === 'civil-war' && (c.clanId === clanId || c.contributions.some((p) => p.clanId === clanId && p.ships > 0))).length
   );
 }
@@ -113,10 +113,12 @@ export function peaceTick(s: GameState): void {
   for (const w of s.wars) {
     add(s.playerClanId);
     add(w.enemy);
+    for (const id of new Set((w.coalition ?? []).filter((p) => p.ships > 0).map((p) => p.clanId))) if (id !== s.playerClanId && id !== w.enemy) add(id);
   }
   for (const w of s.aiWars) {
     add(w.attacker);
     add(w.defender);
+    for (const id of new Set((w.coalition ?? []).filter((p) => p.ships > 0).map((p) => p.clanId))) if (id !== w.attacker && id !== w.defender) add(id);
   }
   for (const c of s.successionCrises)
     if (c.stage === 'civil-war') {

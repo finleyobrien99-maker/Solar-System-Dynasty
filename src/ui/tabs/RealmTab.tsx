@@ -1,8 +1,11 @@
+import { committedShips } from '../../game/coalitions';
+import { CoalitionsSection } from '../sections/CoalitionsSection';
+import { SiegeSection } from '../sections/SiegeSection';
 import { WarWearinessSection } from '../sections/WarWearinessSection';
 import { truceOf, OATH_BREAK_COST } from '../../game/peace';
 import { TrucesSection } from '../sections/TrucesSection';
 import { ch, clanRank, clanRegions, clanTitle, fmt, liegeOf, playerClan, regionIncome, ruler, sovereignPlanets, vassalsOf } from '../../game/core';
-import { fleetCap } from '../../game/economy';
+import { fleetCap, UPKEEP_PER_SHIP } from '../../game/economy';
 import {
   arrestChance,
   arrestVassal,
@@ -66,6 +69,8 @@ export function RealmTab() {
   const liege = liegeOf(s, clan.id);
   const vassals = vassalsOf(s, clan.id);
   const cap = fleetCap(s);
+  const committed = committedShips(s, clan.id);
+  const totalFleet = s.fleet + committed;
   const sc = shipCost(s);
   const regency = regencyActive(s);
   const jailed = prisoners(s);
@@ -168,7 +173,7 @@ export function RealmTab() {
       <Section
         title={`Wars (${s.wars.length})`}
         icon="war"
-        info="Win battles to push the war score to +100 and take your prize. At -100 you lose. The enemy also attacks once every cycle. Wars that drag on 7 cycles end in a white peace."
+        info="Win battles or siege operations to push the war score to +100 and take your prize. A manual battle and a siege operation share one allowance per war each cycle. At -100 you lose. The enemy also gets one operation every cycle. Wars that drag on 7 cycles end in a white peace. Coalition defenders lend actual ships, take their own losses and receive the survivors back."
       >
         {s.wars.length === 0 && <div className="empty">At peace. Declare war from the System tab by picking a region.</div>}
         <div className="stack">
@@ -207,11 +212,27 @@ export function RealmTab() {
                     {them.helpers.length > 0 && <div className="dim">{them.helpers.join(', ')}</div>}
                   </div>
                 </div>
+                {!!w.coalition?.length && (
+                  <div className="card flat stack" style={{ marginTop: 'var(--space-10px)' }}>
+                    <b>Coalition defence</b>
+                    <div className="muted">
+                      Detached ships fight for {w.playerAttacker ? 'the defending house' : 'your defence'}; each house bears its own losses.
+                    </div>
+                    {w.coalition.map((loan) => (
+                      <div key={loan.clanId} className="spread wrap">
+                        <ClanBadge clanId={loan.clanId} />
+                        <span>
+                          {loan.ships} of {loan.sent} ships remain
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="btn-row" style={{ marginTop: 'var(--space-10px)' }}>
                   <Btn
                     kind="primary"
                     icon="war"
-                    reason={canFightBattle(s, w) ? null : s.fleet <= 0 ? 'No ships!' : 'Already fought this cycle'}
+                    reason={canFightBattle(s, w) ? null : s.fleet <= 0 ? 'No ships!' : 'Battle or siege operation already used this cycle'}
                     onClick={() => act((d) => fightBattle(d, w.id))}
                   >
                     Launch battle
@@ -227,44 +248,48 @@ export function RealmTab() {
                     Surrender
                   </Btn>
                 </div>
+                <SiegeSection war={w} />
               </div>
             );
           })}
         </div>
       </Section>
 
+      <CoalitionsSection />
       <WarWearinessSection />
       <TrucesSection />
 
       <Section
         title="Fleet"
         icon="fleet"
-        info="Ships are your battle strength. Command adds 4% per point; Mars adds 15%; traits and flagships add more. Each ship costs 0.8 credits upkeep per cycle. Capacity grows with regions and rank."
+        info="Ships are your battle strength. Command adds 4% per point; Mars adds 15%; traits and flagships add more. Each ship costs 0.8 credits upkeep per cycle, including your ships committed to coalition defence. Committed ships keep their place in your capacity and return on peace or withdrawal. Capacity grows with regions and rank."
       >
         <div className="card">
           <div className="spread">
             <div>
               <div style={{ fontFamily: 'var(--head)', fontSize: 'var(--font-size-1_4rem)' }} className="row">
-                <Icon name="fleet" size={22} /> {s.fleet}{' '}
+                <Icon name="fleet" size={22} /> {totalFleet}{' '}
                 <span className="muted" style={{ fontSize: 'var(--font-size-0_9rem)' }}>
                   / {cap} ships
                 </span>
               </div>
               <div className="muted" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
-                {sc} credits per new ship · upkeep {Math.round(s.fleet * 0.8)}/cycle
+                {s.fleet} ships at home{committed > 0 ? ` · ${committed} committed to coalition defence` : ''}
+                <br />
+                {sc} credits per new ship · upkeep {Math.round(totalFleet * UPKEEP_PER_SHIP)}/cycle
               </div>
             </div>
             <div className="btn-row">
               <Btn
                 small
-                reason={s.fleet >= cap ? 'At capacity' : s.credits < sc * 10 ? 'Not enough credits' : null}
+                reason={totalFleet >= cap ? 'At capacity' : s.credits < sc * 10 ? 'Not enough credits' : null}
                 onClick={() => toast(`Recruited ${act((d) => recruitShips(d, 10))} ships.`)}
               >
                 +10 ({sc * 10})
               </Btn>
               <Btn
                 small
-                reason={s.fleet >= cap ? 'At capacity' : s.credits < sc ? 'Not enough credits' : null}
+                reason={totalFleet >= cap ? 'At capacity' : s.credits < sc ? 'Not enough credits' : null}
                 onClick={() => toast(`Recruited ${act((d) => recruitShips(d, 50))} ships.`)}
               >
                 +50

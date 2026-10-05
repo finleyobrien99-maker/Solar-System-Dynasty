@@ -1,3 +1,16 @@
+import {
+  coalitionCall,
+  coalitionStrength,
+  coalitionLosses,
+  coalitionTruces,
+  coalitionBattleNotes,
+  committedShips,
+  recallCoalition,
+  recordExpansion,
+  releaseCoalition,
+  snapshotCoalition,
+} from './coalitions';
+import { chooseAiSiege, performSiege } from './siege';
 import { recordMurder } from './secrets';
 import { breakPeace, isCloseKin, recordDeed } from './epithets';
 // The rest of the solar system: rival houses grow, marry, feud, and sometimes
@@ -124,11 +137,12 @@ function resources(s: GameState): void {
     recordDeed(s, clan.headId, 'income', Math.max(0, income));
     clan.prestige += clanRank(s, clan.id) * 3;
     const target = fleetTarget(s, clan.id);
-    if (clan.fleet < target) {
-      const built = Math.max(1, Math.round((target - clan.fleet) * 0.18));
+    const total = clan.fleet + committedShips(s, clan.id);
+    if (total < target) {
+      const built = Math.max(1, Math.round((target - total) * 0.18));
       clan.fleet += built;
       recordDeed(s, clan.headId, 'shipsBuilt', built);
-    } else clan.fleet -= Math.round((clan.fleet - target) * 0.08);
+    } else clan.fleet = Math.max(0, clan.fleet - Math.round((total - target) * 0.08));
   }
 }
 
@@ -138,7 +152,15 @@ function startAiWar(s: GameState): void {
   if (s.aiWars.length >= 3) return;
   const pool = landed(s).filter((c) => {
     const head = ch(s, c.headId);
-    return alive(head) && !head.prisonerOf && s.year - head.born >= 16 && c.fleet > 35 && !s.aiWars.some((w) => w.attacker === c.id || w.defender === c.id);
+    return (
+      alive(head) &&
+      !head.prisonerOf &&
+      s.year - head.born >= 16 &&
+      c.fleet > 35 &&
+      !committedShips(s, c.id) &&
+      !s.wars.some((w) => w.enemy === c.id) &&
+      !s.aiWars.some((w) => w.attacker === c.id || w.defender === c.id)
+    );
   });
   if (!pool.length) return;
   const attacker = weighted(
@@ -184,14 +206,24 @@ export function declareHouseWar(s: GameState, attackerId: string, regionId: stri
   const lord = ch(s, attacker?.headId),
     theirs = ch(s, defender?.headId);
   if (s.gameOver || !attacker || !defender || attacker.isPlayer || defender.isPlayer || attacker.id === defender.id || s.aiWars.length >= 3) return false;
-  if (!alive(lord) || lord.prisonerOf || s.year - lord.born < 16 || !clanRegions(s, attackerId).length) return false;
+  if (
+    !alive(lord) ||
+    lord.prisonerOf ||
+    s.year - lord.born < 16 ||
+    !clanRegions(s, attackerId).length ||
+    committedShips(s, attackerId) ||
+    s.wars.some((w) => w.enemy === attackerId)
+  )
+    return false;
   if (s.aiWars.some((w) => w.attacker === attackerId || w.defender === attackerId || w.defender === defender.id)) return false;
   const pacts = pactMap(s),
     kin = pacts.get(attackerId);
   if (kin?.has(defender.id) && !wouldBetray(s, lord, theirs)) return false;
   const oath = !!truceOf(s, attackerId, defender.id);
   if (oath && (!breakOath || !breakTruce(s, attackerId, defender.id))) return false;
-  const war: AiWar = { id: newId(s, 'aw'), attacker: attackerId, defender: defender.id, target: regionId, started: s.year, progress: 0 };
+  recallCoalition(s, defender.id);
+  const coalition = coalitionCall(s, attackerId, defender.id);
+  const war: AiWar = { id: newId(s, 'aw'), attacker: attackerId, defender: defender.id, target: regionId, started: s.year, progress: 0, coalition };
   s.aiWars.push(war);
   recordDeed(s, lord, 'warsStarted');
   breakPeace(s, defender.headId);
@@ -203,60 +235,92 @@ export function declareHouseWar(s: GameState, attackerId: string, regionId: stri
   return true;
 }
 
-function tickAiWars(s: GameState): void {
+export function tickAiWars(s: GameState): void {
   const pacts = s.aiWars.length ? pactMap(s) : new Map<string, Set<string>>();
   for (const w of s.aiWars.slice()) {
     const a = s.clans[w.attacker];
     const d = s.clans[w.defender];
     const target = s.regions[w.target];
     const done = (peace = false) => {
+      if (peace) {
+        makeTruce(s, w.attacker, w.defender);
+        coalitionTruces(s, w.attacker, w.coalition ?? []);
+      }
+      releaseCoalition(s, w.coalition ?? []);
       s.aiWars = s.aiWars.filter((x) => x.id !== w.id);
-      if (peace) makeTruce(s, w.attacker, w.defender);
     };
     if (!a || !d || !target || target.owner !== d.id || !clanRegions(s, a.id).length) {
       done();
       continue;
     }
-    let def = d.fleet;
-    const liege = liegeOf(s, d.id);
-    if (liege && liege !== a.id && liegeOf(s, a.id) !== liege && liege !== s.playerClanId) def += s.clans[liege].fleet * 0.3;
-    // Kin by marriage stand by each other, more readily in defence than in attack.
-    def += kinFleet(s, d.id, a.id, pacts, 0.25);
-    const att = a.fleet + kinFleet(s, a.id, d.id, pacts, 0.15);
-    const attStrength = att * warStrengthFactor(s, a.id) * leadFactor(s, a.id),
-      defStrength = def * warStrengthFactor(s, d.id) * leadFactor(s, d.id);
-    const pAtt = attStrength / Math.max(1, attStrength + defStrength);
-    const [ac, dc, af, df] = [commanderOf(s, a.id)?.id, commanderOf(s, d.id)?.id, a.fleet, d.fleet];
+
+    // Snapshot the two incumbents even when an operation replaces this cycle's battle.
     const [attackerRuler, defenderRuler] = [a.headId, d.headId];
-    const attWins = chance(s, pAtt);
-    recordDeed(s, attackerRuler, attWins ? 'battlesWon' : 'battlesLost');
-    recordDeed(s, defenderRuler, attWins ? 'battlesLost' : 'battlesWon');
-    w.progress += attWins ? int(s, 25, 45) : -int(s, 25, 45);
-    const oldAtt = a.fleet,
-      oldDef = d.fleet;
-    a.fleet = Math.round(a.fleet * range(s, 0.85, 0.95));
-    d.fleet = Math.round(d.fleet * range(s, 0.85, 0.95));
-    battleWeariness(s, a.id, oldAtt, oldAtt - a.fleet);
-    battleWeariness(s, d.id, oldDef, oldDef - d.fleet);
-    // Each side's commander, as they stood before the battle, after the real losses (commanders.ts).
-    const fates = commandedBattleFates(s, {
-      id: `${w.id}@${s.year}`,
-      attacker: a.id,
-      defender: d.id,
-      attackerCommanderId: ac,
-      defenderCommanderId: dc,
-      attackerWon: attWins,
-      attackerShips: af,
-      attackerLosses: af - a.fleet,
-      defenderShips: df,
-      defenderLosses: df - d.fleet,
-      danger: 0.5,
-    });
-    for (const f of fates) if (f.died || f.captured) log(s, f.note, 'news');
+    if (w.lastOperation !== s.year && w.progress < 100 && w.progress > -100) {
+      const order = chooseAiSiege(s, w.id);
+      if (order && order !== 'assault') performSiege(s, w.id, order, true);
+      else {
+        const excluded = new Set(Object.keys(s.clans).filter((id) => committedShips(s, id) > 0));
+        const liege = liegeOf(s, d.id);
+        let def = d.fleet;
+        if (liege && liege !== a.id && liegeOf(s, a.id) !== liege && liege !== s.playerClanId && !excluded.has(liege)) {
+          def += s.clans[liege].fleet * 0.3;
+          excluded.add(liege); // A relative who is also liege sends one contingent.
+        }
+        def += kinFleet(s, d.id, a.id, pacts, 0.25, excluded);
+        const att = a.fleet + kinFleet(s, a.id, d.id, pacts, 0.15, excluded);
+        const attStrength = att * warStrengthFactor(s, a.id) * leadFactor(s, a.id),
+          defStrength = def * warStrengthFactor(s, d.id) * leadFactor(s, d.id) + coalitionStrength(s, w.coalition ?? []);
+        const pAtt = attStrength / Math.max(1, attStrength + defStrength);
+        const [ac, dc, af, df] = [commanderOf(s, a.id)?.id, commanderOf(s, d.id)?.id, a.fleet, d.fleet];
+        snapshotCoalition(s, w.coalition ?? []);
+        const attWins = chance(s, pAtt);
+        recordDeed(s, attackerRuler, attWins ? 'battlesWon' : 'battlesLost');
+        recordDeed(s, defenderRuler, attWins ? 'battlesLost' : 'battlesWon');
+        const before = w.progress;
+        w.progress = clamp(w.progress + (attWins ? int(s, 25, 45) : -int(s, 25, 45)), -100, 100);
+        w.lastOperation = s.year;
+        a.fleet = Math.round(a.fleet * range(s, 0.85, 0.95));
+        const defRate = 1 - range(s, 0.85, 0.95);
+        d.fleet = Math.round(d.fleet * (1 - defRate));
+        battleWeariness(s, a.id, af, af - a.fleet);
+        battleWeariness(s, d.id, df, df - d.fleet);
+        const helperLosses = coalitionLosses(s, w.coalition ?? [], defRate);
+        const yourAid = helperLosses.find((p) => p.clanId === s.playerClanId);
+        if (yourAid) log(s, `Your coalition fleet defending House ${d.name} at ${target.name} lost ${yourAid.losses} of ${yourAid.ships} ships.`, 'war');
+        const fates = commandedBattleFates(s, {
+          id: `${w.id}@${s.year}`,
+          attacker: a.id,
+          defender: d.id,
+          attackerCommanderId: ac,
+          defenderCommanderId: dc,
+          attackerWon: attWins,
+          attackerShips: af,
+          attackerLosses: af - a.fleet,
+          defenderShips: df,
+          defenderLosses: df - d.fleet,
+          danger: 0.5,
+        });
+        for (const f of fates) if (f.died || f.captured) log(s, f.note, 'news');
+        for (const note of coalitionBattleNotes(s, w.coalition ?? [], a.id, attWins, helperLosses, 0.5)) log(s, note, 'news');
+        if (order === 'assault')
+          w.siege = {
+            kind: order,
+            year: s.year,
+            attacker: a.id,
+            success: attWins,
+            cost: 0,
+            losses: af - a.fleet,
+            progress: w.progress - before,
+            leaderId: ac ?? attackerRuler,
+          };
+      }
+    }
 
     if (w.progress >= 100) {
       const wasCapital = target.capital;
       setOwner(s, target, a.id);
+      recordExpansion(s, a.id, target);
       recordDeed(s, attackerRuler, 'warsWon');
       recordDeed(s, defenderRuler, 'warsLost');
       recordDeed(s, attackerRuler, 'regionsTaken', 1, target.id);
@@ -297,7 +361,8 @@ function aggressionOnPlayer(s: GameState): void {
   const myPlanets = new Set(mine.map((r) => r.planetId));
   const settled = s.year - s.startYear >= 10;
   const pool = landed(s).filter((c) => {
-    if (c.allied || !mayAttack(s, c.id, s.playerClanId) || atWarWith(s, c.id) || s.aiWars.some((w) => w.attacker === c.id)) return false;
+    if (c.allied || committedShips(s, c.id) || !mayAttack(s, c.id, s.playerClanId) || atWarWith(s, c.id) || s.aiWars.some((w) => w.attacker === c.id))
+      return false;
     if (liegeOf(s, c.id) === s.playerClanId) return false;
     const near = myPlanets.has(c.planetId) || neighbourPlanets(c.planetId).some((p) => myPlanets.has(p));
     // Sworn rivals and lords sworn to revenge on you come from anywhere, and with less of an edge.
@@ -437,6 +502,15 @@ export function prune(s: GameState): void {
     if (c.motherId) keep.add(c.motherId);
   }
   for (const clan of Object.values(s.clans)) keep.add(clan.headId);
+  for (const w of [...s.wars, ...s.aiWars]) {
+    if (w.siege?.leaderId) keep.add(w.siege.leaderId);
+    for (const p of w.coalition ?? []) if (p.commanderId) keep.add(p.commanderId);
+  }
+  for (const p of s.pending)
+    if (p.kind === 'battle') {
+      if (p.report.playerCommanderId) keep.add(p.report.playerCommanderId);
+      if (p.report.enemyCommanderId) keep.add(p.report.enemyCommanderId);
+    }
   for (const w of allWardships(s)) {
     keep.add(w.childId);
     keep.add(w.guardianId);

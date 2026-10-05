@@ -1,6 +1,7 @@
 // Income breakdowns. The UI shows every line so players can see exactly where
 // their credits, prestige and faith come from.
 
+import { committedShips } from './coalitions';
 import { warIncomeFactor } from './peace';
 import { isAway } from './wards';
 import {
@@ -77,7 +78,8 @@ export function creditLines(s: GameState): Line[] {
   const liege = liegeOf(s, s.playerClanId);
   if (liege) lines.push({ label: `Tribute to House ${s.clans[liege].name}`, value: -Math.round(gross * TRIBUTE_RATE) });
 
-  lines.push({ label: `Fleet upkeep (${s.fleet} ships)`, value: -Math.round(s.fleet * UPKEEP_PER_SHIP) });
+  const ships = s.fleet + committedShips(s, s.playerClanId);
+  lines.push({ label: `Fleet upkeep (${ships} ships)`, value: -Math.round(ships * UPKEEP_PER_SHIP) });
 
   const members = dynastyMembers(s);
   const school = members.reduce((a, c) => a + (c.edu && !isAway(s, c) && ageOf(s, c) < 16 ? TUTOR_COST[c.edu.tutor] : 0), 0);

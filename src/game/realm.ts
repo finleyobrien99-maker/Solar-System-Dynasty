@@ -1,3 +1,4 @@
+import { committedShips } from './coalitions';
 import { recordDeed } from './epithets';
 // Realm management: ships, development, titles, the bazaar and the treasury.
 
@@ -14,7 +15,7 @@ export function shipCost(s: GameState): number {
 }
 
 export function recruitShips(s: GameState, n: number): number {
-  const room = fleetCap(s) - s.fleet;
+  const room = fleetCap(s) - s.fleet - committedShips(s, s.playerClanId);
   const affordable = Math.floor(Math.max(0, s.credits) / shipCost(s));
   const count = Math.max(0, Math.min(n, room, affordable));
   if (!count) return 0;

@@ -200,6 +200,31 @@ export interface Item {
 
 export type CasusBelli = 'claim' | 'holy' | 'conquest' | 'independence' | 'feud' | 'revolt';
 
+export interface FleetContribution {
+  clanId: string;
+  ships: number; // Surviving detached ships, absent from the house's home fleet.
+  sent: number;
+  commanderId?: string;
+}
+
+export interface Coalition {
+  target: string;
+  members: string[];
+  formed: number;
+}
+
+export type SiegeKind = 'starve' | 'assault' | 'bribe' | 'sabotage';
+export interface SiegeResult {
+  kind: SiegeKind;
+  year: number;
+  attacker: string;
+  success: boolean;
+  cost: number;
+  losses: number;
+  progress: number; // Actual signed change from the attacker's view.
+  leaderId?: string;
+}
+
 export interface War {
   id: string;
   enemy: string; // clan id
@@ -209,6 +234,9 @@ export interface War {
   score: number; // from the player's point of view, -100..100
   started: number;
   lastPlayerBattle?: number;
+  lastAiOperation?: number;
+  coalition?: FleetContribution[];
+  siege?: SiegeResult;
 }
 
 export interface AiWar {
@@ -218,6 +246,9 @@ export interface AiWar {
   target: string; // region id
   started: number;
   progress: number; // -100..100 from attacker's view
+  lastOperation?: number;
+  coalition?: FleetContribution[];
+  siege?: SiegeResult;
 }
 
 export type LogKind = 'info' | 'good' | 'bad' | 'birth' | 'death' | 'war' | 'news' | 'family';
@@ -244,6 +275,7 @@ export interface BattleReport {
   /** Actual leaders before battle deaths or succession; old reports may omit them. */
   playerCommanderId?: string;
   enemyCommanderId?: string;
+  coalitionLosses?: { clanId: string; ships: number; losses: number }[];
   note?: string;
 }
 
@@ -406,6 +438,8 @@ export interface GameState {
   truces: Truce[];
   /** House campaign fatigue, 0..100. Zero entries need not be stored. */
   warWeariness: Record<string, number>;
+  houseThreat: Record<string, number>;
+  coalitions: Coalition[];
   vip?: VipState;
   scenario?: ScenarioId;
   stats: { battlesWon: number; battlesLost: number; schemes: number; children: number; peakRank: number };

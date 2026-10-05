@@ -10,6 +10,7 @@ import { purgeTrait, releaseTrait } from './genetics';
 import { executePrisoner, releasePrisoner } from './intrigue';
 import { killCharacter } from './life';
 import { developRegion } from './realm';
+import * as siege from './siege';
 import * as rng from './rng';
 import { addFeeling, forget, lovers } from './relations';
 import { exportSave, importSave, migrate } from './save';
@@ -142,9 +143,11 @@ describe('earned epithets', () => {
     a.fleet = 1000000;
     d.fleet = 0;
     s.aiWars.push({ id: 'test-ai-war', attacker: a.id, defender: d.id, target: target.id, started: s.year, progress: 90 });
+    vi.spyOn(siege, 'chooseAiSiege').mockReturnValue('assault');
     vi.spyOn(rng, 'chance').mockImplementation((_, p) => p > 0.9);
     aiTick(s);
     expect(target.owner).toBe(a.id);
+    expect(s.houseThreat[a.id]).toBe(20 + (target.capital ? 20 : 0));
     expect(s.characters[a.headId].reputation!.deeds.battlesWon).toBe(1);
     expect(s.characters[a.headId].reputation!.deeds.warsWon).toBe(1);
     expect(s.characters[a.headId].reputation!.deeds.regionsTaken).toBe(1);
@@ -156,7 +159,15 @@ describe('earned epithets', () => {
       r = ruler(s),
       a = Object.values(s.clans).find((k) => !k.isPlayer)!;
     for (let i = 0; i < 5; i++) {
-      const w = { id: 'war-' + i, enemy: a.id, playerAttacker: true, target: '', cb: 'conquest' as const, score: -100, started: s.year };
+      const w = {
+        id: 'war-' + i,
+        enemy: a.id,
+        playerAttacker: true,
+        target: clanRegions(s, a.id)[0].id,
+        cb: 'conquest' as const,
+        score: -100,
+        started: s.year,
+      };
       s.wars.push(w);
       endWar(s, w, 'lose');
       endWar(s, w, 'lose');

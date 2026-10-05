@@ -479,6 +479,39 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               rival profiles show theirs, and income breakdowns show War-weary lands. AI uses its own fatigue and the same multipliers. Old saves start at zero,
               with no reconstructed campaign costs.
             </p>
+            <h3>Fear and defensive coalitions</h3>
+            <p>
+              Each territorial victory adds 12 threat to the attacking house, or 20 for naked conquest, plus 20 for a throne-region. Threat caps at 100 and
+              falls by 3 in a cycle begun without an offensive campaign. It stays with the house when rulers change. At 30, houses on the same or neighbouring
+              worlds can form a league; at 60, the wider system can join. Existing pledges end below 15. Up to eight free adult landed houses pledge, provided
+              allegiance, marriage, alliance, truce or another war does not prevent it.
+            </p>
+            <p>
+              A league defends against its target's new territorial attacks. Each eligible member detaches half of its available fleet. These ships fight under
+              their own command and weariness, take actual losses and return as survivors at peace. Helpers receive five-cycle truces with the attacker. The
+              player only joins through Pledge defence on Realm or a house profile; withdrawing recalls your survivors. Incoming attacks recall your own ships.
+              Committed ships still count against capacity and upkeep, and must be recalled before starting your own war.
+            </p>
+            <h3>Siege orders</h3>
+            <p>
+              After winning at least 25 attacker progress, a free adult attacker with 10 ships can choose a siege operation. One operation and one manual battle
+              share the same allowance each cycle. AI attackers make the same choices using their own treasury. Independence and revolts have no territorial
+              siege. Capturing the region still requires 100 progress or an agreed victorious peace.
+            </p>
+            <ul>
+              <li>Starve them out: 20 + 4 per development credits, 5-9 progress, 1-3% own-fleet attrition.</li>
+              <li>
+                Assault: an ordinary battle, with normal losses and commander risks. The estimate is strength share including helpers, before battle rolls.
+              </li>
+              <li>
+                Bribe a gate: 80 + 20 per development credits; 35% base +3% per Diplomacy -3% per development, capped at 15-85%. Success gains 12-20 progress;
+                failure loses 4. Pay either way.
+              </li>
+              <li>
+                Sabotage the walls: 40 + 10 per development credits; 30% base +3% per Intrigue -3% per development, capped at 10-80%. Success gains 8-16
+                progress; failure loses 8. Pay either way and lose 1-4% of your own ships.
+              </li>
+            </ul>
             <h3>Peace oaths</h3>
             <p>
               Every victory, defeat or white peace swears a five-cycle truce between the two houses, including independence and revolts. It survives inheritance

@@ -202,10 +202,10 @@ export function aiMarriages(s: GameState): void {
 }
 
 /** Ships a house's kin send to its war: a quarter of each ally's fleet in defence, less in attack. Kin of both sides stay home. */
-export function kinFleet(s: GameState, clanId: string, foeId: string, pacts: Pacts, share: number): number {
+export function kinFleet(s: GameState, clanId: string, foeId: string, pacts: Pacts, share: number, excluded: ReadonlySet<string> = new Set()): number {
   let n = 0;
   for (const id of pactsOf(s, clanId, pacts)) {
-    if (id === foeId || pacts.get(id)?.has(foeId)) continue;
+    if (id === foeId || id === s.playerClanId || excluded.has(id) || pacts.get(id)?.has(foeId)) continue;
     n += (s.clans[id]?.fleet ?? 0) * share;
   }
   return Math.round(n);

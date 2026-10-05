@@ -10,7 +10,7 @@ import type { BattleReport, Pending } from '../../game/types';
 import { haptic } from '../../native';
 import { Icon } from '../../svg/Icons';
 import { Ship } from '../../svg/Ship';
-import { Btn, CharCard, Face, Modal, TraitList, WarBar } from '../components';
+import { Btn, CharCard, ClanBadge, Face, Modal, TraitList, WarBar } from '../components';
 import { useGame } from '../store';
 
 function dismiss(uid: string) {
@@ -141,6 +141,20 @@ function BattleView({ p }: { p: { uid: string; report: BattleReport } }) {
         <p className="muted" style={{ marginTop: 8 }}>
           You led the fleet in person.
         </p>
+      )}
+      {!!r.coalitionLosses?.length && (
+        <div className="card flat stack" aria-label="Coalition casualties">
+          <b>Coalition defenders</b>
+          {r.coalitionLosses.map((row) => (
+            <div className="spread wrap" key={row.clanId}>
+              <ClanBadge clanId={row.clanId} />
+              <span>
+                {row.ships} committed · <span className="bad">{row.losses} lost</span>
+              </span>
+            </div>
+          ))}
+          <div className="muted">These losses come from each defender's own ships. Surviving crews return when the campaign ends.</div>
+        </div>
       )}
       {r.note && <p className="gold">{r.note}</p>}
       <div style={{ marginTop: 12 }}>
