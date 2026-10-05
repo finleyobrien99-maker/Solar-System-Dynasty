@@ -78,12 +78,16 @@ test('finds real murder proof, spends one marriage favour and preserves the resu
   await load(page, s);
   let dialog = await profile(page, captive.name, head.name);
   const section = dialog.locator('.section').filter({ has: page.getByRole('heading', { name: /^Secrets & hooks/ }) });
+  const dossier = dialog.locator('.section').filter({ has: page.getByRole('heading', { name: /^Dossier/ }) });
+  await expect(dossier).not.toContainText('The Lost Steward');
   await expect(section).not.toContainText('The Lost Steward');
   await section.getByRole('button', { name: 'Investigate (40 credits)' }).click();
   const notice = page.getByRole('dialog').last();
   await expect(notice).toContainText('Evidence Uncovered');
   await notice.getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(section).toContainText('The Lost Steward');
+  await expect(dossier).toContainText(`Private evidence: ${s.secrets[0].subjectName} ordered the murder of ${s.secrets[0].otherName}`);
+  await expect(dossier).toContainText('One-use hook:');
   await expect(section.getByRole('button', { name: 'Investigate (40 credits)' })).toBeDisabled();
   await section.getByText('Trade silence for a marriage', { exact: true }).click();
   await section.getByLabel('Your family member', { exact: true }).selectOption(own.id);
@@ -97,6 +101,8 @@ test('finds real murder proof, spends one marriage favour and preserves the resu
   await expect(page.getByRole('dialog').last()).toContainText('A Marriage Bought with Silence');
   await page.getByRole('dialog').last().getByRole('button', { name: 'Continue', exact: true }).click();
   await expect(section).toContainText('Your hook is spent.');
+  await expect(dossier).toContainText(`Private evidence: ${s.secrets[0].subjectName} ordered the murder of ${s.secrets[0].otherName}`);
+  await expect(dossier).not.toContainText('One-use hook:');
   await expect(section.getByRole('button', { name: 'Spend hook on marriage' })).toHaveCount(0);
   let saved: GameState | undefined;
   await expect
@@ -131,6 +137,9 @@ test('exposes proof once and removes all marriage leverage', async ({ page }) =>
   await section.getByRole('button', { name: 'Expose evidence' }).click();
   await section.getByRole('button', { name: 'Publish this evidence? All hooks on it will be lost.' }).click();
   await expect(section).toContainText('Public evidence');
+  const dossier = dialog.locator('.section').filter({ has: page.getByRole('heading', { name: /^Dossier/ }) });
+  await expect(dossier).toContainText(`Public evidence: ${s.secrets[0].subjectName} ordered the murder of ${s.secrets[0].otherName}`);
+  await expect(dossier).not.toContainText('One-use hook:');
   await expect(section.getByText('Trade silence for a marriage', { exact: true })).toHaveCount(0);
   await expect(section.getByRole('button', { name: 'Expose evidence' })).toHaveCount(0);
 });

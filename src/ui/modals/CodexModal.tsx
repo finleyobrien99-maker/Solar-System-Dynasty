@@ -148,7 +148,19 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
             <h3>Affairs</h3>
             <p>
               Lovers can give you unsanctioned children. They cannot inherit unless legitimised for 150 prestige. Character profiles link to lovers you know
-              about and say whether a spouse has discovered the affair; other houses have love lives too.
+              about and distinguish private evidence from a publicly exposed affair; other houses have love lives too.
+            </p>
+            <h3>Noble dossiers</h3>
+            <p>
+              Open another character's profile to see known facts, rumours with their source, leverage you hold and threats you know about. Proven secrets say
+              whether the evidence is private or public. Spending a hook keeps the proof but removes the favour; your heir inherits neither private knowledge
+              nor hooks. Gratitude is goodwill, rather than a guaranteed favour. An AI's undisclosed evidence stays hidden until a demand reveals it.
+            </p>
+            <h3>Justice petitions</h3>
+            <p>
+              Named nobles bring disputes about debts, inheritances, insults and alleged crimes. Your rulings build a reputation for justice or caprice, and
+              leave gratitude or resentment in the people involved. Fines and bribes draw from the offending house's actual treasury, up to what it can afford;
+              compensation and blood money reach the house that was wronged. A murder allegation alone creates no secret or hook.
             </p>
             <h3>Captive relatives</h3>
             <p>
