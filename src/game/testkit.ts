@@ -17,6 +17,7 @@ import { openRoute } from './trade';
 import type { GameState } from './types';
 import { cbOptions, declareWar, fightBattle, warBlocker } from './war';
 import { appointCommander, eligibleCommanders } from './commanders';
+import { guardianWard, nameGuardian, regentCandidates } from './regency';
 
 /** Answer every pending pop-up with a random allowed choice. */
 export function drain(s: GameState, bot: Seeded): void {
@@ -135,6 +136,12 @@ export function botTurn(s: GameState, bot: Seeded): void {
   if (chance(bot, 0.3)) {
     const pool = eligibleCommanders(s, s.playerClanId);
     if (pool.length) appointCommander(s, s.playerClanId, pick(bot, pool).id);
+  }
+  // Name a guardian for a young heir now and then, so regencies begin both ways: as the late ruler asked, or by the council.
+  const young = guardianWard(s);
+  if (young && chance(bot, 0.3)) {
+    const pool = regentCandidates(s, s.playerClanId, young);
+    if (pool.length) nameGuardian(s, pick(bot, pool).id);
   }
   for (const w of s.wars.slice()) fightBattle(s, w.id);
   const cands = vaultCandidates(s);

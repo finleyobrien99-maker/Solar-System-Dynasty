@@ -2,7 +2,7 @@
 import { pactMap, type Pacts } from './aiCourt';
 import { commanderOf, commandedBattleFates, leadFactor } from './commanders';
 import { recordDeed } from './epithets';
-import { ageOf, alive, ch, clanRegions, liegeOf, log, ruler } from './core';
+import { ageOf, alive, ch, clanRegions, liegeOf, log, regentHolding, ruler } from './core';
 import { battleWeariness, makeTruce, truceOf, warStrengthFactor } from './peace';
 import { neighbourPlanets } from './planets';
 import { clamp } from './rng';
@@ -184,7 +184,7 @@ export function coalitionPledgeBlocker(s: GameState, target: string): string | n
   if (threatOf(s, target) < THREAT_LOCAL && !coalitionOf(s, target)) return 'This house has not alarmed its neighbours.';
   if (coalitionOf(s, target)?.members.includes(s.playerClanId)) return 'You have already pledged.';
   const head = ruler(s);
-  if (!alive(head) || head.prisonerOf || ageOf(s, head) < 16) return 'A free adult ruler must make this pledge.';
+  if (!alive(head) || head.prisonerOf || ageOf(s, head) < 16 || regentHolding(s)) return 'A free adult ruler must make this pledge.';
   if (!eligible(s, s.playerClanId, target, pactMap(s))) return 'Distance, allegiance, alliance or sworn peace prevents this pledge.';
   if (busy(s, s.playerClanId, target) || committedShips(s, s.playerClanId)) return 'Your fleet is already committed to war.';
   if (homeFleet(s, s.playerClanId) < 2) return 'You need at least two ships to pledge aid.';

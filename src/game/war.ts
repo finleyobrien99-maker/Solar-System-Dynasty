@@ -29,6 +29,7 @@ import {
   newId,
   notice,
   playerClan,
+  regentHolding,
   ruler,
   setOwner,
   traitSum,
@@ -89,7 +90,7 @@ export function warBlocker(s: GameState, region: Region, breakOath = false): str
   if (atWarWith(s, region.owner)) return 'Already at war with this clan.';
   const r = ruler(s);
   if (r.prisonerOf) return 'A captive ruler cannot declare war.';
-  if (s.year - r.born < 16) return 'A regency council cannot declare war.';
+  if (s.year - r.born < 16 || regentHolding(s)) return 'A regency cannot declare war.';
   const enemy = s.clans[region.owner];
   if (!enemy) return 'Nobody holds this region.';
   const truce = truceOf(s, s.playerClanId, enemy.id);
@@ -137,7 +138,7 @@ export function independenceBlocker(s: GameState, breakOath = false): string | n
   if (committedShips(s, s.playerClanId)) return 'Recall your coalition ships before starting another war.';
   if (atWarWith(s, liege)) return 'Already at war with your liege.';
   if (s.wars.length >= 3) return 'You are already fighting three wars.';
-  if (s.year - ruler(s).born < 16 || ruler(s).prisonerOf) return 'A free adult ruler must declare independence.';
+  if (s.year - ruler(s).born < 16 || regentHolding(s) || ruler(s).prisonerOf) return 'A free adult ruler must declare independence.';
   const truce = truceOf(s, s.playerClanId, liege);
   return truce ? (breakOath ? truceBreakBlocker(s, s.playerClanId, liege) : `Your truce with House ${s.clans[liege].name} lasts until ${truce.until}.`) : null;
 }

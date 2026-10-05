@@ -1,6 +1,7 @@
 import { UpbringingOverview } from '../sections/UpbringingOverview';
 import { AmbitionSection } from '../sections/AmbitionSection';
 import { SuccessionSection } from '../sections/SuccessionSection';
+import { RegencySection } from '../sections/RegencySection';
 import { AbdicateSection } from '../sections/AbdicateSection';
 import { useId, useState } from 'react';
 import { ageOf, alive, ch, charTitle, clanRank, fullName, lifespan, playerClan, ruler } from '../../game/core';
@@ -66,8 +67,8 @@ export function LifeTab() {
                 />
               </div>
               {regencyActive(s) && (
-                <div className="pill red" style={{ marginTop: 'var(--space-4px)' }}>
-                  Regency until age 16: war, schemes and activities are locked
+                <div className="pill red" style={{ marginTop: 'var(--space-4px)', whiteSpace: 'normal', borderRadius: 'var(--radius-8px)' }}>
+                  {ageOf(s, r) < 16 ? 'Regency until age 16' : 'The regent still holds the seal'}: war, schemes and activities are locked
                 </div>
               )}
             </div>
@@ -80,6 +81,7 @@ export function LifeTab() {
 
       <AmbitionSection />
       <SuccessionSection />
+      <RegencySection />
       <UpbringingOverview />
 
       <div className="cols section">

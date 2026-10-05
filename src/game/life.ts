@@ -22,6 +22,7 @@ import {
   newId,
   notice,
   playerClan,
+  regentHolding,
   ruler,
   siblingsOf,
   statTotal,
@@ -476,7 +477,7 @@ export function abdicationBlocker(s: GameState): string | null {
   if (s.gameOver || !alive(ruler(s))) return 'Your dynasty has ended.';
   if (s.pending.length) return 'Resolve the current events first.';
   if (successionCrisis(s)) return 'Settle the disputed inheritance first.';
-  if (ageOf(s, ruler(s)) < 16) return 'A regent cannot abdicate for a child.';
+  if (ageOf(s, ruler(s)) < 16 || regentHolding(s)) return 'A regent cannot abdicate for you.';
   if (ruler(s).prisonerOf) return 'You cannot abdicate while imprisoned.';
   const heir = currentHeir(s);
   if (!heir) return 'You need a legitimate heir.';
@@ -499,7 +500,7 @@ export function abdicate(s: GameState): boolean {
 }
 
 export function regencyActive(s: GameState): boolean {
-  return ageOf(s, ruler(s)) < 16;
+  return ageOf(s, ruler(s)) < 16 || regentHolding(s);
 }
 
 export function pickRandomAdultFromClan(s: GameState, clanId: string): Character | undefined {

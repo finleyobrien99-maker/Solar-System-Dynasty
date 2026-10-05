@@ -1,7 +1,24 @@
 import { isCloseKin, recordDeed } from './epithets';
 // Schemes, diplomacy and prisoners.
 
-import { ageOf, alive, ch, clanRank, effStats, fullName, homePlanet, itemSum, liegeOf, log, notice, playerClan, ruler, traitSum, vassalsOf } from './core';
+import {
+  ageOf,
+  alive,
+  ch,
+  clanRank,
+  effStats,
+  fullName,
+  homePlanet,
+  itemSum,
+  liegeOf,
+  log,
+  notice,
+  playerClan,
+  regentHolding,
+  ruler,
+  traitSum,
+  vassalsOf,
+} from './core';
 import { canAfford, pay, type Cost } from './genetics';
 import { killCharacter } from './life';
 import { consumeHook, hooksOf, recordMurder } from './secrets';
@@ -90,7 +107,7 @@ export function schemeChance(s: GameState, kind: SchemeKind, targetId: string): 
 }
 
 export function schemeBlocker(s: GameState, kind: SchemeKind, targetId: string): string | null {
-  if (ageOf(s, ruler(s)) < 16) return 'A regency council will not scheme.';
+  if (ageOf(s, ruler(s)) < 16 || regentHolding(s)) return 'A regency will not scheme.';
   if (schemesLeft(s) <= 0) return 'No scheme actions left this cycle.';
   if (!canAfford(s, SCHEMES[kind].cost)) return 'Not enough credits.';
   const key = `scheme:${kind}:${targetId}`;

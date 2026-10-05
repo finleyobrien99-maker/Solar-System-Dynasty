@@ -1,6 +1,6 @@
 // Siege orders deepen territorial campaigns without inventing troops or occupation.
 // Ownership, battle deeds and commander fates belong to the existing war resolver.
-import { alive, ch, clanRegions, effStats, log, ruler, traitSum } from './core';
+import { alive, ch, clanRegions, effStats, log, regentHolding, ruler, traitSum } from './core';
 import { commanderOf } from './commanders';
 import { battleWeariness, warStrengthFactor } from './peace';
 import { chance, clamp, int, range, weighted } from './rng';
@@ -147,7 +147,7 @@ export function siegeBlocker(s: GameState, warId: string, kind: SiegeKind, aiIni
   if (!clanRegions(s, c.attacker.id).length) return 'The attacking house has no lands.';
   if (!alive(c.head)) return 'The attacking house has no living ruler.';
   if (c.head.prisonerOf) return 'A captive ruler cannot order a siege.';
-  if (s.year - c.head.born < 16) return 'A free adult ruler must order the siege.';
+  if (s.year - c.head.born < 16 || (c.attacker.id === s.playerClanId && regentHolding(s))) return 'A free adult ruler must order the siege.';
   if (c.ships < 10) return 'Need at least 10 of your own ships.';
   if (c.progress >= 100 || c.progress <= -100) return 'The campaign is already decided.';
   if (c.progress < 25) return 'Win orbital control first: need 25 attacker progress.';

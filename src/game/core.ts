@@ -375,5 +375,13 @@ export function isVip(s: GameState): boolean {
 }
 
 export function canAct(s: GameState): boolean {
-  return !s.gameOver && ageOf(s, ruler(s)) >= ADULT_AGE;
+  return !s.gameOver && ageOf(s, ruler(s)) >= ADULT_AGE && !regentHolding(s);
+}
+
+/** A grown ruler whose regent will not yet hand back the seal (regency.ts) is still under the regency. */
+export function regentHolding(s: GameState): boolean {
+  const f = s.flags?.['regent:' + s.playerClanId];
+  if (!f || f.data.ward !== s.rulerId || !(Number(f.data.until ?? 0) > s.year)) return false;
+  const regent = s.characters[String(f.data.id)];
+  return !!regent && regent.died === undefined && !regent.prisonerOf;
 }

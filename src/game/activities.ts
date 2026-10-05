@@ -2,7 +2,7 @@ import { capOpinion } from './memory';
 import { recordDeed } from './epithets';
 // Once-a-cycle activities: galas, hunts, pilgrimages and the rest.
 
-import { ageOf, alive, clanRank, effStats, fullName, hasTrait, log, newId, notice, playerClan, ruler, setCooldown, cooldownReady } from './core';
+import { ageOf, alive, clanRank, effStats, fullName, hasTrait, log, newId, notice, playerClan, regentHolding, ruler, setCooldown, cooldownReady } from './core';
 import { canAfford, pay, type Cost } from './genetics';
 import { makeItem } from './items';
 import { killCharacter } from './life';
@@ -90,7 +90,7 @@ const SHRINES = [
 ];
 
 export function activityBlocker(s: GameState, kind: ActivityKind): string | null {
-  if (ageOf(s, ruler(s)) < 16) return 'Regency: the council forbids it.';
+  if (ageOf(s, ruler(s)) < 16 || regentHolding(s)) return 'Regency: the regent forbids it.';
   if (!cooldownReady(s, `act:${kind}`)) return `Available again in ${s.cooldowns[`act:${kind}`] - s.year} cycle(s).`;
   if (!canAfford(s, ACTIVITIES[kind].cost(s))) return 'Not enough credits.';
   return null;

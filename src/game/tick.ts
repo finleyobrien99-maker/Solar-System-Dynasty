@@ -1,6 +1,7 @@
 import { coalitionsTick } from './coalitions';
 import { peaceTick } from './peace';
 import { successionTick } from './succession';
+import { regencyTick } from './regency';
 import { ambitionsTick } from './ambitions';
 import { secretsTick } from './secrets';
 import { epithetsTick, recordDeed } from './epithets';
@@ -64,6 +65,7 @@ export function ageUp(s: GameState): void {
   forgeTick(s);
   aiTick(s);
   successionTick(s);
+  regencyTick(s); // After deaths and inheritances, before this cycle's events.
   ambitionsTick(s);
   secretsTick(s); // Discover evidence after new AI deeds, before blackmail letters are selected.
   tickPlayerWars(s);
