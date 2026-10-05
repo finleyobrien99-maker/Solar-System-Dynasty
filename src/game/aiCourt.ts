@@ -218,11 +218,11 @@ export function wouldBetray(s: GameState, head: Character, theirs: Character | u
 }
 
 /** A house turns on its kin by marriage. Their lord won't forget it, and the oath-breaking counts toward a bad name. */
-export function betrayPact(s: GameState, attacker: Clan, victim: Clan): void {
+export function betrayPact(s: GameState, attacker: Clan, victim: Clan, countOath = true): void {
   const head = ch(s, attacker.headId);
   const theirs = ch(s, victim.headId);
   if (!alive(head)) return;
-  recordDeed(s, head, 'oathsBroken');
+  if (countOath) recordDeed(s, head, 'oathsBroken');
   if (alive(theirs)) addFeeling(s, theirs.id, head.id, { why: 'Betrayed the bond between our houses', value: -50, decay: 0.5, key: 'pact' });
   log(s, `House ${attacker.name} turns on House ${victim.name}, its own kin by marriage.`, 'news');
 }

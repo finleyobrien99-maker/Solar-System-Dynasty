@@ -1,4 +1,5 @@
 // Contested adult inheritance. Every fleet contribution is physically debited.
+import { battleWeariness, warStrengthFactor } from './peace';
 import { ageOf, alive, ch, childrenOf, clanRank, clanRegions, effStats, fullName, log, newId, notice, siblingsOf, vassalsOf } from './core';
 import { councilStat, ROLE_KEYS } from './council';
 import { finishAmbition } from './ambitions';
@@ -296,11 +297,23 @@ function battle(s: GameState, c: SuccessionCrisis): void {
   const inc = s.characters[c.incumbentId],
     claim = s.characters[c.claimantId];
   const cmd = Math.max(effStats(s, inc).cmd, c.clanId === s.playerClanId ? councilStat(s, 'admiral') : 0);
-  const win = loyal * (1 + cmd * 0.04) * (0.8 + int(s, 0, 40) / 100) >= rebel * (1 + effStats(s, claim).cmd * 0.04);
+  const contributions = c.contributions.map((p) => ({ ...p }));
+  const rebelStrength = c.contributions.reduce((n, p) => n + p.ships * warStrengthFactor(s, p.clanId), 0);
+  const win = loyal * warStrengthFactor(s, c.clanId) * (1 + cmd * 0.04) * (0.8 + int(s, 0, 40) / 100) >= rebelStrength * (1 + effStats(s, claim).cmd * 0.04);
   const loyalLoss = Math.min(loyal, Math.ceil((loyal * int(s, win ? 6 : 18, win ? 14 : 30)) / 100));
   const rebelLoss = Math.min(rebel, Math.ceil((rebel * int(s, win ? 18 : 6, win ? 30 : 14)) / 100));
   setFleet(s, c.clanId, loyal - loyalLoss);
   rebelLosses(c, rebelLoss);
+  let ownShips = loyal,
+    ownLosses = loyalLoss;
+  for (const original of contributions) {
+    const remaining = c.contributions.find((p) => p.clanId === original.clanId)?.ships ?? 0;
+    if (original.clanId === c.clanId) {
+      ownShips += original.ships;
+      ownLosses += original.ships - remaining;
+    } else battleWeariness(s, original.clanId, original.ships, original.ships - remaining);
+  }
+  battleWeariness(s, c.clanId, ownShips, ownLosses);
   c.score += win ? 35 : -35;
   recordDeed(s, inc, win ? 'battlesWon' : 'battlesLost');
   recordDeed(s, claim, win ? 'battlesLost' : 'battlesWon');

@@ -1,4 +1,5 @@
 // Test data built through actual engine actions; never imported by the app.
+import { declareWar, fightBattle } from './war';
 import { createCharacter } from './character';
 import { alive, ch, clanRank, clanRegions } from './core';
 import { killCharacter } from './life';
@@ -61,4 +62,22 @@ export function disputedInheritance(ai = false) {
     return { s, house, old, heir, claimant, crisis, backer };
   }
   throw new Error('No seeded dispute found');
+}
+
+/** An unfinished campaign, built by a real claim and battle, for saves and browser play. */
+export function peaceCampaign() {
+  const s = createWorld(97),
+    home = scenarioHouses(s, 'mars', 'governor')[0];
+  startGame(s, { clanId: home.id, ruler: rollRuler(97, 'mars', 'F', 'Asha'), focus: 'dip', age: 40, family: 'married' });
+  Object.assign(s, { credits: 2000, prestige: 1000, fleet: 300 });
+  const enemy = Object.values(s.clans).find((k) => !k.isPlayer && k.planetId === 'mars' && clanRegions(s, k.id).length)!;
+  const head = s.characters[enemy.headId];
+  head.born = s.year - 40;
+  head.prisonerOf = undefined;
+  const target = clanRegions(s, enemy.id).find((r) => !r.capital) ?? clanRegions(s, enemy.id)[0];
+  s.claims.push(target.id);
+  if (!declareWar(s, target.id, 'claim')) throw new Error('Cannot start the peace fixture');
+  fightBattle(s, s.wars[0].id);
+  s.pending = [];
+  return { s, enemy, target, war: s.wars[0] };
 }

@@ -1,3 +1,4 @@
+import { peaceTick } from './peace';
 import { successionTick } from './succession';
 import { ambitionsTick } from './ambitions';
 import { secretsTick } from './secrets';
@@ -25,6 +26,7 @@ export function canAgeUp(s: GameState): boolean {
 export function ageUp(s: GameState): void {
   if (!canAgeUp(s)) return;
   s.year += 1;
+  peaceTick(s); // Expire treaties before this cycle's declarations.
 
   // Money first, so this cycle's events see this cycle's treasury.
   const dc = sum(creditLines(s));

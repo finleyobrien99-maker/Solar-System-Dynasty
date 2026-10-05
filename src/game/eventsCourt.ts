@@ -339,12 +339,15 @@ export const COURT_EVENTS: EventDef[] = [
             do: [
               {
                 run: (c) => {
-                  aiDeclareWar(c.s, String(c.data.clan), 'conquest', warTarget(c.s, c.s.clans[String(c.data.clan)]));
+                  c.vars.declared = aiDeclareWar(c.s, String(c.data.clan), 'conquest', warTarget(c.s, c.s.clans[String(c.data.clan)])) ? 1 : 0;
                 },
-                text: (c) => `House ${clanName(c)} declares war`,
+                text: (c) => (c.vars.declared ? `House ${clanName(c)} declares war` : `House ${clanName(c)} cannot begin another war`),
               },
             ],
-            text: (c) => `You refuse. House ${clanName(c)} was not bluffing. +15 prestige, and a war.`,
+            text: (c) =>
+              c.vars.declared
+                ? `You refuse. House ${clanName(c)} was not bluffing. +15 prestige, and a war.`
+                : 'You refuse. They threaten war, but their sworn peace or other commitments hold them back. +15 prestige.',
           },
         },
       },
@@ -399,12 +402,15 @@ export const COURT_EVENTS: EventDef[] = [
             { gain: 'prestige', n: 10 },
             {
               run: (c) => {
-                aiDeclareWar(c.s, String(c.data.clan), 'feud', warTarget(c.s, c.s.clans[String(c.data.clan)]));
+                c.vars.declared = aiDeclareWar(c.s, String(c.data.clan), 'feud', warTarget(c.s, c.s.clans[String(c.data.clan)])) ? 1 : 0;
               },
-              text: 'your liege comes for you',
+              text: (c) => (c.vars.declared ? 'your liege comes for you' : 'your liege cannot call the banners'),
             },
           ],
-          text: 'You stay home. Your liege takes that as the answer it was, and calls the banners. +10 prestige.',
+          text: (c) =>
+            c.vars.declared
+              ? 'You stay home. Your liege takes that as the answer it was, and calls the banners. +10 prestige.'
+              : 'You stay home. Your liege threatens you, but sworn peace or other commitments hold back the fleet. +10 prestige.',
         },
       },
     ],

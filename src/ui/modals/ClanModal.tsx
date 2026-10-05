@@ -1,3 +1,5 @@
+import { WarWearinessSection } from '../sections/WarWearinessSection';
+import { TrucesSection } from '../sections/TrucesSection';
 import { ageOf, alive, ch, clanRank, clanRegions, clanTitle, liegeOf } from '../../game/core';
 import {
   allianceChance,
@@ -54,6 +56,8 @@ export function ClanModal({ id }: { id: string }) {
         </div>
       )}
       {head?.ambition && <AmbitionRecord c={head} />}
+      <WarWearinessSection clanId={id} />
+      <TrucesSection clanId={id} />
       <div className="row top wrap" style={{ gap: 'var(--space-14px)' }}>
         <Sigil spec={clan.sigil} size={84} />
         <div className="grow stack" style={{ gap: 'var(--space-4px)' }}>

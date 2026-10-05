@@ -1,6 +1,7 @@
 // Income breakdowns. The UI shows every line so players can see exactly where
 // their credits, prestige and faith come from.
 
+import { warIncomeFactor } from './peace';
 import { isAway } from './wards';
 import {
   ageOf,
@@ -37,8 +38,11 @@ export const SHIP_COST = 6;
 export const UPKEEP_PER_SHIP = 0.8;
 export const TRIBUTE_RATE = 0.15;
 
-export function grossRegionIncome(s: GameState, clanId: string): number {
+export function rawRegionIncome(s: GameState, clanId: string): number {
   return clanRegions(s, clanId).reduce((a, r) => a + regionIncome(s, r), 0);
+}
+export function grossRegionIncome(s: GameState, clanId: string): number {
+  return rawRegionIncome(s, clanId) * warIncomeFactor(s, clanId);
 }
 
 export function fleetCap(s: GameState): number {
@@ -51,12 +55,16 @@ export function creditLines(s: GameState): Line[] {
   const st = effStats(s, r);
   const lines: Line[] = [];
   const gross = grossRegionIncome(s, s.playerClanId);
+  const raw = rawRegionIncome(s, s.playerClanId);
   let mult = 1 + st.eco * 0.03 + traitSum(r, 'creditsPct');
   if (homePlanet(s) === 'mercury') mult += 0.15;
   if (homePlanet(s) === 'ceres') mult += 0.1;
-  lines.push({ label: 'Regions (boosted by Economy)', value: Math.round(gross * mult) });
+  lines.push({ label: 'Regions (boosted by Economy)', value: Math.round(raw * mult) });
   const treasurer = councilStat(s, 'treasurer');
-  if (treasurer) lines.push({ label: `Treasurer (+${treasurer}%)`, value: Math.round(gross * treasurer * 0.01) });
+  if (treasurer) lines.push({ label: `Treasurer (+${treasurer}%)`, value: Math.round(raw * treasurer * 0.01) });
+
+  const wearyLoss = Math.round(raw * mult) - Math.round(gross * mult) + Math.round(raw * treasurer * 0.01) - Math.round(gross * treasurer * 0.01);
+  if (wearyLoss) lines.push({ label: 'War-weary lands', value: -wearyLoss });
 
   const vassals = vassalsOf(s, s.playerClanId);
   if (vassals.length) {

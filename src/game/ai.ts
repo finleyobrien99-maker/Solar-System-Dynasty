@@ -31,6 +31,7 @@ import { capOpinion, grudgeOpinion, isRival, opinionCeiling } from './memory';
 import { addFeeling, feelingsSum, murdered, opinionOf } from './relations';
 import { aiIntrigueTick } from './aiIntrigue';
 import { aiDynastyTick } from './aiDynasty';
+import { battleWeariness, warStrengthFactor, aiMayBreakTruce, breakTruce, makeTruce, mayAttack, truceOf } from './peace';
 import { allMentorships, allWardships, aiWardsTick } from './wards';
 import { aiAmbition, ambitionHouse, AMBITION_AGGRESSION, type AmbitionKind } from './aiAmbition';
 import { aiAffairsTick, aiArrests, aiMarriages, alliesAbandon, betrayPact, captivesTick, kinFleet, pactMap, takeCaptive, wouldBetray } from './aiCourt';
@@ -134,7 +135,10 @@ function resources(s: GameState): void {
 
 function startAiWar(s: GameState): void {
   if (s.aiWars.length >= 3) return;
-  const pool = landed(s).filter((c) => c.fleet > 35 && !s.aiWars.some((w) => w.attacker === c.id || w.defender === c.id));
+  const pool = landed(s).filter((c) => {
+    const head = ch(s, c.headId);
+    return alive(head) && !head.prisonerOf && s.year - head.born >= 16 && c.fleet > 35 && !s.aiWars.some((w) => w.attacker === c.id || w.defender === c.id);
+  });
   if (!pool.length) return;
   const attacker = weighted(
     s,
@@ -149,7 +153,7 @@ function startAiWar(s: GameState): void {
     // Feuds inside a planet: never against your own liege's throne.
     targets = targets.filter((r) => r.planetId === attacker.planetId && !r.capital && liegeOf(s, attacker.id) !== r.owner);
   }
-  targets = targets.filter((r) => !s.clans[r.owner]?.isPlayer && !s.aiWars.some((w) => w.defender === r.owner));
+  targets = targets.filter((r) => !s.clans[r.owner]?.isPlayer && mayAttack(s, attacker.id, r.owner) && !s.aiWars.some((w) => w.defender === r.owner));
   // Houses bound by marriage leave each other alone, unless the lord is treacherous and hates them.
   const lord = ch(s, attacker.headId);
   const pacts = pactMap(s);
@@ -166,17 +170,36 @@ function startAiWar(s: GameState): void {
       return [r, (1 + hate / 20) * (r.owner === aim ? 4 : 1)] as const;
     }),
   );
-  const war: AiWar = { id: newId(s, 'aw'), attacker: attacker.id, defender: target.owner, target: target.id, started: s.year, progress: 0 };
+  const oath = !!truceOf(s, attacker.id, target.owner);
+  if (oath && !chance(s, 0.2)) return;
+  declareHouseWar(s, attacker.id, target.id, oath);
+}
+
+/** The validated AI-vs-AI entry point; explicit oath-breaking uses the same own-house cost. */
+export function declareHouseWar(s: GameState, attackerId: string, regionId: string, breakOath = false): boolean {
+  const attacker = s.clans[attackerId],
+    target = s.regions[regionId];
+  const defender = target && s.clans[target.owner];
+  const lord = ch(s, attacker?.headId),
+    theirs = ch(s, defender?.headId);
+  if (s.gameOver || !attacker || !defender || attacker.isPlayer || defender.isPlayer || attacker.id === defender.id || s.aiWars.length >= 3) return false;
+  if (!alive(lord) || lord.prisonerOf || s.year - lord.born < 16 || !clanRegions(s, attackerId).length) return false;
+  if (s.aiWars.some((w) => w.attacker === attackerId || w.defender === attackerId || w.defender === defender.id)) return false;
+  const pacts = pactMap(s),
+    kin = pacts.get(attackerId);
+  if (kin?.has(defender.id) && !wouldBetray(s, lord, theirs)) return false;
+  const oath = !!truceOf(s, attackerId, defender.id);
+  if (oath && (!breakOath || !breakTruce(s, attackerId, defender.id))) return false;
+  const war: AiWar = { id: newId(s, 'aw'), attacker: attackerId, defender: defender.id, target: regionId, started: s.year, progress: 0 };
   s.aiWars.push(war);
-  recordDeed(s, attacker.headId, 'warsStarted');
-  breakPeace(s, s.clans[target.owner].headId);
-  const defender = s.clans[target.owner];
-  if (kin?.has(defender.id)) betrayPact(s, attacker, defender);
-  const theirs = ch(s, defender.headId);
-  if (alive(lord) && alive(theirs)) addFeeling(s, theirs.id, lord.id, { why: 'Made war on us', value: -20, decay: 1 });
+  recordDeed(s, lord, 'warsStarted');
+  breakPeace(s, defender.headId);
+  if (kin?.has(defender.id)) betrayPact(s, attacker, defender, !oath);
+  if (alive(theirs)) addFeeling(s, theirs.id, lord.id, { why: 'Made war on us', value: -20, decay: 1 });
   log(s, `House ${attacker.name} (${PLANET_BY_ID[attacker.planetId].name}) declares war on House ${defender.name} over ${target.name}.`, 'news');
-  const friends = [...(pacts.get(defender.id) ?? [])].filter((id) => id !== attacker.id && !pacts.get(id)?.has(attacker.id)).map((id) => s.clans[id].name);
+  const friends = [...(pacts.get(defender.id) ?? [])].filter((id) => id !== attackerId && !pacts.get(id)?.has(attackerId)).map((id) => s.clans[id].name);
   if (friends.length) log(s, `House ${defender.name}'s kin by marriage (${friends.map((n) => `House ${n}`).join(', ')}) send ships to defend them.`, 'news');
+  return true;
 }
 
 function tickAiWars(s: GameState): void {
@@ -185,7 +208,10 @@ function tickAiWars(s: GameState): void {
     const a = s.clans[w.attacker];
     const d = s.clans[w.defender];
     const target = s.regions[w.target];
-    const done = () => (s.aiWars = s.aiWars.filter((x) => x.id !== w.id));
+    const done = (peace = false) => {
+      s.aiWars = s.aiWars.filter((x) => x.id !== w.id);
+      if (peace) makeTruce(s, w.attacker, w.defender);
+    };
     if (!a || !d || !target || target.owner !== d.id || !clanRegions(s, a.id).length) {
       done();
       continue;
@@ -196,13 +222,19 @@ function tickAiWars(s: GameState): void {
     // Kin by marriage stand by each other, more readily in defence than in attack.
     def += kinFleet(s, d.id, a.id, pacts, 0.25);
     const att = a.fleet + kinFleet(s, a.id, d.id, pacts, 0.15);
-    const pAtt = att / Math.max(1, att + def);
+    const attStrength = att * warStrengthFactor(s, a.id),
+      defStrength = def * warStrengthFactor(s, d.id);
+    const pAtt = attStrength / Math.max(1, attStrength + defStrength);
     const attWins = chance(s, pAtt);
     recordDeed(s, a.headId, attWins ? 'battlesWon' : 'battlesLost');
     recordDeed(s, d.headId, attWins ? 'battlesLost' : 'battlesWon');
     w.progress += attWins ? int(s, 25, 45) : -int(s, 25, 45);
+    const oldAtt = a.fleet,
+      oldDef = d.fleet;
     a.fleet = Math.round(a.fleet * range(s, 0.85, 0.95));
     d.fleet = Math.round(d.fleet * range(s, 0.85, 0.95));
+    battleWeariness(s, a.id, oldAtt, oldAtt - a.fleet);
+    battleWeariness(s, d.id, oldDef, oldDef - d.fleet);
     if (w.progress >= 100) {
       const wasCapital = target.capital;
       setOwner(s, target, a.id);
@@ -210,7 +242,7 @@ function tickAiWars(s: GameState): void {
       recordDeed(s, d.headId, 'warsLost');
       recordDeed(s, a.headId, 'regionsTaken', 1, target.id);
       if (wasCapital) recordDeed(s, a.headId, 'capitalsTaken', 1, target.planetId);
-      done();
+      done(true);
       // Losing land is not forgotten.
       const [ah, dh] = [ch(s, a.headId), ch(s, d.headId)];
       if (alive(ah) && alive(dh))
@@ -231,7 +263,7 @@ function tickAiWars(s: GameState): void {
         recordDeed(s, a.headId, 'peaceTreaties');
         recordDeed(s, d.headId, 'peaceTreaties');
       }
-      done();
+      done(true);
       log(s, `House ${d.name} beat off House ${a.name}'s attack on ${target.name}.`, 'news');
     }
   }
@@ -246,7 +278,7 @@ function aggressionOnPlayer(s: GameState): void {
   const myPlanets = new Set(mine.map((r) => r.planetId));
   const settled = s.year - s.startYear >= 10;
   const pool = landed(s).filter((c) => {
-    if (c.allied || atWarWith(s, c.id) || s.aiWars.some((w) => w.attacker === c.id)) return false;
+    if (c.allied || !mayAttack(s, c.id, s.playerClanId) || atWarWith(s, c.id) || s.aiWars.some((w) => w.attacker === c.id)) return false;
     if (liegeOf(s, c.id) === s.playerClanId) return false;
     const near = myPlanets.has(c.planetId) || neighbourPlanets(c.planetId).some((p) => myPlanets.has(p));
     // Sworn rivals and lords sworn to revenge on you come from anywhere, and with less of an edge.
@@ -263,7 +295,9 @@ function aggressionOnPlayer(s: GameState): void {
   const onPlanet = mine.filter((r) => r.planetId === attacker.planetId && !(r.capital && clanRank(s, attacker.id) < 2));
   const target = onPlanet.length ? pick(s, onPlanet) : pick(s, mine);
   const cb = s.claims.length && chance(s, 0.3) ? 'feud' : 'conquest';
-  aiDeclareWar(s, attacker.id, cb, target.id);
+  const oath = !!truceOf(s, attacker.id, s.playerClanId);
+  if (oath && (!aiMayBreakTruce(s, attacker.id, s.playerClanId) || !chance(s, 0.2))) return;
+  aiDeclareWar(s, attacker.id, cb, target.id, oath);
 }
 
 /** Whether a house's ambition is aimed at you: revenge on your people, or your land. */
@@ -338,13 +372,15 @@ function rivalPlots(s: GameState): void {
 
 function revolts(s: GameState): void {
   for (const v of vassalsOf(s, s.playerClanId)) {
-    if (v.opinion >= -40 || atWarWith(s, v.id) || s.wars.length >= 3) continue;
+    if (v.opinion >= -40 || !mayAttack(s, v.id, s.playerClanId) || atWarWith(s, v.id) || s.wars.length >= 3) continue;
     const head = ch(s, v.headId);
     if (!alive(head) || head.prisonerOf) continue;
     if (v.fleet < s.fleet * 0.35) continue;
     if (chance(s, 0.12)) {
       const mine = clanRegions(s, s.playerClanId).find((r) => r.planetId === v.planetId);
-      aiDeclareWar(s, v.id, 'revolt', mine?.id ?? '');
+      const oath = !!truceOf(s, v.id, s.playerClanId);
+      if (oath && !chance(s, 0.2)) continue;
+      aiDeclareWar(s, v.id, 'revolt', mine?.id ?? '', oath);
     }
   }
 }

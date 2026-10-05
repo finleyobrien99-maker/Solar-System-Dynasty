@@ -8,6 +8,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { compressToUTF16, decompressFromBase64 } from 'lz-string';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { endWar } from './war';
 import { SAVE_VERSION } from './core';
 import type { Seeded } from './rng';
 import { deleteSave, exportSave, importSave, listSaves, migrate, MIGRATIONS, NewerSaveError, readBackup, readSave, writeSave } from './save';
@@ -16,7 +17,7 @@ import { ageUp } from './tick';
 import { killCharacter } from './life';
 import type { GameState, ScenarioId } from './types';
 import { createWorld, rollRuler, scenarioHouses, startGame } from './world';
-import { disputedInheritance } from './testScenarios';
+import { peaceCampaign, disputedInheritance } from './testScenarios';
 import { successionTick } from './succession';
 import { ambitionChoices, chooseAmbition } from './ambitions';
 
@@ -96,6 +97,18 @@ describe.runIf(WRITE)('freeze contested inheritance', () => {
         s.year = crisis.deadline;
         successionTick(s);
       }
+      writeFileSync(file, exportSave(s) + '\n');
+    }
+  });
+});
+
+describe.runIf(WRITE)('freeze peace and campaign weariness', () => {
+  it('freezes an actual battle and a signed peace without reconstructing historical wars', () => {
+    for (const name of ['campaign', 'peace-oath']) {
+      const file = new URL(`save-v${SAVE_VERSION}-${name}.json`, DIR);
+      if (existsSync(file)) continue;
+      const { s, war } = peaceCampaign();
+      if (name === 'peace-oath') endWar(s, war, 'white');
       writeFileSync(file, exportSave(s) + '\n');
     }
   });

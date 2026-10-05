@@ -27,6 +27,23 @@ export function checkInvariants(s: GameState): void {
   for (const r of Object.values(s.regions)) expect(s.clans[r.owner], `region ${r.id} owner`).toBeTruthy();
   for (const c of Object.values(s.clans)) expect(s.characters[c.headId], `clan ${c.id} head`).toBeTruthy();
   for (const role of ROLE_KEYS) if (s.council[role]) expect(s.characters[s.council[role]!]).toBeTruthy();
+  const pairs = new Set<string>();
+  for (const t of s.truces) {
+    expect(s.clans[t.a]).toBeTruthy();
+    expect(s.clans[t.b]).toBeTruthy();
+    expect(t.a).not.toBe(t.b);
+    expect(Number.isFinite(t.started) && Number.isFinite(t.until)).toBe(true);
+    expect(t.until).toBeGreaterThan(t.started);
+    const key = [t.a, t.b].sort().join(':');
+    expect(pairs.has(key)).toBe(false);
+    pairs.add(key);
+  }
+  for (const [id, fatigue] of Object.entries(s.warWeariness)) {
+    expect(s.clans[id]).toBeTruthy();
+    expect(Number.isFinite(fatigue)).toBe(true);
+    expect(fatigue).toBeGreaterThanOrEqual(0);
+    expect(fatigue).toBeLessThanOrEqual(100);
+  }
   for (const t of s.routes) {
     expect(s.regions[t.from].owner).toBe(s.playerClanId);
     expect(s.clans[t.partner]).toBeTruthy();

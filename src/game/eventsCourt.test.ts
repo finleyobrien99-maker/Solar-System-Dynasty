@@ -4,6 +4,7 @@ import { alive, ch, clanRank, clanRegions, liegeOf } from './core';
 import { neighbourPlanets } from './planets';
 import { buildCtx, EVENT_BY_ID, queueEvent } from './events';
 import { COURT_EVENTS, courtingHouse, courtship, heldKin } from './eventsCourt';
+import { makeTruce } from './peace';
 import { remember } from './memory';
 import { addFeeling } from './relations';
 import type { Clan, GameState, Pending } from './types';
@@ -178,6 +179,19 @@ describe('who asks for your hand', () => {
 });
 
 describe('the strong lean on you', () => {
+  it('a hostile liege honours a truce and the summons reports the blocked war truthfully', () => {
+    const s = court();
+    SETUP.liege_charges(s);
+    const liege = liegeOf(s, s.playerClanId)!;
+    makeTruce(s, s.playerClanId, liege);
+    const { def, ctx } = event(s, 'liege_charges');
+    const before = s.prestige;
+    expect(def.choices[2].run(ctx)).toMatch(/sworn peace/);
+    expect(s.wars).toHaveLength(0);
+    expect(s.truces).toHaveLength(1);
+    expect(s.prestige).toBe(before + 10);
+  });
+
   it('bending the knee to a stronger house makes it your liege', () => {
     const s = court();
     SETUP.fealty_demand(s);

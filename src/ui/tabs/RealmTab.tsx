@@ -1,3 +1,6 @@
+import { WarWearinessSection } from '../sections/WarWearinessSection';
+import { truceOf, OATH_BREAK_COST } from '../../game/peace';
+import { TrucesSection } from '../sections/TrucesSection';
 import { ch, clanRank, clanRegions, clanTitle, fmt, liegeOf, playerClan, regionIncome, ruler, sovereignPlanets, vassalsOf } from '../../game/core';
 import { fleetCap } from '../../game/economy';
 import {
@@ -31,7 +34,19 @@ import {
   viceroyBlocker,
 } from '../../game/realm';
 import { canAfford } from '../../game/genetics';
-import { canFightBattle, CB_INFO, declareIndependence, enemySide, fightBattle, offerPeace, peaceChance, playerSide, surrender, warLabel } from '../../game/war';
+import {
+  canFightBattle,
+  CB_INFO,
+  declareIndependence,
+  independenceBlocker,
+  enemySide,
+  fightBattle,
+  offerPeace,
+  peaceChance,
+  playerSide,
+  surrender,
+  warLabel,
+} from '../../game/war';
 import { Icon } from '../../svg/Icons';
 import { Sigil } from '../../svg/Sigil';
 import { Btn, CharCard, ClanBadge, CostTag, InfoDot, Opinion, Section, WarBar } from '../components';
@@ -123,11 +138,24 @@ export function RealmTab() {
                   small
                   kind="danger"
                   icon="war"
-                  reason={regency ? 'Regency' : s.wars.some((w) => w.enemy === liege) ? 'Already at war' : null}
+                  reason={independenceBlocker(s)}
+                  showReason
                   onClick={() => act((d) => declareIndependence(d)) && toast('You declare independence!')}
                 >
                   Declare independence
                 </Btn>
+                {truceOf(s, clan.id, liege) && (
+                  <Btn
+                    small
+                    kind="danger"
+                    reason={independenceBlocker(s, true)}
+                    showReason
+                    confirm={`Tap again: betray House ${s.clans[liege].name}`}
+                    onClick={() => act((d) => declareIndependence(d, true)) && toast('You broke the truce and declared independence.')}
+                  >
+                    Break truce and revolt ({OATH_BREAK_COST} prestige)
+                  </Btn>
+                )}
               </div>
             )}
           </div>
@@ -203,6 +231,9 @@ export function RealmTab() {
           })}
         </div>
       </Section>
+
+      <WarWearinessSection />
+      <TrucesSection />
 
       <Section
         title="Fleet"

@@ -354,6 +354,14 @@ export interface Hook {
   usedYear?: number;
 }
 
+/** A bilateral peace oath, valid while year < until. */
+export interface Truce {
+  a: string;
+  b: string;
+  started: number;
+  until: number;
+}
+
 export interface GameState {
   version: number;
   seed: number;
@@ -392,6 +400,9 @@ export interface GameState {
   secrets: Secret[];
   hooks: Hook[];
   successionCrises: SuccessionCrisis[];
+  truces: Truce[];
+  /** House campaign fatigue, 0..100. Zero entries need not be stored. */
+  warWeariness: Record<string, number>;
   vip?: VipState;
   scenario?: ScenarioId;
   stats: { battlesWon: number; battlesLost: number; schemes: number; children: number; peakRank: number };

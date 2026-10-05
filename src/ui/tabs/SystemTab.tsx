@@ -1,3 +1,5 @@
+import { canAfford, costText } from '../../game/genetics';
+import { OATH_BREAK_COST, truceOf } from '../../game/peace';
 import { ch, clanRank, clanRegions, liegeOf, planetRegions, planetSovereign } from '../../game/core';
 import { runScheme, schemeBlocker, schemeChance } from '../../game/intrigue';
 import { FAITHS, PLANET_BY_ID } from '../../game/planets';
@@ -18,7 +20,8 @@ function RegionPanel({ regionId }: { regionId: string }) {
   const reg = s.regions[regionId];
   const owner = s.clans[reg.owner];
   const mine = reg.owner === s.playerClanId;
-  const block = warBlocker(s, reg);
+  const truce = truceOf(s, s.playerClanId, reg.owner);
+  const block = warBlocker(s, reg, !!truce);
   const opts = cbOptions(s, reg);
   const fab = schemeBlocker(s, 'fabricate', reg.id);
   return (
@@ -49,25 +52,30 @@ function RegionPanel({ regionId }: { regionId: string }) {
             Declare war{' '}
             <InfoDot text="Pick a justification (casus belli). A claim or blood feud is free. A holy war needs a different faith and costs faith. Naked conquest needs no excuse but costs prestige and makes everyone like you less." />
           </h4>
+          {truce && (
+            <p className="gold">
+              Peace with House {owner.name} until {truce.until}. Breaking it costs {OATH_BREAK_COST} prestige and your good name.
+            </p>
+          )}
           {block ? (
             <div className="muted">{block}</div>
           ) : (
             <div className="stack" style={{ gap: 'var(--space-6px)' }}>
               {opts.map((o) => (
-                <div key={o.cb} className="spread">
+                <div key={o.cb} className="spread wrap">
                   <span>
                     <b>{CB_INFO[o.cb].name}</b>{' '}
                     <span className="muted" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
                       {CB_INFO[o.cb].desc}
                     </span>
                   </span>
-                  <span className="row" style={{ gap: 'var(--space-6px)' }}>
-                    <CostTag cost={o.cost} />
+                  <span className="row wrap" style={{ gap: 'var(--space-6px)' }}>
+                    <CostTag cost={truce ? { ...o.cost, prestige: (o.cost.prestige ?? 0) + OATH_BREAK_COST } : o.cost} />
                     <Btn
                       small
                       kind="danger"
                       icon="war"
-                      reason={o.ok ? null : o.reason}
+                      reason={truce ? `Truce until ${truce.until}` : o.ok ? null : o.reason}
                       confirm="Tap again: war!"
                       onClick={() => {
                         if (act((d) => declareWar(d, reg.id, o.cb))) toast(`War declared on House ${owner.name}! Fight from the Realm tab.`);
@@ -75,6 +83,26 @@ function RegionPanel({ regionId }: { regionId: string }) {
                     >
                       War
                     </Btn>
+                    {truce && (
+                      <Btn
+                        small
+                        kind="danger"
+                        icon="war"
+                        reason={
+                          !o.ok
+                            ? o.reason
+                            : canAfford(s, { ...o.cost, prestige: (o.cost.prestige ?? 0) + OATH_BREAK_COST })
+                              ? null
+                              : 'Need ' + costText({ ...o.cost, prestige: (o.cost.prestige ?? 0) + OATH_BREAK_COST })
+                        }
+                        confirm={`Tap again: betray House ${owner.name}`}
+                        onClick={() => {
+                          if (act((d) => declareWar(d, reg.id, o.cb, true))) toast('You broke the truce and declared war. Other rulers will remember.');
+                        }}
+                      >
+                        Break truce and attack
+                      </Btn>
+                    )}
                   </span>
                 </div>
               ))}
@@ -211,7 +239,7 @@ export function SystemTab() {
         </div>
         <div className="stack">
           {regionId ? (
-            <RegionPanel regionId={regionId} />
+            <RegionPanel key={regionId} regionId={regionId} />
           ) : (
             <div className="card flat muted">Select a region on the map to see who holds it, forge claims or declare war.</div>
           )}

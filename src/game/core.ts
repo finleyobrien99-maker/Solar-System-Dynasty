@@ -6,7 +6,7 @@ import { clamp } from './rng';
 import { TRAITS, type TraitDef } from './traits';
 import { STAT_KEYS, type Character, type Clan, type GameState, type ItemEffects, type LogKind, type Pending, type Region, type StatKey } from './types';
 
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 export const ADULT_AGE = 16;
 
 export function newId(s: GameState, prefix: string): string {

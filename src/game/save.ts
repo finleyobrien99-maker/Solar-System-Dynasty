@@ -228,6 +228,11 @@ export class NewerSaveError extends Error {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MIGRATIONS: Record<number, (s: any) => void> = {
+  // Only future peace creates a truce: never reconstruct old treaties from history.
+  7: (s) => {
+    s.truces ??= [];
+    s.warWeariness ??= {};
+  },
   // Existing reigns may choose a vow; no historical disputes or achievements are invented.
   6: (s) => {
     s.successionCrises ??= [];

@@ -456,6 +456,33 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               At +100 you win the region (or independence). At -100 you lose. Allies send 30% of their fleets; loyal vassals 20%. If a vassal is attacked by an
               outsider, their liege helps them.
             </p>
+            <h3>War weariness</h3>
+            <p>
+              Each house gains 3 weariness per active campaign each cycle, capped at 9 for three or more wars. Actual battles add 3 plus 20 times the fraction
+              of participating ships lost, rounded up. It caps at 100, reducing fleet strength by up to 25% and regional income by up to 15%. Civil wars and
+              their real backers count too.
+            </p>
+            <p>
+              Weariness survives a new ruler. Beginning a cycle at peace recovers 8; active campaigns prevent recovery. Realm shows your number and penalties,
+              rival profiles show theirs, and income breakdowns show War-weary lands. AI uses its own fatigue and the same multipliers. Old saves start at zero,
+              with no reconstructed campaign costs.
+            </p>
+            <h3>Peace oaths</h3>
+            <p>
+              Every victory, defeat or white peace swears a five-cycle truce between the two houses, including independence and revolts. It survives inheritance
+              and changing region owners. The end year is the first year you may declare again. Claims and blood feuds do not bypass it; old saves begin with no
+              invented historical treaties.
+            </p>
+            <p>
+              Realm lists your peace oaths; house profiles show theirs. In System, an ordinary War button is locked during a truce. Break truce and attack
+              requires a second tap and 200 prestige plus the usual war cost. The actual ruler earns one broken-oath deed, other houses lose 10 opinion of a
+              player breaker, and the victim remembers the betrayal. Independence uses the same gate.
+            </p>
+            <p>
+              AI houses pay the same 200 prestige from their own treasury of honour. Only free adult rulers can break one. Wrathful or deceitful lords with a
+              real personal hatred may occasionally do so; honourable rulers wait. An AI offence changes feelings towards that AI ruler, never house memories
+              falsely blaming you.
+            </p>
             <h3>Leading in person</h3>
             <p>+15% strength and extra prestige, with a chance of glory (War Hero), wounds, scars or death.</p>
             <h3>Peace</h3>

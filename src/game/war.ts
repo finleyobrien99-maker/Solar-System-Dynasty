@@ -1,3 +1,4 @@
+import { battleWeariness, warStrengthFactor, breakTruce, makeTruce, OATH_BREAK_COST, truceBreakBlocker, truceOf } from './peace';
 import { breakPeace, recordDeed } from './epithets';
 // Wars and fleet battles involving the player.
 
@@ -66,22 +67,29 @@ export function cbOptions(s: GameState, region: Region): CBOption[] {
   return opts;
 }
 
-export function warBlocker(s: GameState, region: Region): string | null {
+export function warBlocker(s: GameState, region: Region, breakOath = false): string | null {
+  if (s.gameOver) return 'The dynasty has ended.';
   if (region.owner === s.playerClanId) return 'You already hold this region.';
   if (s.wars.length >= 3) return 'You are already fighting three wars.';
   if (atWarWith(s, region.owner)) return 'Already at war with this clan.';
   const r = ruler(s);
+  if (r.prisonerOf) return 'A captive ruler cannot declare war.';
   if (s.year - r.born < 16) return 'A regency council cannot declare war.';
   const enemy = s.clans[region.owner];
   if (!enemy) return 'Nobody holds this region.';
+  const truce = truceOf(s, s.playerClanId, enemy.id);
+  if (truce) return breakOath ? truceBreakBlocker(s, s.playerClanId, enemy.id) : `You swore a truce with House ${enemy.name} until ${truce.until}.`;
   return null;
 }
 
-export function declareWar(s: GameState, regionId: string, cb: CasusBelli): boolean {
+export function declareWar(s: GameState, regionId: string, cb: CasusBelli, breakOath = false): boolean {
   const region = s.regions[regionId];
-  if (!region || warBlocker(s, region)) return false;
+  if (!region || warBlocker(s, region, breakOath)) return false;
   const opt = cbOptions(s, region).find((o) => o.cb === cb);
   if (!opt || !opt.ok) return false;
+  const violates = !!truceOf(s, s.playerClanId, region.owner);
+  if (violates && (!canAfford(s, { ...opt.cost, prestige: (opt.cost.prestige ?? 0) + OATH_BREAK_COST }) || !breakTruce(s, s.playerClanId, region.owner)))
+    return false;
   pay(s, opt.cost);
   const enemy = s.clans[region.owner];
   if (cb === 'conquest') {
@@ -89,8 +97,10 @@ export function declareWar(s: GameState, regionId: string, cb: CasusBelli): bool
   }
   if (enemy.allied) {
     enemy.allied = false;
-    recordDeed(s, ruler(s), 'oathsBroken');
-    s.prestige -= 50;
+    if (!violates) {
+      recordDeed(s, ruler(s), 'oathsBroken');
+      s.prestige -= 50;
+    }
     log(s, `You broke your alliance with House ${enemy.name}. Oath-breaker!`, 'bad');
   }
   enemy.opinion = Math.min(enemy.opinion, -40) - 20;
@@ -103,9 +113,21 @@ export function declareWar(s: GameState, regionId: string, cb: CasusBelli): bool
   return true;
 }
 
-export function declareIndependence(s: GameState): boolean {
+export function independenceBlocker(s: GameState, breakOath = false): string | null {
   const liege = liegeOf(s, s.playerClanId);
-  if (!liege || atWarWith(s, liege) || s.wars.length >= 3) return false;
+  if (s.gameOver) return 'The dynasty has ended.';
+  if (!liege) return 'You already answer to nobody.';
+  if (atWarWith(s, liege)) return 'Already at war with your liege.';
+  if (s.wars.length >= 3) return 'You are already fighting three wars.';
+  if (s.year - ruler(s).born < 16 || ruler(s).prisonerOf) return 'A free adult ruler must declare independence.';
+  const truce = truceOf(s, s.playerClanId, liege);
+  return truce ? (breakOath ? truceBreakBlocker(s, s.playerClanId, liege) : `Your truce with House ${s.clans[liege].name} lasts until ${truce.until}.`) : null;
+}
+
+export function declareIndependence(s: GameState, breakOath = false): boolean {
+  if (independenceBlocker(s, breakOath)) return false;
+  const liege = liegeOf(s, s.playerClanId)!;
+  if (truceOf(s, s.playerClanId, liege) && !breakTruce(s, s.playerClanId, liege)) return false;
   s.wars.push({ id: newId(s, 'w'), enemy: liege, playerAttacker: true, target: '', cb: 'independence', score: 0, started: s.year });
   s.clans[liege].opinion = -80;
   recordDeed(s, ruler(s), 'warsStarted');
@@ -116,9 +138,14 @@ export function declareIndependence(s: GameState): boolean {
 }
 
 /** AI declares war on the player. */
-export function aiDeclareWar(s: GameState, enemyId: string, cb: CasusBelli, targetRegionId: string): void {
-  if (atWarWith(s, enemyId)) return;
-  const enemy = s.clans[enemyId];
+export function aiDeclareWar(s: GameState, enemyId: string, cb: CasusBelli, targetRegionId: string, breakOath = false): boolean {
+  if (s.gameOver || atWarWith(s, enemyId) || s.wars.length >= 3) return false;
+  const enemy = s.clans[enemyId],
+    head = ch(s, enemy?.headId);
+  if (!enemy || enemy.isPlayer || !alive(head) || head.prisonerOf || s.year - head.born < 16 || !clanRegions(s, enemyId).length) return false;
+  const target = s.regions[targetRegionId];
+  if (!target || target.owner !== s.playerClanId || (cb === 'revolt' && liegeOf(s, enemyId) !== s.playerClanId)) return false;
+  if (truceOf(s, enemyId, s.playerClanId) && (!breakOath || !breakTruce(s, enemyId, s.playerClanId))) return false;
   s.wars.push({ id: newId(s, 'w'), enemy: enemyId, playerAttacker: false, target: targetRegionId, cb, score: 0, started: s.year });
   recordDeed(s, enemy.headId, 'warsStarted');
   if (cb === 'revolt') recordDeed(s, enemy.headId, 'rebellions');
@@ -130,6 +157,7 @@ export function aiDeclareWar(s: GameState, enemyId: string, cb: CasusBelli, targ
     tone: 'bad',
     portraitId: enemy.headId,
   });
+  return true;
 }
 
 // ── Strength ──────────────────────────────────────────────────────────────
@@ -168,7 +196,7 @@ export function playerSide(s: GameState, war: War, personal: boolean): Side {
   if (homePlanet(s) === 'mars') mod += 0.15;
   if (personal) mod += 0.15;
   if (s.year - r.born < 16) mod -= 0.2; // regency
-  return { ships, strength: ships * (1 + cmd * 0.04) * mod, helpers };
+  return { ships, strength: ships * (1 + cmd * 0.04) * mod * warStrengthFactor(s, s.playerClanId), helpers };
 }
 
 export function enemySide(s: GameState, war: War): Side {
@@ -198,7 +226,7 @@ export function enemySide(s: GameState, war: War): Side {
   const cmd = head && alive(head) ? effStats(s, head).cmd : 4;
   let mod = 1 + (head ? traitSum(head, 'fleetPct') : 0);
   if (enemy.planetId === 'mars') mod += 0.15;
-  return { ships, strength: ships * (1 + cmd * 0.04) * mod, helpers };
+  return { ships, strength: ships * (1 + cmd * 0.04) * mod * warStrengthFactor(s, enemy.id), helpers };
 }
 
 // ── Battles ───────────────────────────────────────────────────────────────
@@ -209,7 +237,7 @@ export function canFightBattle(s: GameState, war: War): boolean {
 
 export function fightBattle(s: GameState, warId: string, aiInitiated = false): BattleReport | undefined {
   const war = s.wars.find((w) => w.id === warId);
-  if (!war) return undefined;
+  if (!war || (!aiInitiated && !canFightBattle(s, war))) return undefined;
   const enemy = s.clans[war.enemy];
   const actorId = s.rulerId;
   const personal = !aiInitiated && s.leadPersonally && s.year - ruler(s).born >= 16;
@@ -228,6 +256,8 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
   const eLossRate = won ? range(s, 0.15, 0.3) : range(s, 0.04, 0.12);
   const playerLosses = Math.min(s.fleet, Math.round(s.fleet * pLossRate));
   const enemyLosses = Math.min(enemy.fleet, Math.round(enemy.fleet * eLossRate));
+  battleWeariness(s, s.playerClanId, s.fleet, playerLosses);
+  battleWeariness(s, enemy.id, enemy.fleet, enemyLosses);
   s.fleet -= playerLosses;
   enemy.fleet -= enemyLosses;
 
@@ -290,6 +320,7 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
   const enemy = s.clans[war.enemy];
   const region = s.regions[war.target];
   const clan = playerClan(s);
+  makeTruce(s, clan.id, war.enemy);
   if (outcome === 'white') {
     recordDeed(s, actorId, 'peaceTreaties');
     recordDeed(s, enemy.headId, 'peaceTreaties');
