@@ -1,3 +1,6 @@
+import { useId, useState } from 'react';
+import { Tabs } from '../Tabs';
+import { HousesSection } from '../sections/HousesSection';
 import { canAfford, costText } from '../../game/genetics';
 import { OATH_BREAK_COST, truceOf } from '../../game/peace';
 import { ch, clanRank, clanRegions, liegeOf, planetRegions, planetSovereign } from '../../game/core';
@@ -190,6 +193,10 @@ function ClanRow({ clanId }: { clanId: string }) {
 
 export function SystemTab() {
   const { s, ui, setUi } = useGame();
+  const [view, setView] = useState<'map' | 'houses'>('map');
+  const panelId = useId();
+  // Region links in house profiles return to the map without changing game state.
+  const selectedView = ui.regionId ? 'map' : view;
   const planetId = ui.planetId ?? s.clans[s.playerClanId].planetId;
   const p = PLANET_BY_ID[planetId];
   const sov = planetSovereign(s, planetId);
@@ -202,54 +209,75 @@ export function SystemTab() {
 
   return (
     <div>
-      <Section
-        title="The Sol System"
-        icon="map"
-        info="Tap a world to inspect it. The coloured ring around each planet is its ruling house. Gold stars mark worlds where you hold land, gold dots are your trade lanes and red dashes are your wars. Planets move along their orbits each cycle."
-      >
-        <SolarMap s={s} selected={planetId} onSelect={(id) => setUi({ planetId: id, regionId: undefined })} />
-      </Section>
-      <div className="cols section">
-        <div className="card">
-          <div className="row top">
-            <PlanetArt planetId={planetId} size={84} />
-            <div className="grow">
-              <h2 style={{ marginBottom: 'var(--space-2px)' }}>{p.name}</h2>
-              <div className="gold" style={{ fontSize: 'var(--font-size-0_88rem)' }}>
-                {p.faction}
+      <Tabs
+        label="System views"
+        items={[
+          { id: 'map', label: 'Map' },
+          { id: 'houses', label: 'Houses' },
+        ]}
+        value={selectedView}
+        onChange={(next) => {
+          if (next === 'houses') setUi({ regionId: undefined });
+          setView(next);
+        }}
+        panelId={panelId}
+      />
+      <div id={panelId} role="tabpanel" aria-label={selectedView === 'map' ? 'Map' : 'Houses'}>
+        {selectedView === 'houses' ? (
+          <HousesSection />
+        ) : (
+          <>
+            <Section
+              title="The Sol System"
+              icon="map"
+              info="Tap a world to inspect it. The coloured ring around each planet is its ruling house. Gold stars mark worlds where you hold land, gold dots are your trade lanes and red dashes are your wars. Planets move along their orbits each cycle."
+            >
+              <SolarMap s={s} selected={planetId} onSelect={(id) => setUi({ planetId: id, regionId: undefined })} />
+            </Section>
+            <div className="cols section">
+              <div className="card">
+                <div className="row top">
+                  <PlanetArt planetId={planetId} size={84} />
+                  <div className="grow">
+                    <h2 style={{ marginBottom: 'var(--space-2px)' }}>{p.name}</h2>
+                    <div className="gold" style={{ fontSize: 'var(--font-size-0_88rem)' }}>
+                      {p.faction}
+                    </div>
+                    <div className="muted" style={{ fontSize: 'var(--font-size-0_84rem)', marginTop: 'var(--space-4px)' }}>
+                      {p.blurb}
+                    </div>
+                    <div style={{ fontSize: 'var(--font-size-0_82rem)', marginTop: 'var(--space-4px)' }}>
+                      <b>Bonus for natives:</b> {p.bonus}
+                    </div>
+                    <div style={{ fontSize: 'var(--font-size-0_82rem)' }}>
+                      <b>Faith:</b> <span style={{ color: FAITHS[p.faithId].color }}>{FAITHS[p.faithId].name}</span>
+                    </div>
+                    <div style={{ fontSize: 'var(--font-size-0_82rem)' }}>
+                      <b>Ruled by:</b> {sovClan ? `House ${sovClan.name}, ${p.monarch[ch(s, sovClan.headId)?.gender ?? 'M']}` : 'nobody'}
+                    </div>
+                  </div>
+                </div>
+                <PlanetMap s={s} planetId={planetId} selected={regionId} onSelect={(id) => setUi({ regionId: id })} />
+                <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)', textAlign: 'center' }}>
+                  Tap a region. Gold dashes: yours. Hatched: your claims. Red: war targets. Crown: the throne-region.
+                </div>
               </div>
-              <div className="muted" style={{ fontSize: 'var(--font-size-0_84rem)', marginTop: 'var(--space-4px)' }}>
-                {p.blurb}
-              </div>
-              <div style={{ fontSize: 'var(--font-size-0_82rem)', marginTop: 'var(--space-4px)' }}>
-                <b>Bonus for natives:</b> {p.bonus}
-              </div>
-              <div style={{ fontSize: 'var(--font-size-0_82rem)' }}>
-                <b>Faith:</b> <span style={{ color: FAITHS[p.faithId].color }}>{FAITHS[p.faithId].name}</span>
-              </div>
-              <div style={{ fontSize: 'var(--font-size-0_82rem)' }}>
-                <b>Ruled by:</b> {sovClan ? `House ${sovClan.name}, ${p.monarch[ch(s, sovClan.headId)?.gender ?? 'M']}` : 'nobody'}
+              <div className="stack">
+                {regionId ? (
+                  <RegionPanel key={regionId} regionId={regionId} />
+                ) : (
+                  <div className="card flat muted">Select a region on the map to see who holds it, forge claims or declare war.</div>
+                )}
+                <h3 style={{ marginTop: 'var(--space-6px)' }}>Houses of {p.name}</h3>
+                {clansHere.map((c) => (
+                  <ClanRow key={c.id} clanId={c.id} />
+                ))}
               </div>
             </div>
-          </div>
-          <PlanetMap s={s} planetId={planetId} selected={regionId} onSelect={(id) => setUi({ regionId: id })} />
-          <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)', textAlign: 'center' }}>
-            Tap a region. Gold dashes: yours. Hatched: your claims. Red: war targets. Crown: the throne-region.
-          </div>
-        </div>
-        <div className="stack">
-          {regionId ? (
-            <RegionPanel key={regionId} regionId={regionId} />
-          ) : (
-            <div className="card flat muted">Select a region on the map to see who holds it, forge claims or declare war.</div>
-          )}
-          <h3 style={{ marginTop: 'var(--space-6px)' }}>Houses of {p.name}</h3>
-          {clansHere.map((c) => (
-            <ClanRow key={c.id} clanId={c.id} />
-          ))}
-        </div>
+            <GrudgeSection />
+          </>
+        )}
       </div>
-      <GrudgeSection />
     </div>
   );
 }

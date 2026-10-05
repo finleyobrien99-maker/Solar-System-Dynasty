@@ -1,5 +1,6 @@
 import { committedShips } from '../../game/coalitions';
 import { CoalitionsSection } from '../sections/CoalitionsSection';
+import { WarParticipantsSection } from '../sections/WarParticipantsSection';
 import { SiegeSection } from '../sections/SiegeSection';
 import { WarWearinessSection } from '../sections/WarWearinessSection';
 import { truceOf, OATH_BREAK_COST } from '../../game/peace';
@@ -212,22 +213,18 @@ export function RealmTab() {
                     {them.helpers.length > 0 && <div className="dim">{them.helpers.join(', ')}</div>}
                   </div>
                 </div>
-                {!!w.coalition?.length && (
-                  <div className="card flat stack" style={{ marginTop: 'var(--space-10px)' }}>
-                    <b>Coalition defence</b>
-                    <div className="muted">
-                      Detached ships fight for {w.playerAttacker ? 'the defending house' : 'your defence'}; each house bears its own losses.
-                    </div>
-                    {w.coalition.map((loan) => (
-                      <div key={loan.clanId} className="spread wrap">
-                        <ClanBadge clanId={loan.clanId} />
-                        <span>
-                          {loan.ships} of {loan.sent} ships remain
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <WarParticipantsSection
+                  defending={w.playerAttacker ? 'House ' + enemy.name : 'your house'}
+                  rows={(w.coalition ?? []).map((loan) => ({
+                    clanId: loan.clanId,
+                    source: 'coalition',
+                    answer: 'accepted',
+                    reasons: [],
+                    sent: loan.sent,
+                    remaining: loan.ships,
+                    leaderId: loan.commanderId,
+                  }))}
+                />
                 <div className="btn-row" style={{ marginTop: 'var(--space-10px)' }}>
                   <Btn
                     kind="primary"

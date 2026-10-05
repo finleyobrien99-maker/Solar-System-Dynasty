@@ -1,9 +1,19 @@
 // Expansion creates fear; frightened houses pledge real ships to defend one another.
 import { pactMap, type Pacts } from './aiCourt';
-import { commanderOf, commandedBattleFates, leadFactor } from './commanders';
-import { recordDeed } from './epithets';
 import { ageOf, alive, ch, clanRegions, liegeOf, log, regentHolding, ruler } from './core';
-import { battleWeariness, makeTruce, truceOf, warStrengthFactor } from './peace';
+import { truceOf } from './peace';
+import {
+  aidBattleNotes,
+  aidLosses,
+  aidStrength,
+  aidTruces,
+  committedShips as aidCommittedShips,
+  homeFleet,
+  releaseAid,
+  reserveAid,
+  snapshotAid,
+  type AidSnapshot,
+} from './warAid';
 import { neighbourPlanets } from './planets';
 import { clamp } from './rng';
 import type { CasusBelli, Coalition, FleetContribution, GameState, Region } from './types';
@@ -16,11 +26,6 @@ export const THREAT_RECOVERY = 3;
 export const COALITION_LIMIT = 8;
 export const COALITION_SHARE = 0.5;
 
-const homeFleet = (s: GameState, id: string) => (id === s.playerClanId ? s.fleet : (s.clans[id]?.fleet ?? 0));
-function setHomeFleet(s: GameState, id: string, ships: number): void {
-  if (id === s.playerClanId) s.fleet = ships;
-  else if (s.clans[id]) s.clans[id].fleet = ships;
-}
 const contributions = (s: GameState): FleetContribution[][] => [...s.wars, ...s.aiWars].map((w) => w.coalition ?? []);
 const houseHead = (s: GameState, id: string) => (id === s.playerClanId ? ruler(s) : ch(s, s.clans[id]?.headId));
 
@@ -95,15 +100,12 @@ function offensiveCampaign(s: GameState, id: string): boolean {
 }
 
 export function committedShips(s: GameState, clanId: string): number {
-  return contributions(s).reduce((total, list) => total + list.reduce((n, p) => n + (p.clanId === clanId ? p.ships : 0), 0), 0);
+  return aidCommittedShips(s, clanId);
 }
 
-/** Return only surviving, detached ships. Zero the loan so any repeated cleanup is inert. */
+/** Compatibility wrapper. Returning the passed coalition loans does not release realm obligations. */
 export function releaseCoalition(s: GameState, list: FleetContribution[]): void {
-  for (const p of list) {
-    if (p.ships > 0 && s.clans[p.clanId]) setHomeFleet(s, p.clanId, homeFleet(s, p.clanId) + p.ships);
-    p.ships = 0;
-  }
+  releaseAid(s, list);
 }
 export function recallCoalition(s: GameState, clanId: string): void {
   for (const list of contributions(s))
@@ -223,43 +225,37 @@ export function leaveCoalition(s: GameState, target: string): boolean {
 }
 
 /** Called only after a validated territorial declaration. A pledge can defend any actual victim. */
-export function coalitionCall(s: GameState, attacker: string, defender: string): FleetContribution[] {
+export function coalitionCall(s: GameState, attacker: string, defender: string, excluded: ReadonlySet<string> = new Set()): FleetContribution[] {
   if (s.gameOver || attacker === defender || !s.clans[attacker] || !s.clans[defender]) return [];
   const c = coalitionOf(s, attacker);
   if (!c || threatOf(s, attacker) < THREAT_RELEASE) return [];
   const pacts = pactMap(s);
   const out: FleetContribution[] = [];
   for (const id of new Set(c.members)) {
-    if (id === attacker || id === defender || !eligible(s, id, attacker, pacts) || busy(s, id, attacker) || committedShips(s, id)) continue;
-    const ships = Math.floor(homeFleet(s, id) * COALITION_SHARE);
-    if (!ships) continue;
-    setHomeFleet(s, id, homeFleet(s, id) - ships);
-    out.push({ clanId: id, ships, sent: ships, commanderId: commanderOf(s, id)?.id });
+    if (id === attacker || id === defender || excluded.has(id) || !eligible(s, id, attacker, pacts) || busy(s, id, attacker) || committedShips(s, id)) continue;
+    const reservation = reserveAid(s, id, Math.floor(homeFleet(s, id) * COALITION_SHARE));
+    if (reservation) out.push(reservation);
   }
   return out;
 }
 export function coalitionStrength(s: GameState, list: FleetContribution[]): number {
-  return list.reduce((n, p) => n + Math.max(0, p.ships) * leadFactor(s, p.clanId) * warStrengthFactor(s, p.clanId), 0);
+  return aidStrength(s, list);
 }
 export function coalitionLosses(s: GameState, list: FleetContribution[], rate: number): { clanId: string; ships: number; losses: number }[] {
-  const out: { clanId: string; ships: number; losses: number }[] = [];
-  for (const p of list) {
-    const ships = p.ships;
-    if (ships <= 0) continue;
-    const losses = Math.min(ships, Math.round(ships * clamp(rate, 0, 1)));
-    p.ships -= losses;
-    battleWeariness(s, p.clanId, ships, losses);
-    out.push({ clanId: p.clanId, ships, losses });
-  }
-  return out;
+  return aidLosses(s, list, rate);
 }
 export function coalitionTruces(s: GameState, attacker: string, list: FleetContribution[]): void {
-  for (const id of new Set(list.filter((p) => p.sent > 0).map((p) => p.clanId))) makeTruce(s, attacker, id);
+  aidTruces(s, attacker, list);
 }
 
-// Snapshot the actual appointed leaders before a battle can kill or replace anyone.
-export function snapshotCoalition(s: GameState, list: FleetContribution[]): void {
-  for (const p of list) p.commanderId = p.ships > 0 ? commanderOf(s, p.clanId)?.id : undefined;
+// Old battle callers ignore this return value. Keep their saved commander IDs and remember the
+// original rulers only for the imminent battle; nothing new is added to the save schema.
+const battleSnapshots = new WeakMap<FleetContribution[], AidSnapshot[]>();
+export function snapshotCoalition(s: GameState, list: FleetContribution[]): AidSnapshot[] {
+  const snapshot = snapshotAid(s, list);
+  for (const p of list) p.commanderId = snapshot.find((row) => row.contribution === p)?.commanderId;
+  battleSnapshots.set(list, snapshot);
+  return snapshot;
 }
 /** Each detached defender earns its own battle and takes one commander consequence roll. */
 export function coalitionBattleNotes(
@@ -270,24 +266,15 @@ export function coalitionBattleNotes(
   casualties: { clanId: string; ships: number; losses: number }[],
   danger = 1,
 ): string[] {
-  const notes: string[] = [];
-  for (const row of casualties) {
-    const p = list.find((p) => p.clanId === row.clanId);
-    const head = row.clanId === s.playerClanId ? s.rulerId : s.clans[row.clanId]?.headId;
-    recordDeed(s, head, attackerWon ? 'battlesLost' : 'battlesWon');
-    // Only this helper is processed: the primary attacker has already had their roll.
-    notes.push(
-      ...commandedBattleFates(s, {
-        id: `coalition@${s.year}:${row.clanId}`,
-        attacker,
-        defender: row.clanId,
-        defenderCommanderId: p?.commanderId,
-        attackerWon,
-        defenderShips: row.ships,
-        defenderLosses: row.losses,
-        danger,
-      }).map((f) => f.note),
-    );
-  }
-  return notes;
+  const snapshot =
+    battleSnapshots.get(list) ??
+    list.map((p) => ({
+      contribution: p,
+      clanId: p.clanId,
+      rulerId: p.clanId === s.playerClanId ? s.rulerId : s.clans[p.clanId]?.headId,
+      commanderId: p.commanderId,
+      ships: casualties.find((row) => row.clanId === p.clanId)?.ships ?? p.ships,
+    }));
+  battleSnapshots.delete(list);
+  return aidBattleNotes(s, snapshot, attacker, attackerWon, casualties, danger);
 }

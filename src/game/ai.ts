@@ -1,15 +1,5 @@
-import {
-  coalitionCall,
-  coalitionStrength,
-  coalitionLosses,
-  coalitionTruces,
-  coalitionBattleNotes,
-  committedShips,
-  recallCoalition,
-  recordExpansion,
-  releaseCoalition,
-  snapshotCoalition,
-} from './coalitions';
+import { coalitionCall, recordExpansion } from './coalitions';
+import { aidBattleNotes, aidStrength, aidLosses, aidTruces, committedShips, recallAid, releaseAid, snapshotAid, warContributions } from './warAid';
 import { chooseAiSiege, performSiege } from './siege';
 import { recordMurder } from './secrets';
 import { breakPeace, isCloseKin, recordDeed } from './epithets';
@@ -221,7 +211,7 @@ export function declareHouseWar(s: GameState, attackerId: string, regionId: stri
   if (kin?.has(defender.id) && !wouldBetray(s, lord, theirs)) return false;
   const oath = !!truceOf(s, attackerId, defender.id);
   if (oath && (!breakOath || !breakTruce(s, attackerId, defender.id))) return false;
-  recallCoalition(s, defender.id);
+  recallAid(s, defender.id);
   const coalition = coalitionCall(s, attackerId, defender.id);
   const war: AiWar = { id: newId(s, 'aw'), attacker: attackerId, defender: defender.id, target: regionId, started: s.year, progress: 0, coalition };
   s.aiWars.push(war);
@@ -244,9 +234,9 @@ export function tickAiWars(s: GameState): void {
     const done = (peace = false) => {
       if (peace) {
         makeTruce(s, w.attacker, w.defender);
-        coalitionTruces(s, w.attacker, w.coalition ?? []);
+        aidTruces(s, w.attacker, warContributions(w));
       }
-      releaseCoalition(s, w.coalition ?? []);
+      releaseAid(s, warContributions(w));
       s.aiWars = s.aiWars.filter((x) => x.id !== w.id);
     };
     if (!a || !d || !target || target.owner !== d.id || !clanRegions(s, a.id).length) {
@@ -260,7 +250,12 @@ export function tickAiWars(s: GameState): void {
       const order = chooseAiSiege(s, w.id);
       if (order && order !== 'assault') performSiege(s, w.id, order, true);
       else {
-        const excluded = new Set(Object.keys(s.clans).filter((id) => committedShips(s, id) > 0));
+        const excluded = new Set([
+          ...Object.keys(s.clans).filter((id) => committedShips(s, id) > 0),
+          ...warContributions(w)
+            .filter((p) => p.sent > 0)
+            .map((p) => p.clanId),
+        ]);
         const liege = liegeOf(s, d.id);
         let def = d.fleet;
         if (liege && liege !== a.id && liegeOf(s, a.id) !== liege && liege !== s.playerClanId && !excluded.has(liege)) {
@@ -270,10 +265,11 @@ export function tickAiWars(s: GameState): void {
         def += kinFleet(s, d.id, a.id, pacts, 0.25, excluded);
         const att = a.fleet + kinFleet(s, a.id, d.id, pacts, 0.15, excluded);
         const attStrength = att * warStrengthFactor(s, a.id) * leadFactor(s, a.id),
-          defStrength = def * warStrengthFactor(s, d.id) * leadFactor(s, d.id) + coalitionStrength(s, w.coalition ?? []);
+          defStrength = def * warStrengthFactor(s, d.id) * leadFactor(s, d.id) + aidStrength(s, warContributions(w));
         const pAtt = attStrength / Math.max(1, attStrength + defStrength);
         const [ac, dc, af, df] = [commanderOf(s, a.id)?.id, commanderOf(s, d.id)?.id, a.fleet, d.fleet];
-        snapshotCoalition(s, w.coalition ?? []);
+        const aidSnapshot = snapshotAid(s, warContributions(w));
+        for (const row of aidSnapshot) row.contribution.commanderId = row.commanderId;
         const attWins = chance(s, pAtt);
         recordDeed(s, attackerRuler, attWins ? 'battlesWon' : 'battlesLost');
         recordDeed(s, defenderRuler, attWins ? 'battlesLost' : 'battlesWon');
@@ -285,9 +281,9 @@ export function tickAiWars(s: GameState): void {
         d.fleet = Math.round(d.fleet * (1 - defRate));
         battleWeariness(s, a.id, af, af - a.fleet);
         battleWeariness(s, d.id, df, df - d.fleet);
-        const helperLosses = coalitionLosses(s, w.coalition ?? [], defRate);
+        const helperLosses = aidLosses(s, warContributions(w), defRate);
         const yourAid = helperLosses.find((p) => p.clanId === s.playerClanId);
-        if (yourAid) log(s, `Your coalition fleet defending House ${d.name} at ${target.name} lost ${yourAid.losses} of ${yourAid.ships} ships.`, 'war');
+        if (yourAid) log(s, `Your supporting fleet defending House ${d.name} at ${target.name} lost ${yourAid.losses} of ${yourAid.ships} ships.`, 'war');
         const fates = commandedBattleFates(s, {
           id: `${w.id}@${s.year}`,
           attacker: a.id,
@@ -302,7 +298,7 @@ export function tickAiWars(s: GameState): void {
           danger: 0.5,
         });
         for (const f of fates) if (f.died || f.captured) log(s, f.note, 'news');
-        for (const note of coalitionBattleNotes(s, w.coalition ?? [], a.id, attWins, helperLosses, 0.5)) log(s, note, 'news');
+        for (const note of aidBattleNotes(s, aidSnapshot, a.id, attWins, helperLosses, 0.5)) log(s, note, 'news');
         if (order === 'assault')
           w.siege = {
             kind: order,
@@ -504,7 +500,7 @@ export function prune(s: GameState): void {
   for (const clan of Object.values(s.clans)) keep.add(clan.headId);
   for (const w of [...s.wars, ...s.aiWars]) {
     if (w.siege?.leaderId) keep.add(w.siege.leaderId);
-    for (const p of w.coalition ?? []) if (p.commanderId) keep.add(p.commanderId);
+    for (const p of warContributions(w)) if (p.commanderId) keep.add(p.commanderId);
   }
   for (const p of s.pending)
     if (p.kind === 'battle') {

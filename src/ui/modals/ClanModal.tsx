@@ -1,9 +1,10 @@
+import { regencyOf, regentTie } from '../../game/regency';
 import { committedShips } from '../../game/coalitions';
 import { CoalitionsSection } from '../sections/CoalitionsSection';
 import { ForeignCommanderSection } from '../sections/CommanderSection';
 import { WarWearinessSection } from '../sections/WarWearinessSection';
 import { TrucesSection } from '../sections/TrucesSection';
-import { ageOf, alive, ch, clanRank, clanRegions, clanTitle, liegeOf } from '../../game/core';
+import { ageOf, alive, ch, clanRank, clanRegions, clanTitle, liegeOf, ruler } from '../../game/core';
 import {
   allianceChance,
   breakAlliance,
@@ -34,7 +35,9 @@ export function ClanModal({ id }: { id: string }) {
   const { s, act, openClan, setUi } = useGame();
   const clan = s.clans[id];
   if (!clan) return null;
-  const head = ch(s, clan.headId);
+  const candidate = id === s.playerClanId ? ruler(s) : ch(s, clan.headId);
+  const head = alive(candidate) ? candidate : undefined;
+  const regency = regencyOf(s, id);
   const regions = clanRegions(s, id);
   const liege = liegeOf(s, id);
   const members = Object.values(s.characters)
@@ -44,7 +47,7 @@ export function ClanModal({ id }: { id: string }) {
   const pastRulers = Object.values(s.characters)
     .filter((c) => c.id !== clan.headId && c.reputation?.houses.includes(id) && c.reputation.earned.length)
     .sort((a, b) => (b.died ?? s.year) - (a.died ?? s.year));
-  const mine = clan.isPlayer;
+  const mine = id === s.playerClanId;
   const homeFleet = mine ? s.fleet : clan.fleet;
   const committed = committedShips(s, id);
   const atWar = s.wars.some((w) => w.enemy === id);
@@ -54,24 +57,13 @@ export function ClanModal({ id }: { id: string }) {
 
   return (
     <Modal title={`House ${clan.name}`} onClose={() => openClan(undefined)} wide>
-      {crisis && (
-        <div className="card flat bad" style={{ marginBottom: 'var(--space-12px)' }}>
-          {ch(s, crisis.claimantId)?.name} contests the crown.{' '}
-          {crisis.stage === 'civil-war' ? 'Civil war: ' + rebelFleet(crisis) + ' rebel ships.' : 'Settlement deadline: ' + crisis.deadline + '.'}
-        </div>
-      )}
-      {head?.ambition && <AmbitionRecord c={head} />}
-      {!mine && <ForeignCommanderSection clanId={id} />}
-      <WarWearinessSection clanId={id} />
-      <TrucesSection clanId={id} />
-      <CoalitionsSection clanId={id} />
       <div className="row top wrap" style={{ gap: 'var(--space-14px)' }}>
         <Sigil spec={clan.sigil} size={84} />
         <div className="grow stack" style={{ gap: 'var(--space-4px)' }}>
           <div className="gold">{head ? clanTitle(s, id, head.gender) : ''}</div>
           <div className="muted" style={{ fontSize: 'var(--font-size-0_86rem)' }}>
-            {PLANET_BY_ID[clan.planetId].faction} · <span style={{ color: FAITHS[clan.faithId].color }}>{FAITHS[clan.faithId].name}</span> · founded{' '}
-            {clan.founded}
+            {PLANET_BY_ID[clan.planetId]?.faction ?? 'Unknown world'} · House faith:{' '}
+            <span style={{ color: FAITHS[clan.faithId]?.color }}>{FAITHS[clan.faithId]?.name ?? 'Unknown'}</span> · founded {clan.founded}
           </div>
           <div className="row wrap">
             {!mine && <Opinion v={clan.opinion} />}
@@ -80,7 +72,7 @@ export function ClanModal({ id }: { id: string }) {
             <span className="pill">{regions.length} regions</span>
             <span className="pill">rank {clanRank(s, id)}</span>
             {clan.allied && <span className="pill green">Allied</span>}
-            {liege && <span className="pill cyan">Vassal of {s.clans[liege].name}</span>}
+            {liege && <span className="pill cyan">Vassal of {s.clans[liege]?.name ?? 'Unknown'}</span>}
             {atWar && <span className="pill red">At war with you</span>}
             {clan.cadetOf === s.playerClanId && <span className="pill gold">Cadet branch of your bloodline</span>}
             {isRival(clan) && <span className="pill red">Sworn rival</span>}
@@ -108,6 +100,34 @@ export function ClanModal({ id }: { id: string }) {
         </div>
       </div>
 
+      <h4 style={{ marginTop: 'var(--space-12px)' }}>Current ruler</h4>
+      {head ? (
+        <CharCard c={head} traitsMax={0} sub={ageOf(s, head) + ' yrs · Ruler faith: ' + (FAITHS[head.faithId]?.name ?? 'Unknown')} />
+      ) : (
+        <p className="muted">Current ruler: Unknown</p>
+      )}
+      {regency && (
+        <div style={{ marginTop: 'var(--space-12px)' }}>
+          <h4>Regent</h4>
+          <CharCard
+            c={regency.regent}
+            traitsMax={0}
+            sub={regentTie(s, regency.ward, regency.regent) + ' · Governs for ' + regency.ward.name + ' since ' + regency.since}
+          />
+        </div>
+      )}
+
+      {crisis && (
+        <div className="card flat bad" style={{ marginBottom: 'var(--space-12px)' }}>
+          {ch(s, crisis.claimantId)?.name} contests the crown.{' '}
+          {crisis.stage === 'civil-war' ? 'Civil war: ' + rebelFleet(crisis) + ' rebel ships.' : 'Settlement deadline: ' + crisis.deadline + '.'}
+        </div>
+      )}
+      {head?.ambition && <AmbitionRecord c={head} />}
+      {!mine && <ForeignCommanderSection clanId={id} />}
+      <WarWearinessSection clanId={id} />
+      <TrucesSection clanId={id} />
+      <CoalitionsSection clanId={id} />
       {!!kin.length && (
         <Section
           title={`Marriage ties (${kin.length})`}
@@ -240,7 +260,7 @@ export function ClanModal({ id }: { id: string }) {
       <h4 style={{ marginTop: 'var(--space-14px)' }}>Members</h4>
       <div className="grid tight">
         {members.map((m) => (
-          <CharCard key={m.id} c={m} size={46} traitsMax={3} sub={`${m.id === clan.headId ? 'Head of house · ' : ''}${ageOf(s, m)} yrs`} />
+          <CharCard key={m.id} c={m} size={46} traitsMax={3} sub={`${m.id === head?.id ? 'Head of house · ' : ''}${ageOf(s, m)} yrs`} />
         ))}
       </div>
       {!!pastRulers.length && (
