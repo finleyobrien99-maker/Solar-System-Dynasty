@@ -1,5 +1,6 @@
 // Shared shapes and helpers for the event decks.
 
+import { isAway, wardshipOf } from './wards';
 import { ageOf, clanRegions, courtMembers, dynastyMembers, hasTrait } from './core';
 import { chance, int, pick } from './rng';
 import { addTrait } from './traits';
@@ -52,7 +53,10 @@ export function sicken(_s: GameState, c: Character): boolean {
 }
 
 export function randomCourt(s: GameState): Character | undefined {
-  const pool = courtMembers(s);
+  const pool = courtMembers(s).filter((c) => {
+    const w = wardshipOf(s, c.id);
+    return !c.prisonerOf && (!w || w.hostId === s.playerClanId);
+  });
   return pool.length ? pick(s, pool) : undefined;
 }
 
@@ -71,7 +75,7 @@ export function myRegion(s: GameState) {
 export function dynastyKids(s: GameState, lo: number, hi: number) {
   return dynastyMembers(s).filter((c) => {
     const a = ageOf(s, c);
-    return a >= lo && a <= hi;
+    return a >= lo && a <= hi && !c.prisonerOf && !isAway(s, c);
   });
 }
 

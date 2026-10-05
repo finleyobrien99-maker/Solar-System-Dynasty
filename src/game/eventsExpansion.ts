@@ -13,13 +13,16 @@ import { defineEvent } from './dsl';
 import { named } from './eventBits';
 import { pr, type EventCtx, type EventDef } from './eventKit';
 import { int, pick } from './rng';
+import { isAway } from './wards';
 import type { Character, Clan, GameState, Region } from './types';
 
 // ── Who the events are about (cheap: close family only, never a full scan) ──
 
 /** Your own children, alive, free and of the right age. */
 function kids(s: GameState, lo: number, hi: number): Character[] {
-  return childrenOf(s, ruler(s)).filter((c) => alive(c) && !c.prisonerOf && c.clanId === s.playerClanId && ageOf(s, c) >= lo && ageOf(s, c) <= hi);
+  return childrenOf(s, ruler(s)).filter(
+    (c) => alive(c) && !c.prisonerOf && !isAway(s, c) && c.clanId === s.playerClanId && ageOf(s, c) >= lo && ageOf(s, c) <= hi,
+  );
 }
 
 /** The ruler's brothers and sisters, alive and free. */

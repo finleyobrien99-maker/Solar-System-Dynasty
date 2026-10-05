@@ -1,3 +1,4 @@
+import { isAway } from '../../game/wards';
 import { useState } from 'react';
 import { ageOf, alive, ch, childrenOf, cooldownReady, dynastyMembers, ruler, siblingsOf } from '../../game/core';
 import { TUTOR_COST } from '../../game/economy';
@@ -35,17 +36,28 @@ export function EduControls({ c }: { c: Character }) {
   const { s, act } = useGame();
   if (!c.edu) return null;
   const tier = eduTier(c.edu.progress);
+  const away = isAway(s, c);
   return (
     <div className="stack" style={{ gap: 'var(--space-6px)', marginTop: 'var(--space-6px)' }} onClick={(e) => e.stopPropagation()}>
       <div className="row wrap" style={{ gap: 'var(--space-6px)' }}>
-        <select value={c.edu.focus} onChange={(e) => act((d) => setEducation(d, c.id, e.target.value as StatKey, c.edu!.tutor))} aria-label="Education focus">
+        <select
+          disabled={away || !!c.prisonerOf}
+          value={c.edu.focus}
+          onChange={(e) => act((d) => setEducation(d, c.id, e.target.value as StatKey, c.edu!.tutor))}
+          aria-label="Education focus"
+        >
           {STAT_KEYS.map((k) => (
             <option key={k} value={k}>
               {STAT_NAMES[k]}
             </option>
           ))}
         </select>
-        <select value={c.edu.tutor} onChange={(e) => act((d) => setEducation(d, c.id, c.edu!.focus, e.target.value as TutorKey))} aria-label="Tutor">
+        <select
+          disabled={away || !!c.prisonerOf}
+          value={c.edu.tutor}
+          onChange={(e) => act((d) => setEducation(d, c.id, c.edu!.focus, e.target.value as TutorKey))}
+          aria-label="Tutor"
+        >
           {(Object.keys(TUTORS) as TutorKey[]).map((k) => (
             <option key={k} value={k}>
               {TUTORS[k].name} {TUTOR_COST[k] ? `(${TUTOR_COST[k]}/cycle)` : '(free)'}
@@ -57,6 +69,7 @@ export function EduControls({ c }: { c: Character }) {
         On track for: <b className="gold">{EDU_NAMES[c.edu.focus][tier - 1]}</b> (tier {tier}/4) · progress {Math.round(c.edu.progress)}
         <InfoDot text="At 16 a child earns an education trait based on progress: under 45 is tier 1, 45+ tier 2, 75+ tier 3, 100+ tier 4. Better tutors, Quick or Brilliant genes and Saturnine schooling all speed it up. Switching focus after age 10 loses some progress." />
       </div>
+      {away && <div className="dim">Their foster court provides lessons. Home tutors and tuition resume when they return.</div>}
       {s.year - c.born < 6 && <div className="dim">Schooling starts at 6.</div>}
     </div>
   );

@@ -1,6 +1,7 @@
 // Income breakdowns. The UI shows every line so players can see exactly where
 // their credits, prestige and faith come from.
 
+import { isAway } from './wards';
 import {
   ageOf,
   alive,
@@ -71,11 +72,11 @@ export function creditLines(s: GameState): Line[] {
   lines.push({ label: `Fleet upkeep (${s.fleet} ships)`, value: -Math.round(s.fleet * UPKEEP_PER_SHIP) });
 
   const members = dynastyMembers(s);
-  const school = members.reduce((a, c) => a + (c.edu && ageOf(s, c) < 16 ? TUTOR_COST[c.edu.tutor] : 0), 0);
+  const school = members.reduce((a, c) => a + (c.edu && !isAway(s, c) && ageOf(s, c) < 16 ? TUTOR_COST[c.edu.tutor] : 0), 0);
   if (school) lines.push({ label: 'Heir tuition', value: -school });
 
   // Only the household you actually keep at court costs money; distant kin pay their own way.
-  const court = members.filter((c) => isCloseFamily(s, c)).length * 2 + (alive(ch(s, r.spouseId)) ? 2 : 0);
+  const court = members.filter((c) => isCloseFamily(s, c) && !isAway(s, c)).length * 2 + (alive(ch(s, r.spouseId)) ? 2 : 0);
   lines.push({ label: 'Court upkeep (close family)', value: -court });
 
   const items = itemSum(s, 'creditsYr');

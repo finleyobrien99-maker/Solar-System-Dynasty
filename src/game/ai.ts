@@ -31,6 +31,7 @@ import { capOpinion, grudgeOpinion, isRival, opinionCeiling } from './memory';
 import { addFeeling, feelingsSum, murdered, opinionOf } from './relations';
 import { aiIntrigueTick } from './aiIntrigue';
 import { aiDynastyTick } from './aiDynasty';
+import { allMentorships, allWardships, aiWardsTick } from './wards';
 import { aiAmbition, ambitionHouse, AMBITION_AGGRESSION, type AmbitionKind } from './aiAmbition';
 import { aiAffairsTick, aiArrests, aiMarriages, alliesAbandon, betrayPact, captivesTick, kinFleet, pactMap, takeCaptive, wouldBetray } from './aiCourt';
 import { neighbourPlanets, PLANET_BY_ID } from './planets';
@@ -361,6 +362,7 @@ export function aiTick(s: GameState): void {
   rivalPlots(s);
   aiIntrigueTick(s);
   aiArrests(s);
+  aiWardsTick(s);
   captivesTick(s);
   alliesAbandon(s);
   revolts(s);
@@ -379,6 +381,14 @@ export function prune(s: GameState): void {
     if (c.motherId) keep.add(c.motherId);
   }
   for (const clan of Object.values(s.clans)) keep.add(clan.headId);
+  for (const w of allWardships(s)) {
+    keep.add(w.childId);
+    keep.add(w.guardianId);
+  }
+  for (const m of allMentorships(s)) {
+    keep.add(m.childId);
+    keep.add(m.mentorId);
+  }
   for (const crisis of s.successionCrises) {
     keep.add(crisis.predecessorId);
     keep.add(crisis.claimantId);

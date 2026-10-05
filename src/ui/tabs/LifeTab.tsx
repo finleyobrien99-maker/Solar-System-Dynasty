@@ -1,3 +1,4 @@
+import { UpbringingOverview } from '../sections/UpbringingOverview';
 import { AmbitionSection } from '../sections/AmbitionSection';
 import { SuccessionSection } from '../sections/SuccessionSection';
 import { AbdicateSection } from '../sections/AbdicateSection';
@@ -79,6 +80,7 @@ export function LifeTab() {
 
       <AmbitionSection />
       <SuccessionSection />
+      <UpbringingOverview />
 
       <div className="cols section">
         <div className="stack">

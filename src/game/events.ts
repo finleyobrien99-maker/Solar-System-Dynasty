@@ -1,6 +1,7 @@
 // Random events. Each cycle one or two are drawn from this deck. Every choice
 // shows a hint of what it costs, and the outcome is spelled out afterwards.
 
+import { isAway } from './wards';
 import { createCharacter } from './character';
 import {
   ageOf,
@@ -26,6 +27,7 @@ import { INTRIGUE_EVENTS } from './eventsIntrigue';
 import { COURT_EVENTS, courtingHouse, courtship } from './eventsCourt';
 import { EXPANSION_EVENTS } from './eventsExpansion';
 import { PETITION_EVENTS } from './eventsPetitions';
+import { WARD_EVENTS } from './eventsWards';
 import { capOpinion } from './memory';
 import { defineEvent, regionOf, type Cond, type Ctx, type Effect, type Outcome } from './dsl';
 import { catchable, courtier, houseName, myRegionPick, named, placeName, present, rivalPick } from './eventBits';
@@ -1593,11 +1595,11 @@ export const EVENTS: EventDef[] = [
     title: 'Sibling Rivalry',
     icon: 'family',
     weight: 1,
-    when: (s) => childrenOf(s, ruler(s)).filter((c) => alive(c) && ageOf(s, c) >= 8).length >= 2,
+    when: (s) => childrenOf(s, ruler(s)).filter((c) => alive(c) && !c.prisonerOf && !isAway(s, c) && ageOf(s, c) >= 8).length >= 2,
     setup: ({ s, data }) => {
       const kids = shuffle(
         s,
-        childrenOf(s, ruler(s)).filter((c) => alive(c) && ageOf(s, c) >= 8),
+        childrenOf(s, ruler(s)).filter((c) => alive(c) && !c.prisonerOf && !isAway(s, c) && ageOf(s, c) >= 8),
       );
       data.a = kids[0].id;
       data.b = kids[1].id;
@@ -1634,6 +1636,7 @@ export const EVENTS: EventDef[] = [
   ...COURT_EVENTS,
   ...EXPANSION_EVENTS,
   ...PETITION_EVENTS,
+  ...WARD_EVENTS,
 ];
 
 export const EVENT_BY_ID: Record<string, EventDef> = Object.fromEntries(EVENTS.map((e) => [e.id, e]));

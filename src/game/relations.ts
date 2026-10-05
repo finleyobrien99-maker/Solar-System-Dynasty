@@ -1,3 +1,4 @@
+import { isAway, wardshipOf } from './wards';
 import { recordAffair, recordMurder } from './secrets';
 import { breakFaithfulness, recordDeed } from './epithets';
 // Personal relationships (ROADMAP §1.1, numbers from deep dives §C).
@@ -116,6 +117,9 @@ export function timeBlocker(s: GameState, targetId: string): string | null {
   if (!alive(t)) return 'They are dead.';
   if (t.id === s.rulerId) return 'That is you.';
   if (!canAct(s)) return 'A regent rules for now.';
+  if (ruler(s).prisonerOf) return 'You cannot visit while imprisoned.';
+  const ward = wardshipOf(s, targetId);
+  if (ward && ward.hostId !== s.playerClanId) return 'They are being raised at another court.';
   if (t.prisonerOf) return 'They are a prisoner.';
   if (relationOf(s, t.id, s.rulerId)?.together === s.year) return 'You already saw them this cycle.';
   if (timeLeft(s) <= 0) return `You can only see ${TIME_PER_CYCLE} people a cycle.`;
@@ -253,7 +257,7 @@ export function neglectedFor(s: GameState, child: Character): number {
 function neglectTick(s: GameState): void {
   const r = ruler(s);
   for (const kid of childrenOf(s, r)) {
-    if (!alive(kid) || ageOf(s, kid) > 15) continue;
+    if (!alive(kid) || ageOf(s, kid) > 15 || isAway(s, kid)) continue;
     const n = neglectedFor(s, kid);
     if (n < 5) continue;
     addFeeling(s, kid.id, r.id, { why: 'Neglected me', value: -Math.min(45, 15 + 4 * (n - 5)), decay: 0, key: 'neglect' });

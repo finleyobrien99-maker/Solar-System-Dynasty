@@ -1,3 +1,4 @@
+import { isAway } from './wards';
 import { breakFaithfulness } from './epithets';
 // Family management: marriages, betrothals, tutors, cybernetics, laws.
 
@@ -158,7 +159,7 @@ export const TUTORS: Record<TutorKey, { name: string; desc: string; cost: number
 
 export function setEducation(s: GameState, id: string, focus: StatKey, tutor: TutorKey): void {
   const c = s.characters[id];
-  if (!c?.edu) return;
+  if (!c?.edu || c.prisonerOf || isAway(s, c)) return;
   if (c.edu.focus !== focus && ageOf(s, c) >= 10) c.edu.progress *= 0.7;
   c.edu.focus = focus;
   c.edu.tutor = tutor;

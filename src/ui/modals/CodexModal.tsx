@@ -75,6 +75,18 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               on Age Up if needed. After six war cycles, support and surviving fleets decide. Surviving rebel ships return to the houses that contributed them.
               AI houses use their own money, councillors and fleets.
             </p>
+            <h3>Who raises the next ruler?</h3>
+            <p>
+              Give a child aged 6-15 a mentor at your court, or send one aged 6-14 to a willing foreign house. Mentors can raise two pupils. Upbringing can pass
+              on skills, temperament, faith and lasting friendships; a harsh guardian can leave scars. Wards return at 16, with letters and homecoming choices
+              along the way. War may turn a ward into a hostage. Life lists your arrangements and foreign children you are hosting; open a child's profile to
+              manage them.
+            </p>
+            <p>
+              While your ward is abroad, their host supplies household lessons. You pay no home tuition or court upkeep for them, your home scientist does not
+              teach them, and visits and local childhood events wait until they return. They can still keep in touch through letters. A recall can upset the
+              host. Foreign captivity is preserved when an heir inherits.
+            </p>
             <h3>Know your family</h3>
             <p>
               The matchmaker checks five generations of recorded parents. Close-family warnings come from real shared ancestors, never matching genes or

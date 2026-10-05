@@ -1,3 +1,4 @@
+import { isAway, wardshipOf } from './wards';
 import { finishAmbition } from './ambitions';
 import { beginSuccessionCrisis, successionCrisis } from './succession';
 import { observeReputation } from './epithets';
@@ -254,9 +255,11 @@ export function growthTick(s: GameState): void {
         if (dynastic && isCloseFamily(s, c)) log(s, `${c.name} has begun lessons. Pick a tutor in the Family tab.`, 'family');
       }
       const intellect = c.traits.map((t) => TRAITS[t]).find((t) => t?.group === 'intellect')?.level ?? 0;
-      const sat = s.clans[c.clanId]?.planetId === 'saturn' ? 2 : 0;
-      const scientist = dynastic ? councilStat(s, 'scientist') * 0.15 : 0;
-      c.edu.progress += TUTOR_RATE[c.edu.tutor] + intellect * 1.5 + sat + scientist + rand(s) * 3;
+      const away = isAway(s, c);
+      const schoolHouse = away ? wardshipOf(s, c.id)?.hostId : c.clanId;
+      const sat = s.clans[schoolHouse ?? c.clanId]?.planetId === 'saturn' ? 2 : 0;
+      const scientist = dynastic && !away ? councilStat(s, 'scientist') * 0.15 : 0;
+      c.edu.progress += (away ? TUTOR_RATE.household : TUTOR_RATE[c.edu.tutor]) + intellect * 1.5 + sat + scientist + rand(s) * 3;
       if (chance(s, 0.4)) c.base[c.edu.focus] = Math.min(12, c.base[c.edu.focus] + 1);
     }
     if (age === 16) comeOfAge(s, c);
