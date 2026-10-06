@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ch, clanRegions, liegeOf, setOwner } from './core';
+import { ch, clanRegions, liegeOf, setOwner, SAVE_VERSION } from './core';
 import { declareWithGoal, declareWar, aiDeclareWar, endWar, fightBattle, answerRealm } from './war';
 import { declareHouseWar, tickAiWars } from './ai';
 import { acceptPeace, makeTruce, offerPeace, peaceAcceptance, peaceTerms, settlePeace, truceOf } from './peace';
@@ -288,7 +288,7 @@ describe('exact war goals and terms', () => {
     delete s.wars[0].goal;
     s.version = 10;
     const loaded = migrate(s);
-    expect(loaded.version).toBe(11);
+    expect(loaded.version).toBe(SAVE_VERSION);
     expect(loaded.wars[0].goal).toBeUndefined();
     expect(loaded.peaceTributes).toEqual([]);
     expect(migrate(structuredClone(loaded))).toEqual(loaded);

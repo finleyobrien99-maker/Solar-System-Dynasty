@@ -31,6 +31,8 @@ import { RelationshipsSection } from '../sections/RelationshipsSection';
 import { DossierSection } from '../sections/DossierSection';
 import { UpbringingSection } from '../sections/UpbringingSection';
 import { VipEditor } from '../vip/VipEditor';
+import { canEditPortrait } from '../../game/identity';
+import { CharacterAppearanceEditor } from '../editors/CharacterAppearanceEditor';
 
 function Links({ label, people }: { label: string; people: Character[] }) {
   const { openChar } = useGame();
@@ -107,6 +109,7 @@ export function CharacterModal({ id }: { id: string }) {
           )}
         </div>
       </div>
+      {canEditPortrait(s, c) && <CharacterAppearanceEditor key={c.id + '-appearance'} c={c} />}
       {isVip(s) && <VipEditor key={c.id} c={c} />}
       <hr className="divider" />
       <Links label="Parents" people={parents} />

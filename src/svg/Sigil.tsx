@@ -128,9 +128,9 @@ export const CHARGES: ((fill: string, line: string) => ReactElement)[] = [
   ),
 ];
 
-function SigilImpl({ spec, size = 48, className }: { spec: SigilSpec; size?: number | string; className?: string }) {
+function SigilImpl({ spec, size = 48, className, flag = false }: { spec: SigilSpec; size?: number | string; className?: string; flag?: boolean }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
-  const shape = SHAPES[spec.shape % SHAPES.length];
+  const shape = flag ? 'M 2 22 H 98 V 94 H 2 Z' : SHAPES[spec.shape % SHAPES.length];
   const { c1, c2, c3 } = spec;
   const line = luminance(c3) > 0.55 ? '#1b1b22' : '#f2f2f2';
   const charge = CHARGES[spec.charge % CHARGES.length];
@@ -158,7 +158,13 @@ function SigilImpl({ spec, size = 48, className }: { spec: SigilSpec; size?: num
     }
   })();
   return (
-    <svg viewBox="0 0 100 120" width={size} height={typeof size === 'number' ? size * 1.2 : size} className={className} aria-hidden>
+    <svg
+      viewBox={flag ? '0 20 100 76' : '0 0 100 120'}
+      width={size}
+      height={typeof size === 'number' ? size * (flag ? 0.76 : 1.2) : size}
+      className={className}
+      aria-hidden
+    >
       <defs>
         <clipPath id={`sg${uid}`}>
           <path d={shape} />

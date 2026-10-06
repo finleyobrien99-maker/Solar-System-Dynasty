@@ -32,6 +32,7 @@ import { coalitionCampaign, peaceCampaign, disputedInheritance } from './testSce
 import { breakTreaty, proposeTreaty, termsFor } from './treaties';
 import { successionTick } from './succession';
 import { ambitionChoices, chooseAmbition } from './ambitions';
+import { setHouseIdentity, setPortrait } from './identity';
 
 // Long synchronous simulations must let the worker receive progress replies between tests.
 // Otherwise a whole file can exceed the runner RPC deadline even though every assertion passes.
@@ -99,6 +100,17 @@ describe.runIf(WRITE)('freeze fixture saves', () => {
       // eslint-disable-next-line no-console
       console.log(`froze ${file}: year ${s.year}, ${Object.keys(s.characters).length} characters`);
     }
+  });
+});
+
+describe.runIf(WRITE)('freeze cosmetic identity', () => {
+  it('freezes custom colours and house design without changing the genome', () => {
+    const file = new URL(`save-v${SAVE_VERSION}-identity.json`, DIR);
+    if (existsSync(file)) return;
+    const s = goalWorld();
+    setPortrait(s, s.rulerId, { skinColor: '#72ccad', hairColor: '#7e22ce', eyeColor: '#ff8800', face: 3, hairStyle: 5 });
+    setHouseIdentity(s, s.playerClanId, 'Starlight', { shape: 3, division: 4, charge: 15, c1: '#17385b', c2: '#efefef', c3: '#ff9933' });
+    writeFileSync(file, exportSave(s) + '\n');
   });
 });
 

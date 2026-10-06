@@ -4,7 +4,7 @@ import { clanRegions } from '../game/core';
 import { FAITHS, PLANETS, PLANET_BY_ID } from '../game/planets';
 import { seeded } from '../game/rng';
 import { addTrait, EDU_NAMES, PERSONALITY, STAT_NAMES, TRAITS } from '../game/traits';
-import { STAT_KEYS, type Appearance, type Character, type GameState, type Gender, type ScenarioId, type SigilSpec, type StatKey } from '../game/types';
+import { STAT_KEYS, type PortraitStyle, type Character, type GameState, type Gender, type ScenarioId, type SigilSpec, type StatKey } from '../game/types';
 import { GOD_EXTRAS, GOD_PERSONALITY, GOD_STAT, godGenetics, STAT_MAX } from '../game/vip';
 import {
   createWorld,
@@ -26,6 +26,8 @@ import { Sigil } from '../svg/Sigil';
 import { InfoDot, TraitChip } from './components';
 import { CategoryMark } from './traitCategories';
 import { TraitPicker } from './vip/TraitPicker';
+import { normalisePortrait, hexColour, setPortrait } from '../game/identity';
+import { AppearanceControls, previewPortrait, previewSigil, SigilControls } from './editors/IdentityControls';
 
 const FOCUS_DESC: Record<StatKey, string> = {
   dip: 'Raised at court. Charming and persuasive.',
@@ -35,18 +37,6 @@ const FOCUS_DESC: Record<StatKey, string> = {
   sci: 'Raised in the archives. Brilliant and curious.',
 };
 
-const LOOKS: [keyof Appearance, string, number][] = [
-  ['skin', 'Skin', 7],
-  ['hair', 'Hair colour', 7],
-  ['hairStyle', 'Hair style', 7],
-  ['eyes', 'Eyes', 6],
-  ['face', 'Face', 3],
-  ['nose', 'Nose', 3],
-  ['mouth', 'Mouth', 3],
-  ['brow', 'Brows', 2],
-  ['beard', 'Beard', 3],
-];
-
 const FAMILY: [StartFamily, string, string][] = [
   ['single', 'Single', 'Find your own match.'],
   ['married', 'Married', 'A spouse from another house.'],
@@ -54,32 +44,6 @@ const FAMILY: [StartFamily, string, string][] = [
 ];
 
 const STEPS = ['1. Homeworld', '2. Start', '3. House', '4. Ruler'];
-
-function LooksEditor({ looks, gender, onChange }: { looks: Appearance; gender: Gender; onChange: (l: Appearance) => void }) {
-  return (
-    <div className="looks-grid">
-      {LOOKS.filter(([k]) => k !== 'beard' || gender === 'M').map(([k, label, max]) => {
-        const set = (d: number) => onChange({ ...looks, [k]: (looks[k] + d + max + 1) % (max + 1) });
-        return (
-          <div key={k} className="looks-row">
-            <span>{label}</span>
-            <span className="row" style={{ gap: 'var(--space-4px)' }}>
-              <button type="button" className="btn small ghost" onClick={() => set(-1)} aria-label={`Previous ${label}`}>
-                ‹
-              </button>
-              <b style={{ minWidth: 34, textAlign: 'center' }}>
-                {looks[k] + 1}/{max + 1}
-              </b>
-              <button type="button" className="btn small ghost" onClick={() => set(1)} aria-label={`Next ${label}`}>
-                ›
-              </button>
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; onBack: () => void }) {
   const [worldSeed, setWorldSeed] = useState(() => Math.floor(Math.random() * 1e9));
@@ -101,7 +65,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
   // Overrides on top of the rolled ruler. null = use the roll.
   const [personality, setPersonality] = useState<string[] | null>(null);
   const [genetic, setGenetic] = useState<string[] | null>(null);
-  const [looks, setLooks] = useState<Appearance | null>(null);
+  const [looks, setLooks] = useState<PortraitStyle>({});
   const [base, setBase] = useState<Record<StatKey, number> | null>(null);
   const [extras, setExtras] = useState<string[]>([]);
   const [eduTier, setEduTier] = useState(2);
@@ -110,7 +74,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
   // VIP-only overrides fall away if VIP is switched back off.
   const traitsChosen = personality && (vip || personality.length <= 3) ? personality : preview.personality;
   const genes = vip ? (genetic ?? preview.genetic) : preview.genetic;
-  const face = looks ?? preview.looks;
+  const face = preview.looks;
   const talents = vip ? (base ?? preview.base) : preview.base;
   const rulerName = name ?? preview.name;
   const tier = vip ? eduTier : age >= 35 ? 3 : 2;
@@ -136,13 +100,14 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
     base: talents,
     health: 100,
     looks: face,
+    portrait: previewPortrait(looks),
   };
 
   const reroll = () => {
     setRollSeed(Math.floor(Math.random() * 1e9));
     setPersonality(null);
     setGenetic(null);
-    setLooks(null);
+    setLooks({});
     setBase(null);
     setExtras([]);
     setName(undefined);
@@ -180,22 +145,22 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
     if (!clan) return;
     const s = structuredClone(world);
     const ruler: RulerPreview = { ...preview, name: rulerName.trim() || preview.name, personality: traitsChosen, genetic: genes, looks: face, base: talents };
-    onStart(
-      startGame(s, {
-        clanId: clan.id,
-        clanName: clanName || undefined,
-        sigil,
-        ruler,
-        focus,
-        growth,
-        scenario,
-        age,
-        family: age < 18 ? 'single' : family,
-        vip,
-        extraTraits: vip ? extras : undefined,
-        eduTier: vip ? eduTier : undefined,
-      }),
-    );
+    const next = startGame(s, {
+      clanId: clan.id,
+      clanName: clanName || undefined,
+      sigil,
+      ruler,
+      focus,
+      growth,
+      scenario,
+      age,
+      family: age < 18 ? 'single' : family,
+      vip,
+      extraTraits: vip ? extras : undefined,
+      eduTier: vip ? eduTier : undefined,
+    });
+    setPortrait(next, next.rulerId, looks);
+    onStart(next);
   };
 
   const pickHouse = (id: string) => {
@@ -387,7 +352,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             {houses.map((c) => (
               <button key={c.id} className={`opt ${clan?.id === c.id ? 'sel' : ''}`} onClick={() => pickHouse(c.id)} aria-pressed={clan?.id === c.id}>
                 <div className="row">
-                  <Sigil spec={c.id === clan?.id && sigil ? sigil : c.sigil} size={42} />
+                  <Sigil spec={previewSigil(c.id === clan?.id && sigil ? sigil : c.sigil)} size={42} />
                   <div>
                     <div className="t">House {c.id === clan?.id && clanName ? clanName : c.name}</div>
                     <div className="d">
@@ -403,7 +368,8 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
           {clan && (
             <div className="card" style={{ marginTop: 'var(--space-12px)' }}>
               <div className="row wrap">
-                <Sigil spec={sigil ?? clan.sigil} size={70} />
+                <Sigil spec={previewSigil(sigil ?? clan.sigil)} size={70} />
+                <Sigil spec={previewSigil(sigil ?? clan.sigil)} size={140} flag />
                 <div className="stack" style={{ gap: 'var(--space-6px)' }}>
                   <label className="row wrap">
                     <span className="muted">House name</span>
@@ -414,6 +380,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                   </button>
                 </div>
               </div>
+              <SigilControls value={sigil ?? clan.sigil} onChange={setSigil} />
             </div>
           )}
           <div className="btn-row" style={{ marginTop: 'var(--space-12px)', justifyContent: 'space-between' }}>
@@ -424,7 +391,11 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
               <button className="btn ghost small" onClick={() => setWorldSeed(Math.floor(Math.random() * 1e9))} title="Reroll every house in the system">
                 Reroll the system
               </button>
-              <button className="btn primary" disabled={!clan} onClick={() => setStep(3)}>
+              <button
+                className="btn primary"
+                disabled={!clan || (sigil !== undefined && ![sigil.c1, sigil.c2, sigil.c3].every(hexColour))}
+                onClick={() => setStep(3)}
+              >
                 Next: your ruler <Icon name="arrow" size={16} />
               </button>
             </span>
@@ -447,7 +418,14 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
           <div className="cols">
             <div className="card stack" style={{ gap: 'var(--space-10px)' }}>
               <div className="row top">
-                <Portrait c={fake} year={world.year} rank={rank} clanColor={sigil?.c1 ?? clan.color} trim={sigil?.c2 ?? clan.sigil.c2} size={140} />
+                <Portrait
+                  c={fake}
+                  year={world.year}
+                  rank={rank}
+                  clanColor={previewSigil(sigil ?? clan.sigil).c1}
+                  trim={previewSigil(sigil ?? clan.sigil).c2}
+                  size={140}
+                />
                 <div className="stack" style={{ gap: 'var(--space-8px)', minWidth: 0 }}>
                   <label className="stack" style={{ gap: 'var(--space-4px)' }}>
                     <span className="muted">Name</span>
@@ -461,7 +439,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
                         onClick={() => {
                           setGender(g);
                           setName(undefined);
-                          setLooks(null);
+                          setLooks({});
                         }}
                       >
                         {g === 'F' ? 'Female' : 'Male'}
@@ -494,7 +472,10 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
 
               <details className="looks">
                 <summary className="gold">Appearance</summary>
-                <LooksEditor looks={face} gender={gender} onChange={setLooks} />
+                <AppearanceControls c={fake} year={world.year} value={looks} onChange={setLooks} />
+                <button type="button" className="btn ghost small" onClick={() => setLooks({})}>
+                  Use inherited looks
+                </button>
               </details>
 
               {!vip && (
@@ -625,7 +606,7 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
             <button className="btn ghost" onClick={() => setStep(2)} data-back>
               Back
             </button>
-            <button className="btn primary" onClick={begin}>
+            <button className="btn primary" disabled={!normalisePortrait(looks)} onClick={begin}>
               <Icon name="crown" size={16} /> Begin the dynasty of House {clanName || clan.name}
             </button>
           </div>

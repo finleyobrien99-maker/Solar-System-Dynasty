@@ -23,6 +23,13 @@ export interface Appearance {
   beard: number; // 0..3 (only drawn on adult men)
 }
 
+/** Cosmetic only: the original looks remain the source for children. */
+export interface PortraitStyle extends Partial<Appearance> {
+  skinColor?: string;
+  hairColor?: string;
+  eyeColor?: string;
+}
+
 export interface Education {
   focus: StatKey;
   tutor: TutorKey;
@@ -49,6 +56,7 @@ export interface Character {
   base: Record<StatKey, number>;
   health: number; // 0..100ish
   looks: Appearance;
+  portrait?: PortraitStyle;
   edu?: Education;
   bastard?: boolean;
   marriedIn?: boolean; // joined their spouse's household; children go to the spouse's house

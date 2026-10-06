@@ -749,3 +749,18 @@ html:not([data-text-size='normal']) .topbar .who .name { white-space: normal; }
 .trait-groups > details { border: 1px solid var(--line); border-radius: var(--radius-8px); padding: var(--space-4px) var(--space-8px); }
 .trait-groups summary { cursor: pointer; font-weight: var(--weight-600); }
 .trait-groups .traits { margin-top: var(--space-8px); }
+/* Cosmetic identity tools: controls fit a narrow phone and keep drafts local. */
+.identity-editor { margin-top: 12px; }
+.identity-editor > summary { cursor: pointer; min-height: 44px; display: list-item; padding: 10px 0; }
+.identity-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 12px; }
+.identity-grid > *, .identity-grid input, .identity-grid select { min-width: 0; max-width: 100%; }
+.identity-colour { margin: 0; padding: 10px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.identity-colour legend { padding: 0 5px; }
+.identity-colour .row { gap: 8px; }
+.identity-colour input[type="color"] { flex: 0 0 48px; width: 48px; height: 44px; padding: 3px; cursor: pointer; }
+.identity-colour input:not([type="color"]) { width: 100%; flex: 1; font-family: monospace; }
+.identity-colour summary { min-height: 44px; padding: 12px 0; cursor: pointer; }
+.identity-swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(36px, 1fr)); gap: 6px; }
+.identity-swatches button { min-height: 44px; border: 2px solid #64748b; border-radius: 6px; cursor: pointer; }
+.identity-swatches button[aria-pressed="true"] { outline: 2px solid var(--gold); outline-offset: 2px; }
+.identity-preview { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 18px; padding: 12px 0; }

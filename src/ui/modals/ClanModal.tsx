@@ -32,6 +32,7 @@ import { isRival } from '../../game/memory';
 import { aiAmbition } from '../../game/aiAmbition';
 import { pactsOf } from '../../game/aiCourt';
 import { TRAITS } from '../../game/traits';
+import { HouseIdentityEditor } from '../editors/HouseIdentityEditor';
 
 export function ClanModal({ id }: { id: string }) {
   const { s, act, openClan, setUi } = useGame();
@@ -102,6 +103,7 @@ export function ClanModal({ id }: { id: string }) {
         </div>
       </div>
 
+      {mine && <HouseIdentityEditor key={clan.id} clan={clan} />}
       <h4 style={{ marginTop: 'var(--space-12px)' }}>Current ruler</h4>
       {head ? (
         <CharCard c={head} traitsMax={0} sub={ageOf(s, head) + ' yrs · Ruler faith: ' + (FAITHS[head.faithId]?.name ?? 'Unknown')} />

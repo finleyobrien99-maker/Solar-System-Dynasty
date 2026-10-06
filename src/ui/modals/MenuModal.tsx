@@ -1,4 +1,4 @@
-import { isVip } from '../../game/core';
+import { isVip, ruler } from '../../game/core';
 import { writeSave } from '../../game/save';
 import { enableVip } from '../../game/vip';
 import { AccessibilitySettings } from '../AccessibilitySettings';
@@ -7,11 +7,17 @@ import { useGame } from '../store';
 import { downloadSave } from './SavesModal';
 
 export function MenuModal() {
-  const { s, act, setUi, quit, toast } = useGame();
+  const { s, act, setUi, quit, toast, openChar, openClan } = useGame();
   return (
     <Modal title="Menu" onClose={() => setUi({ panel: null })} icon="menu">
       <div className="stack">
         <AccessibilitySettings />
+        <Btn block icon="family" onClick={() => openChar(ruler(s).id)}>
+          Character appearance
+        </Btn>
+        <Btn block icon="crown" onClick={() => openClan(s.playerClanId)}>
+          House identity & flag
+        </Btn>
         <Btn block icon="save" onClick={() => setUi({ panel: 'saves' })}>
           Save / Load
         </Btn>

@@ -8,6 +8,14 @@
 
 Live build: https://finleyobrien99-maker.github.io/Solar-System-Dynasty/ (deploys on every push to `main`).
 
+### 6 October 2026: character appearance and house identity designers (local, save v12)
+
+The new-dynasty builder and existing profiles now share reusable designers. Menu links open your ruler's **Character appearance** and **House identity & flag**. Your dynasty and current spouse can be styled without VIP; the existing VIP editor still handles stats, traits, age and names, and permits foreign portrait styling. Cosmetic overrides are separate from inherited looks: children, skills, traits, resources, relationships and the random seed are unchanged. Save, discard and inherited-look reset are explicit; invalid draft hex colours never reach the renderer or save.
+
+Character controls cover eight hair styles, four faces, four noses, four mouths, three brows and four adult male beard styles. Skin, hair and eyes have full RGB pickers, editable short/full hex codes and 28-colour palettes. House controls provide five shield shapes, seven patterns and sixteen symbols, with independent field/pattern/symbol colours and matching rectangular flag previews. Saving the house's field colour updates its existing map/ship/clothing colour; renaming preserves the same house ID and all ties. The flag currently shares the shield's pattern/symbol; layered charges, independent flag designs, custom uploaded art and SVG export remain future extensions.
+
+Save v12 introduces optional portrait overrides without inventing makeovers for old characters. All151frozen saves load, play and round-trip;125historical files remain untouched,26v12 fixtures include a coloured portrait and designed house. Full check:1027tests pass (10normal fixture-writer skips). All138desktop/phone browser checks pass; screenshots inspected. Editor checks cover draft isolation, invalid input, palette selection, exact state preservation, reload, inherited reset and founding without cheats at390px/desktop. Embedded phone game rebuilt; no native wrapper changes. No gameplay or balance tuning; no new balance claim. Not published as part of this local update.
+
 ### 6 October 2026: diplomacy and war goals integrated locally
 
 Foreign policy through9831737 is merged with war lane d279db4. Save v11 now includes waiting ultimatums and treaty-review heads as well as exact goals, peace offers, obligations and one-use war justifications. Refusals can start only the demanded war; accepted extortion creates actual capped payments without protection. Houses shows public rivals alongside its treaty web and filters at390px. Captive pending answers are inert and expired warrants are cleaned up. Phone game rebuilt; no publication is part of this merge. Both original lane status/measurement sections below are retained.

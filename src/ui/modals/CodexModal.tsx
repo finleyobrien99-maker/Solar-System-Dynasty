@@ -51,6 +51,18 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               children are born, rivals scheme, wars rage. When your ruler dies you carry on as their heir. Your goal is whatever you want: rule a planet, unite
               the system on the Solar Throne, or breed the most perfect bloodline the stars have ever seen.
             </p>
+            <h3>Make it your dynasty</h3>
+            <p>
+              Menu → Character appearance styles your ruler; your dynasty’s profiles and your spouse’s profile have the same editor. Choose face, hair, brows,
+              nose, mouth and beard, with any RGB skin, hair and eye colours through the picker, palette or hex code. Preview first, then save; Discard changes
+              restores the saved design. Use inherited looks followed by Save appearance removes the makeover. These changes are free and do not affect stats,
+              traits or the appearance your children inherit. Age, crowns, implants and expressions still follow each life.
+            </p>
+            <p>
+              Menu → House identity &amp; flag opens your house’s designer: 5 shield shapes, 7 patterns and 16 symbols, with three full colour controls. Shield
+              and flag share a design. Saving the field colour also updates your ships, clothing and map regions; renaming keeps the same house, titles and
+              diplomatic ties. The same designers are available when founding a new dynasty. VIP’s separate editor still handles stats and traits.
+            </p>
             <h3>A ruler's purpose</h3>
             <p>
               Choose one of three coronation vows on Life. They suit your ruler's personality and measure their own deeds after the choice: children, building,

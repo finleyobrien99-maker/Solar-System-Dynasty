@@ -1,4 +1,5 @@
 import { initialiseSecrets } from './secrets';
+import { normalisePortrait } from './identity';
 import { migrateDiplomacy } from './houseRelations';
 import { migrateForeignPolicy } from './foreignPolicy';
 import { initialiseReputations } from './epithets';
@@ -230,6 +231,15 @@ export class NewerSaveError extends Error {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MIGRATIONS: Record<number, (s: any) => void> = {
+  // Existing people keep their inherited appearance. No cosmetic overrides are invented.
+  12: (s) => {
+    for (const c of [...Object.values(s.characters ?? {}), ...(s.suitors?.list ?? []).map((x: { char: unknown }) => x.char)] as { portrait?: unknown }[]) {
+      if (c.portrait === undefined) continue;
+      const clean = normalisePortrait(c.portrait);
+      if (clean && Object.keys(clean).length) c.portrait = clean;
+      else delete c.portrait;
+    }
+  },
   // Missing goals retain legacy settlements; old saves receive no invented demands or succession history.
   11: (s) => {
     s.peaceTributes ??= [];
