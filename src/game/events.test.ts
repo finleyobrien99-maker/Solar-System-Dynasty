@@ -60,8 +60,10 @@ describe('event deck', () => {
         const c = def.choices[i];
         if ((c.show && !c.show(ctx)) || (c.available && !c.available(ctx))) continue;
         const before = s.pending.length;
+        const wars = s.wars.length;
         resolveEvent(s, p.uid, i);
-        expect(s.pending.length, `${def.id} #${i}`).toBe(before); // event swapped for its outcome notice
+        // The event is swapped for its outcome notice; a war it provokes brings its own declaration notice.
+        expect(s.pending.length, `${def.id} #${i}`).toBe(before + (s.wars.length > wars ? 1 : 0));
         const notice = s.pending[0];
         expect(notice.kind).toBe('notice');
         if (notice.kind === 'notice') expect(notice.text, `${def.id} #${i}`).not.toMatch(/undefined|NaN/);
