@@ -1,5 +1,24 @@
 # Wave 5 slice 3 — war lane
 
+## Integrated locally — 6 October 2026
+
+The completed foreign-policy lane (6170afa + 9831737) is merged with d279db4 in ui-foundations. This section supersedes the pending integration checklist below; previous lane measurements remain as history. No publication is part of this merge.
+
+- GameState and emptyState now hold foreignPolicy {ultimatums, heads}; MIGRATIONS[11] calls the idempotent policy migration. Existing v1–v11 fixtures stay untouched; a new pending-ultimatum v11 fixture preserves exact terms and treaty-review heads.
+- Refusals record the actual goal under the ultimatum's ID (or a new AI decision ID), and AI demanders use declareWithGoal with that exact justification. Player demanders explicitly enforce their saved goal from the house profile. No free claim or conquest fallback. Expired warrants are removed during annual policy upkeep.
+- Accepted demands use settleDemand. Tribute is a capped actual-credit obligation for the stated duration, without protection. Public rivals now recognise these actual obligations until expiry. HouseConnections receives rivalsOf, and phone/desktop coverage checks filtered public links without private evidence.
+- Both treaty edits survive: stances, fear and pacts plus capped transfers, atomic declaration charges and current physical-fleet eligibility. AI–AI defence calls now receive the war's actual cause, including a refused demand's feud.
+- The review fixes from 9831737 survive: captive demands/repudiation blocked, defector sabotage uses the existing paid scheme. A pending ultimatum also revalidates the current ruler's freedom on answering; stale/captive answers change no state or dice.
+- The breeder strategy unit test now checks actual marriage choices in a controlled family, rather than expecting three stochastic families to outgrow three others. Overall births/survival remain measured in the unchanged 80-game harness. Browser reload/war assertions wait for actual saved state; no deadlines or retries were raised.
+- The embedded phone game was rebuilt after the integration: single HTML 1265.88KB (484.05KB gzip), embedded source 1236KB. Wrapper APIs unchanged.
+
+**Combined balance:** identical seeds 1–20, all four bots, 150 cycles, against live 65e16f3. Builder Sovereign 25%→20%, Warmonger 95%→90% (50% target still missed), Passive endings by100 0%→5%, Breeder 5%→5%. Median wins/losses Builder 6.5/0→5.5/0; Warmonger 35/13→37/15. Events 1.40→1.39 per cycle, 147 distinct, none over3%. No fleet/economy retuning; aggregate seeded outcomes do not isolate causation. Reports: %TEMP%/solar-wave5-slice3-integrated-balance.
+
+**Same-save speed:** serial five-sample processes on the unchanged year2681 save, 12,599 living dynasty members /21,002 characters. Canonical prepared-state SHA256 matches both builds: 6273098a0809b1702291d6c6221b4397a9c13bd9bfa64777c8ce22142a9b3863. Median AgeUp live193.6ms→merged183.6ms; samples overlap (164.9–204.7 vs141.0–201.8ms), so treat speed as comparable. Export-save time1503.4→1496.1ms and1624KB both (this is the lz-base64 export path, not autosave). The100ms phone target remains unproven.
+
+**Final combined validation:** npm run check passes typecheck, lint, formatting and957unit tests (55files,9normal fixture-writer skips). E2E_PORT=4273 npm run e2e passes all132tests at1280px and390px. All125frozen saves load, play20cycles when alive and round-trip; no existing fixture was modified. Actual ultimatum and filtered Houses screens were inspected at both widths, with no console errors or sideways scroll. npm run build:app succeeds, and its generated source is included in the final check. Initial browser save races were corrected with state-based waits; the final full suite passes without retries or raised timeouts.
+
+
 6 October 2026. Built locally on ui-foundations from 65e16f3068c23ac74cf704e3511cd0b7f1a4c8c8. This is a local integration handoff, not a release.
 
 ## Built

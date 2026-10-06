@@ -1,5 +1,6 @@
 import { HouseConnections } from './HouseConnections';
 import { houseRelation } from '../../game/houseRelations';
+import { rivalsOf } from '../../game/foreignPolicy';
 import { pactMap } from '../../game/aiCourt';
 import { useId, useState, useMemo } from 'react';
 import { alive, ch, clanRegions, fullName, liegeOf, ruler } from '../../game/core';
@@ -136,7 +137,7 @@ export function HousesSection() {
                 {!own && house.allied && <span className="pill green">Allied to you</span>}
                 {peace && <span className="pill gold">Truce with you until {peace.until}</span>}
               </div>
-              <HouseConnections houseId={house.id} marriagePacts={marriagePacts} />
+              <HouseConnections houseId={house.id} marriagePacts={marriagePacts} rivals={rivalsOf(s, house.id, s.playerClanId)} />
               <div className="muted" style={{ overflowWrap: 'anywhere' }}>
                 {regions.length} region{regions.length === 1 ? '' : 's'} · {own ? s.fleet : house.fleet} ships at home
                 {committed > 0 && <div>{committed} ships committed to defence</div>}

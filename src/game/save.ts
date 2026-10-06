@@ -1,5 +1,6 @@
 import { initialiseSecrets } from './secrets';
 import { migrateDiplomacy } from './houseRelations';
+import { migrateForeignPolicy } from './foreignPolicy';
 import { initialiseReputations } from './epithets';
 import { initialiseHouseGenetics } from './houseGenetics';
 // Bulletproof saves.
@@ -229,10 +230,11 @@ export class NewerSaveError extends Error {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MIGRATIONS: Record<number, (s: any) => void> = {
-  // Missing goals retain legacy settlements. Foreign policy will add its own empty state at integration.
+  // Missing goals retain legacy settlements; old saves receive no invented demands or succession history.
   11: (s) => {
     s.peaceTributes ??= [];
     s.warJustifications ??= [];
+    migrateForeignPolicy(s);
   },
   // Treaties, trust and house memories begin now: no invented pacts or history. Legacy alliances, truces and memories of you are untouched.
   10: (s) => migrateDiplomacy(s),

@@ -4,6 +4,7 @@ import { clanRegions } from '../src/game/core';
 import { declareWithGoal } from '../src/game/war';
 import { recordRefusedDemand } from '../src/game/warGoals';
 import { offerPeace } from '../src/game/peace';
+import { rememberHouse } from '../src/game/houseRelations';
 import { hashString } from '../src/game/rng';
 import { inflateString } from '../src/game/codec';
 import type { GameState } from '../src/game/types';
@@ -152,6 +153,8 @@ test('planet-filtered Houses shows real AI-AI pact and protection links without 
     { id: 'public-pact', kind: 'defensive', a: b.id, b: c.id, signed: s.year, until: s.year + 10, years: 10 },
     { id: 'public-protection', kind: 'guarantee', a: b.id, b: s.playerClanId, signed: s.year, until: s.year + 15, years: 15 },
   );
+  const rival = Object.values(s.clans).find((k) => !k.isPlayer && k.id !== b.id && k.id !== c.id && clanRegions(s, k.id).length)!;
+  rememberHouse(s, b.id, rival.id, { text: 'Private proof of a hidden affair', value: -90 });
   await load(page, s);
   await page
     .getByRole('navigation', { name: 'Main' })
@@ -163,6 +166,11 @@ test('planet-filtered Houses shows real AI-AI pact and protection links without 
   await card.getByText('Who stands with them · 2 treaties', { exact: true }).click();
   await expect(card).toContainText('Defensive pact with');
   await expect(card).toContainText('Protects');
+  await expect(card).toContainText('Public rivals');
+  await expect(card.getByRole('button', { name: 'House ' + rival.name, exact: true })).toBeVisible();
+  await expect(card).toContainText('Cold relations');
+  await expect(card).not.toContainText('Private proof');
+  await expect(card).not.toContainText('hidden affair');
   await healthy(page, errors, info, 'house-web');
   await card.getByRole('button', { name: 'House ' + c.name, exact: true }).click();
   await expect(page.getByRole('dialog').last()).toContainText('House ' + c.name);

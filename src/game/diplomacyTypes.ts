@@ -98,3 +98,30 @@ export interface DiplomacyState {
   /** The year trust last grew between a pair (keyed by the pair), so it grows at most once a cycle. */
   trustYear: Record<string, number>;
 }
+
+/**
+ * What a demand asks for. These are the cede and tribute shapes of the war
+ * lane's WarGoal (warGoals.ts), so a refused demand becomes a war goal unchanged.
+ */
+export type DemandGoal = { kind: 'cede'; regionId: string } | { kind: 'tribute'; amount: number; years: number };
+
+/**
+ * An ultimatum waiting for your answer (slice 3). AI targets answer at once,
+ * so only yours wait. A refusal leaves this record; the war lane keeps the
+ * justification it gives (warGoals.ts, `warJustifications`).
+ */
+export interface SavedUltimatum {
+  id: string;
+  from: string;
+  to: string;
+  goal: DemandGoal;
+  year: number;
+  /** It lapses unanswered when the year reaches this. */
+  expires: number;
+}
+
+export interface ForeignPolicyState {
+  ultimatums: SavedUltimatum[];
+  /** The lord each AI house had when it last reviewed its treaties, so a new lord's review happens once. */
+  heads: Record<string, string>;
+}

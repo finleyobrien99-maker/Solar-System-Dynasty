@@ -32,6 +32,7 @@ import { COMMANDER_EVENTS } from './eventsCommanders';
 import { REGENCY_EVENTS } from './eventsRegency';
 import { REALM_DEFENCE_EVENTS } from './eventsRealmDefence';
 import { DIPLOMACY_EVENTS } from './eventsDiplomacy';
+import { FOREIGN_POLICY_EVENTS } from './eventsForeignPolicy';
 import { capOpinion } from './memory';
 import { defineEvent, regionOf, type Cond, type Ctx, type Effect, type Outcome } from './dsl';
 import { catchable, courtier, houseName, myRegionPick, named, placeName, present, rivalPick } from './eventBits';
@@ -1645,6 +1646,7 @@ export const EVENTS: EventDef[] = [
   ...REGENCY_EVENTS,
   ...REALM_DEFENCE_EVENTS,
   ...DIPLOMACY_EVENTS,
+  ...FOREIGN_POLICY_EVENTS,
 ];
 
 export const EVENT_BY_ID: Record<string, EventDef> = Object.fromEntries(EVENTS.map((e) => [e.id, e]));

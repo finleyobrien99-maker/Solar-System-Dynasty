@@ -11,6 +11,7 @@ import { compressToUTF16, decompressFromBase64 } from 'lz-string';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { declareHouseWar } from './ai';
 import { goalWorld } from './warGoalScenarios';
+import { issueUltimatum, pendingUltimatum, answerUltimatum, foreignPolicyTick } from './foreignPolicy';
 import { declareWithGoal } from './war';
 import { offerPeace, settlePeace } from './peace';
 import { recordRefusedDemand, type WarGoal } from './warGoals';
@@ -252,7 +253,46 @@ describe.runIf(WRITE)('freeze exact goals, consent and obligations', () => {
     }
   });
 });
+describe.runIf(WRITE)('freeze foreign policy', () => {
+  it('freezes a pending exact ultimatum and recorded treaty-review heads', () => {
+    const file = new URL(`save-v${SAVE_VERSION}-pending-ultimatum.json`, DIR);
+    if (existsSync(file)) return;
+    const s = goalWorld();
+    const enemy = Object.values(s.clans).find((k) => !k.isPlayer && k.planetId === 'venus' && clanRegions(s, k.id).length)!;
+    foreignPolicyTick(s);
+    expect(issueUltimatum(s, enemy.id, s.playerClanId, { kind: 'tribute', amount: 35, years: 4 })).toBe('pending');
+    expect(pendingUltimatum(s)?.goal).toEqual({ kind: 'tribute', amount: 35, years: 4 });
+    checkInvariants(s);
+    writeFileSync(file, exportSave(s) + '\n');
+  });
+});
+
 describe('save migrations', () => {
+  it('v11 preserves exact pending demands and real war records, and adds no invented history to v10', () => {
+    const s = goalWorld();
+    const enemy = Object.values(s.clans).find((k) => !k.isPlayer && k.planetId === 'venus' && clanRegions(s, k.id).length)!;
+    expect(issueUltimatum(s, enemy.id, s.playerClanId, { kind: 'tribute', amount: 35, years: 4 })).toBe('pending');
+    const id = pendingUltimatum(s)!.id;
+    const imported = importSave(exportSave(s));
+    expect(imported.foreignPolicy).toEqual(s.foreignPolicy);
+    expect(answerUltimatum(imported, false, id)).toBe(true);
+    expect(imported.wars[0]?.goal).toEqual({ kind: 'tribute', amount: 35, years: 4 });
+    expect(imported.wars[0]?.target).toBe('');
+    const savedWar = importSave(exportSave(imported));
+    expect(savedWar.wars).toEqual(imported.wars);
+    const old = structuredClone(s);
+    old.version = 10;
+    delete old.foreignPolicy;
+    delete old.peaceTributes;
+    delete old.warJustifications;
+    const seed = old.seed;
+    migrate(old);
+    expect(old.foreignPolicy).toEqual({ ultimatums: [], heads: {} });
+    expect(old.peaceTributes).toEqual([]);
+    expect(old.warJustifications).toEqual([]);
+    expect(old.seed).toBe(seed);
+    expect(migrate(structuredClone(old))).toEqual(old);
+  });
   it('v9 invents no past and preserves existing calls, oaths and uncertain loan history', () => {
     const { s, war } = coalitionCampaign();
     s.version = 8;

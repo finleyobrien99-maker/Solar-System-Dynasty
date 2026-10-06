@@ -1,6 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { checkTargets, markdown, playRun, runsCsv, seriesCsv, type RunResult } from './balance';
 import { BOTS, type BotId } from './bots';
+import { createCharacter } from './character';
+import { ruler } from './core';
+import { goalWorld } from './warGoalScenarios';
 
 describe('balance harness', () => {
   const ids = Object.keys(BOTS) as BotId[];
@@ -23,9 +26,30 @@ describe('balance harness', () => {
 
   it('bots play to their strategy', () => {
     expect(runs.warmonger.battlesWon + runs.warmonger.battlesLost).toBeGreaterThan(0);
-    // Over a few worlds, not one: any single family can be unlucky.
-    const family = (bot: BotId) => [3, 4, 5].reduce((n, seed) => n + (seed === 3 ? runs[bot] : playRun(bot, seed, 40)).end.dynasty, 0);
-    expect(family('breeder')).toBeGreaterThan(family('passive'));
+    // Test the strategy's actual choices. Births and survival belong in the many-seed balance report.
+    const s = goalWorld(),
+      parent = ruler(s);
+    const children = [18, 19, 20].map((age) => {
+      const c = createCharacter(s, {
+        gender: 'M',
+        born: s.year - age,
+        clanId: s.playerClanId,
+        planetId: 'mars',
+        faithId: parent.faithId,
+        motherId: parent.id,
+        fatherId: parent.spouseId,
+        adultExtras: true,
+      });
+      parent.childrenIds.push(c.id);
+      return c.id;
+    });
+    const passive = structuredClone(s),
+      breeder = structuredClone(s);
+    BOTS.passive.turn(passive, { seed: 3 });
+    BOTS.breeder.turn(breeder, { seed: 3 });
+    const matched = (state: typeof s) => children.filter((id) => !!state.characters[id].spouseId || !!state.characters[id].betrothedId).length;
+    expect(matched(passive)).toBeLessThanOrEqual(1);
+    expect(matched(breeder)).toBe(3);
   });
 
   it('writes a report row per run and per sample', () => {

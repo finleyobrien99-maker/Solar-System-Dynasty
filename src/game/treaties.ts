@@ -39,6 +39,7 @@ import {
 import { truceOf } from './peace';
 import { REALM_SHARE, realmOf } from './realmDefence';
 import { regencyOf } from './regency';
+import { foreignPolicyTick, risingPower, stanceKind } from './foreignPolicy';
 import { chance, clamp } from './rng';
 import type { GameState } from './types';
 import { committedShips } from './warAid';
@@ -163,13 +164,20 @@ function hasDesigns(s: GameState, on: string, by: string): boolean {
 }
 
 /** A third house both have reason to fear: a threatening neighbour of both, one at war with either, or one both despise. */
-function commonThreat(s: GameState, x: string, y: string): string | undefined {
+function commonThreat(s: GameState, x: string, y: string, pacts?: Pacts): string | undefined {
   for (const z of Object.keys(s.clans)) {
     if (z === x || z === y || !clanRegions(s, z).length) continue;
     if (threatOf(s, z) >= 30 && neighbours(s, z, x) && neighbours(s, z, y)) return z;
+    if (risingPower(s, z) && neighbours(s, z, x) && neighbours(s, z, y)) return z;
     if (atWar(s, x, z) || atWar(s, y, z)) return z;
-    if (houseRelation(s, x, z).value <= -30 && houseRelation(s, y, z).value <= -30) return z;
+    if (houseRelation(s, x, z, pacts).value <= -30 && houseRelation(s, y, z, pacts).value <= -30) return z;
   }
+  return undefined;
+}
+
+/** A rising power next to both houses, if any: the cheap first question before commonThreat. */
+function risingThreat(s: GameState, x: string, y: string): string | undefined {
+  for (const z of Object.keys(s.clans)) if (z !== x && z !== y && risingPower(s, z) && neighbours(s, z, x) && neighbours(s, z, y)) return z;
   return undefined;
 }
 
@@ -199,7 +207,7 @@ export function treatyAcceptance(s: GameState, proposer: string, recipient: stri
       break;
     case 'defensive': {
       add('Base', -0.05);
-      const z = commonThreat(s, proposer, recipient);
+      const z = commonThreat(s, proposer, recipient, pacts);
       if (z) add(`Both fear House ${s.clans[z].name}`, 0.25);
       if (neighbours(s, proposer, recipient)) add('Neighbours', 0.05);
       if (rel < 10) add('Not close enough for a pact', -0.2);
@@ -232,6 +240,14 @@ export function treatyAcceptance(s: GameState, proposer: string, recipient: stri
       }
       break;
   }
+  const stance = stanceKind(s, recipient);
+  if (stance === 'honourable' && (terms.kind === 'defensive' || terms.kind === 'nonAggression')) add('Honourable: values a promise', 0.05);
+  if (stance === 'mercantile' && terms.kind === 'trade') add('Mercantile: lives by trade', 0.15);
+  if (stance === 'expansionist' && terms.kind === 'nonAggression') add('Wants a free hand', -0.15);
+  if (stance === 'planetFirst' && terms.kind !== 'trade' && s.clans[proposer].planetId !== s.clans[recipient].planetId) add('Distrusts outsiders', -0.1);
+  // A schemer happily signs a pact with a neighbour it means to betray. It looks keen; it says nothing of why.
+  if (stance === 'schemer' && terms.kind === 'nonAggression' && hasDesigns(s, proposer, recipient)) add('Keen to sign', 0.25);
+  if (risingPower(s, proposer) && terms.kind !== 'tribute' && !(terms.kind === 'guarantee' && terms.b === proposer)) add('Wary of your growing power', -0.15);
   add('How they regard you', rel / 150);
   if (trust) add(trust > 0 ? 'Trusts your word' : 'Remembers broken promises', trust / 250);
   if (has('paranoid')) add('Paranoid', -0.1);
@@ -253,6 +269,11 @@ function describe(s: GameState, t: TreatyTerms): string {
     default:
       return `${houseName(s, t.a)} and ${houseName(s, t.b)} sign a ${treatyName(t.kind).toLowerCase()}`;
   }
+}
+
+/** Record agreed terms (an accepted offer, or tribute exacted by an ultimatum). */
+export function signTreaty(s: GameState, terms: TreatyTerms): Treaty {
+  return sign(s, terms);
 }
 
 function sign(s: GameState, terms: TreatyTerms): Treaty {
@@ -367,7 +388,11 @@ export function treatyWarBlocker(s: GameState, attacker: string, defender: strin
 /** Whether an AI lord would even consider breaking promises to attack: deceit, or ambition with a temper. Pure. */
 export function mightBreakPromises(s: GameState, attacker: string): boolean {
   const h = headOf(s, attacker);
-  return !!h && attacker !== s.playerClanId && (hasTrait(h, 'deceitful') || (hasTrait(h, 'ambitious') && hasTrait(h, 'wrathful')));
+  return (
+    !!h &&
+    attacker !== s.playerClanId &&
+    (hasTrait(h, 'deceitful') || (hasTrait(h, 'ambitious') && hasTrait(h, 'wrathful')) || stanceKind(s, attacker) === 'schemer')
+  );
 }
 
 /**
@@ -385,7 +410,9 @@ export function aiResolvePromises(s: GameState, attacker: string, defender: stri
   if (hasTrait(h, 'ambitious')) p += 0.1;
   if (hasTrait(h, 'wrathful')) p += 0.05;
   if (houseRelation(s, attacker, defender).value <= -40) p += 0.1;
+  if (stanceKind(s, attacker) === 'schemer') p += 0.15;
   if (hasTrait(h, 'honest')) p = 0.01;
+  if (stanceKind(s, attacker) === 'honourable') p = 0.005;
   if (!chance(s, clamp(p, 0, 0.5))) return false;
   breakTreatiesForWar(s, attacker, defender);
   return true;
@@ -547,6 +574,7 @@ export function bestDeal(s: GameState, x: string, pacts: Pacts = pactMap(s)): Pl
   if (freeAdultHead(s, x) || treatiesOf(s, x).length >= MAX_TREATIES) return undefined;
   const head = headOf(s, x)!;
   const mx = Math.max(1, mightOf(s, x));
+  const stance = stanceKind(s, x);
   const plans: Plan[] = [];
   const consider = (to: string, terms: TreatyTerms, utility: number) => {
     if (utility >= 10 && !treatyBlocker(s, x, to, terms)) plans.push({ to, terms, utility });
@@ -559,9 +587,15 @@ export function bestDeal(s: GameState, x: string, pacts: Pacts = pactMap(s)): Pl
     const near = neighbours(s, x, y);
     // A realm already binds its houses to defend each other: pacts and guarantees are for houses of different realms.
     const apart = realmOf(s, x) !== realmOf(s, y);
-    if (near && rel >= -15 && my >= mx * 1.5) consider(y, termsFor(s, 'nonAggression', x, y), 10 * Math.min(3, my / mx) + rel / 5 - 5);
-    if (apart && rel >= 25 && commonThreat(s, x, y)) consider(y, termsFor(s, 'defensive', x, y), 15 + rel / 3);
-    if (rel >= 10 && s.clans[x].planetId !== s.clans[y].planetId) consider(y, termsFor(s, 'trade', x, y), 6 + rel / 5 + (hasTrait(head, 'greedy') ? 5 : 0));
+    if (near && rel >= -15 && my >= mx * 1.5)
+      consider(y, termsFor(s, 'nonAggression', x, y), (10 * Math.min(3, my / mx) + rel / 5 - 5) * (stance === 'expansionist' ? 0.5 : 1));
+    const giantNear = apart && rel >= 5 ? risingThreat(s, x, y) : undefined;
+    const threat = giantNear ?? (apart && rel >= 25 ? commonThreat(s, x, y, pacts) : undefined);
+    const giant = !!giantNear;
+    // Fear of a rising power draws even lukewarm neighbours together.
+    if (threat && rel >= (giant ? 5 : 25)) consider(y, termsFor(s, 'defensive', x, y), 15 + rel / 3 + (giant ? 10 : 0));
+    if (rel >= 10 && s.clans[x].planetId !== s.clans[y].planetId)
+      consider(y, termsFor(s, 'trade', x, y), 6 + rel / 5 + (hasTrait(head, 'greedy') ? 5 : 0) + (stance === 'mercantile' ? 6 : 0));
     if (apart && near && rel >= 20 && mx >= my * 2 && clanRegions(s, y).length <= 2)
       consider(y, termsFor(s, 'guarantee', x, y, x), 6 + rel / 5 + (hasTrait(head, 'ambitious') ? 3 : 0));
     if (near && my >= mx * 3 && houseRelation(s, y, x, pacts).value <= -20)
@@ -628,6 +662,7 @@ export function diplomacyTick(s: GameState): void {
   payments(s);
   d.proposals = d.proposals.filter((p) => p.expires > s.year && s.clans[p.from] && clanRegions(s, p.from).length);
   aiDiplomacy(s);
+  foreignPolicyTick(s);
   houseMemoriesTick(s);
 }
 

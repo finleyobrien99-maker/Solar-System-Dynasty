@@ -118,6 +118,7 @@ function emptyState(seed: number): GameState {
     successionCrises: [],
     truces: [],
     diplomacy: { treaties: [], proposals: [], memories: [], trust: {}, trustYear: {} },
+    foreignPolicy: { ultimatums: [], heads: {} },
     warWeariness: {},
     houseThreat: {},
     coalitions: [],

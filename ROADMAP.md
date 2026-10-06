@@ -8,6 +8,12 @@
 
 Live build: https://finleyobrien99-maker.github.io/Solar-System-Dynasty/ (deploys on every push to `main`).
 
+### 6 October 2026: diplomacy and war goals integrated locally
+
+Foreign policy through9831737 is merged with war lane d279db4. Save v11 now includes waiting ultimatums and treaty-review heads as well as exact goals, peace offers, obligations and one-use war justifications. Refusals can start only the demanded war; accepted extortion creates actual capped payments without protection. Houses shows public rivals alongside its treaty web and filters at390px. Captive pending answers are inert and expired warrants are cleaned up. Phone game rebuilt; no publication is part of this merge. Both original lane status/measurement sections below are retained.
+
+Combined80games (same20seeds ×150/all4 against65e16f3): Builder Sovereign25%→20%, Warmonger95%→90% (50% target still missed), Passive endings0%→5%, Breeder5%→5%. Events1.39/cycle,147distinct,noneover3%. Same large save AgeUp193.6→183.6ms with overlapping samples;100ms phone target unproven. No base economy or fleet retuning. Final full check957unit tests, all132desktop/phone browser tests and phone rebuild pass. All125frozen saves load/play/round-trip; no historical fixture changed. Exact wiring and measurements: WAR-GOALS-HANDOFF.md.
+
 ### 6 October 2026: exact war goals and peace (Wave 5, slice 3 — local integration candidate)
 
 Built locally from live `65e16f3`, not published. Houses may fight for a named region, tribute for N cycles, capped humiliation or liberation of a named direct vassal. Realm shows exact negotiated terms and explained acceptance odds; incoming offers wait for explicit consent and survive reload. Actual capped credits and prestige move between houses, land changes through setOwner, and surviving defenders return once. Wars from old saves retain their original settlement. Save v11 adds empty peace obligations and one-use refused-demand justifications; 24 frozen v11 fixtures include all goals, incoming terms and actual tribute.
@@ -15,6 +21,35 @@ Built locally from live `65e16f3`, not published. Houses may fight for a named r
 Houses exposes public AI–AI treaty links, protection direction, reciprocal marriages and recorded feuds at desktop and 390px, with planet/faith filters. Claude's policy/rival adapter and pending ultimatum migration are integration work described in WAR-GOALS-HANDOFF.md. The war lane reviews capped treaty payments, atomic declaration costs, current pact eligibility and the same existing conquest price for AI and player.
 
 Same20 seeds ×150/all4 against65e16f3: Builder Sovereign **25% →10%**, Warmonger **95% →95%** (50% target still missed), Passive endings by100 **0% →0%**, Breeder **5% →5%**. No base economy or fleet retuning. Measure the combined policy engine separately. Validation: full check (913 unit tests), all 124 desktop/390px browser checks and the embedded phone rebuild pass. No historical fixture was changed.
+
+### 6 October 2026: houses with a foreign policy (Wave 5, slice 3, Claude's half; built locally, not released)
+
+Every AI house now has a foreign policy, read from its lord:
+- **Seven stances.** The lord's traits and stated ambition make a house expansionist, honourable, planet first, zealous, mercantile, a schemer or cautious, and a new lord can turn it around. Stances change which treaties a house wants and accepts, and how readily it breaks its word: an honourable lord all but never does.
+- **The balance of power.** A house with 2.5× the typical fleet is a *rising power*, you included. Its neighbours fear it (−10), grow warier of its offers and sign defensive pacts with each other against it.
+- **Ultimatums.** Expansionist lords who clearly outgun a neighbour, counting that neighbour's sworn treaty defenders, demand a region or tribute. AI targets weigh explained odds. You get *An Ultimatum*; a regent answers for a child. You can make the same demands from a house's profile.
+- **Rivals.** Every house names up to three it is publicly set against, with reasons. Private knowledge never shows.
+- **Envoys at Court** now interrupts you at most once every 6 cycles; other offers wait in Realm.
+
+A refusal is remembered. The war over exactly the refused demand comes with Codex's war goals (`declareWithGoal`, `s.warJustifications`), never as a war over some other target. Pending ultimatums need save v11 (Codex's). Handoff: FOREIGN-POLICY-HANDOFF.md.
+
+| Measured: same 20 seeds × 150, against the live `65e16f3` | Before | After |
+|---|---|---|
+| Builder Sovereign | 25% | 20% |
+| Warmonger Sovereign | 95% | 90% |
+| Passive endings by 100 | 0% | 5% (back in the 5–15% band) |
+| Breeder endings by 100 | 5% | 5% |
+
+AI houses sign about 100–130 treaties per game. 143 distinct events fire, none over 3%: Envoys at Court 2.3%, An Ultimatum 0.4%. Checks: 860 unit tests and 120 browser tests at 1280px and 390px pass. Age Up on the same 10k state is unchanged (160–163 ms against 158–164 ms).
+
+**Second local commit:**
+- A new lord reviews the old lord's treaties and may repudiate some, for stated reasons. That costs the partner's trust and a memory, but it is no breach. You may do the same in the first 5 cycles of a reign.
+- Houses plot against those they have quarrelled with, and sabotage a rising power next door.
+- Three new events: *A Border Incident*, *The Neighbours Confer* and *A Defector*.
+- Codex entries for treaties and foreign policy.
+- Codex's review fixes: a captive ruler cannot repudiate or make demands, and the defector's raid is now ordinary covert sabotage.
+
+Measured: Builder Sovereign 30%, Warmonger 85%, Passive endings 0% (one game in twenty), 145 distinct events with none over 3%. AI assassinations are unchanged (33 → 35 in 20 games) and sabotage is up 60%. Age Up is unchanged. Checks: 878 unit tests and 122 browser tests pass.
 
 ### 6 October 2026: houses deal with each other (Wave 5, slice 2)
 

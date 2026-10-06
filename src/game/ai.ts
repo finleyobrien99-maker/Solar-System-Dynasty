@@ -270,7 +270,7 @@ export function declareHouseWar(s: GameState, attackerId: string, regionId: stri
   const friends = [...(pacts.get(defender.id) ?? [])].filter((id) => id !== attackerId && !pacts.get(id)?.has(attackerId)).map((id) => s.clans[id].name);
   if (friends.length) log(s, `House ${defender.name}'s kin by marriage (${friends.map((n) => `House ${n}`).join(', ')}) send ships to defend them.`, 'news');
   // The defender's realm answers first; its helpers are then not asked again by a league.
-  Object.assign(war, callRealm(s, war.id, attackerId, defender.id, regionId, 'conquest'));
+  Object.assign(war, callRealm(s, war.id, attackerId, defender.id, regionId, war.cb ?? 'conquest'));
   war.coalition = coalitionCall(s, attackerId, defender.id, realmHelpers(war));
   return true;
 }
