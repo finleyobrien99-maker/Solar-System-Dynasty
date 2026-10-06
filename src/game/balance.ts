@@ -2,6 +2,8 @@
 // bots and measure how the game actually plays. Pure engine code; the CLI in
 // scripts/balance.ts runs it and writes the reports.
 
+import { unitedUntil } from './realmDefence';
+import type { RealmCallAnswer } from './diplomacyTypes';
 import { BOTS, answerPending, type BotId } from './bots';
 import { ageOf, clanRank, dynastyMembers } from './core';
 import { bloodlineScore } from './genetics';
@@ -42,7 +44,7 @@ export interface RunResult {
   deaths: Record<string, number>; // causes of death in the dynasty
   events: Record<string, number>; // event id -> times answered
   /** Realm calls in every war of the run, AI wars included (realmDefence.ts): answers by kind, counted once per war. */
-  realm: { accepted: number; refused: number; blocked: number; pending: number };
+  realm: { accepted: number; refused: number; blocked: number; pending: number; unities: number };
 }
 
 const GRADES = ['-', 'F', 'D', 'C', 'B', 'A', 'S'];
@@ -77,13 +79,25 @@ export function playRun(bot: BotId, seed: number, cycles: number, every = 10): R
   const onEvent = (id: string) => (events[id] = (events[id] ?? 0) + 1);
   const reached: RunResult['reached'] = {};
   const samples = [sample(s, 0)];
-  const realm: RunResult['realm'] = { accepted: 0, refused: 0, blocked: 0, pending: 0 };
-  const counted = new Set<string>();
+  const realm: RunResult['realm'] = { accepted: 0, refused: 0, blocked: 0, pending: 0, unities: 0 };
+  const counted = new Map<string, RealmCallAnswer['answer']>();
+  const unitySeen = new Map<string, number>();
   const countRealm = () => {
-    for (const w of [...s.wars, ...s.aiWars]) {
-      if (counted.has(w.id) || !w.realmCalls) continue;
-      counted.add(w.id);
-      for (const a of w.realmCalls) realm[a.answer]++;
+    for (const w of [...s.wars, ...s.aiWars])
+      for (const a of w.realmCalls ?? []) {
+        const key = w.id + ':' + a.clanId,
+          old = counted.get(key);
+        if (old === a.answer) continue;
+        if (old) realm[old]--;
+        realm[a.answer]++;
+        counted.set(key, a.answer);
+      }
+    for (const p of PLANETS) {
+      const until = unitedUntil(s, p.id);
+      if (until !== undefined && unitySeen.get(p.id) !== until) {
+        realm.unities++;
+        unitySeen.set(p.id, until);
+      }
     }
   };
   let cycle = 0;
@@ -93,6 +107,7 @@ export function playRun(bot: BotId, seed: number, cycles: number, every = 10): R
     BOTS[bot].turn(s, rng);
     countRealm();
     answerPending(s, rng, onEvent);
+    countRealm();
     ageUp(s);
     countRealm();
     cycle++;
@@ -101,6 +116,7 @@ export function playRun(bot: BotId, seed: number, cycles: number, every = 10): R
     if (cycle % every === 0) samples.push(sample(s, cycle));
   }
   if (!s.gameOver) answerPending(s, rng, onEvent);
+  countRealm();
 
   const rulerChars = s.dynasty.rulers.map((r) => ({ r, c: s.characters[r.id] }));
   const reigns = s.dynasty.rulers.filter((r) => r.to !== undefined).map((r) => r.to! - r.from);
@@ -194,6 +210,7 @@ export interface BotSummary {
   topEventShare: number;
   /** Mean realm answers per run: accepted / refused / blocked. */
   realmCalls: string;
+  unitedWorlds: number;
 }
 
 export function summariseBot(bot: BotId, runs: RunResult[]): BotSummary {
@@ -214,6 +231,7 @@ export function summariseBot(bot: BotId, runs: RunResult[]): BotSummary {
     avgReign: mean(runs.map((r) => r.avgReign).filter(Boolean)),
     avgRulerLifespan: mean(runs.map((r) => r.avgRulerLifespan).filter(Boolean)),
     battlesWon: median(runs.map((r) => r.battlesWon)),
+    unitedWorlds: mean(runs.map((r) => r.realm?.unities ?? 0)),
     realmCalls: (['accepted', 'refused', 'blocked'] as const).map((k) => mean(runs.map((r) => r.realm?.[k] ?? 0))).join(' / '),
     battlesLost: median(runs.map((r) => r.battlesLost)),
     gradeAt50: medianGrade(runs.flatMap((r) => at(r, 50)?.grade ?? [])),
@@ -458,6 +476,7 @@ export function markdown(runs: RunResult[], cycles: number): string {
   row('Events per cycle', (x) => x.eventsPerCycle);
   row('Most common event', (x) => `${x.topEvent} (${n(x.topEventShare)}%)`);
   row('Realm calls answered / refused / blocked (mean)', (x) => x.realmCalls);
+  row('Worlds united after actual foreign conquest (mean)', (x) => x.unitedWorlds);
 
   const deaths: Record<string, number> = {};
   for (const r of runs) for (const [k, v] of Object.entries(r.deaths)) deaths[k] = (deaths[k] ?? 0) + v;

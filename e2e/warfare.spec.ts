@@ -106,7 +106,7 @@ test('explicit player pledge lends real ships, survives reload and withdrawal re
   });
   await page.getByRole('tab', { name: /^Realm/ }).click();
   const fleet = page.locator('.section').filter({ has: page.getByRole('heading', { name: /^Fleet(?: More|$)/ }) });
-  await expect(fleet).toContainText('50 committed to coalition defence');
+  await expect(fleet).toContainText('50 committed to defence');
   await league.getByRole('button', { name: 'Withdraw pledge and recall ships', exact: true }).click();
   await league.getByRole('button', { name: 'Tap again to withdraw your pledge', exact: true }).click();
   await expect(fleet).toContainText('100 ships at home');

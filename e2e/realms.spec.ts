@@ -1,4 +1,6 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { inflateString } from '../src/game/codec';
+import { declareWar } from '../src/game/war';
 import { declareHouseWar } from '../src/game/ai';
 import { ch, clanRegions } from '../src/game/core';
 import { EVENT_BY_ID, queueEvent } from '../src/game/events';
@@ -130,4 +132,75 @@ test('your realm calls you, and the ships you send show as a realm duty', async 
   await duties.scrollIntoViewIfNeeded();
   await shot(page, info, 'realm-duties');
   await healthy(page, failures);
+});
+
+async function stored(page: Page): Promise<GameState> {
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('solar-dynasty:auto'))).not.toBeNull();
+  const raw = await page.evaluate(() => localStorage.getItem('solar-dynasty:auto'));
+  expect(raw).toBeTruthy();
+  const envelope = JSON.parse(raw!);
+  expect(envelope.z).toBe('df');
+  const data = inflateString(envelope.data);
+  expect(hashString(data)).toBe(envelope.checksum);
+  return JSON.parse(data);
+}
+test('realm casualties retain their own identity and profiles through a battle and reload', async ({ page }, info) => {
+  const errors = watch(page),
+    s = world(),
+    d = vassal(s, 'neptune');
+  expect(declareWar(s, clanRegions(s, d.id)[0].id, 'conquest')).toBe(true);
+  s.pending = [];
+  await load(page, s);
+  await page.getByRole('tab', { name: /^Realm/ }).click();
+  await page.getByRole('button', { name: 'Launch battle', exact: true }).click();
+  const report = page.getByRole('dialog', { name: /Victory in Battle|Defeat in Battle/ });
+  const losses = report.getByLabel('Realm casualties');
+  await expect(losses).toContainText('Realm defenders');
+  await expect(report).toContainText('own-house ships');
+  await expect.poll(async () => (await stored(page)).pending.some((p) => p.kind === 'battle')).toBe(true);
+  const text = await losses.innerText(),
+    saved = await stored(page);
+  const battle = saved.pending.find((p) => p.kind === 'battle')!;
+  if (battle.kind !== 'battle') throw new Error('No saved battle');
+  expect(battle.report.realmLosses?.map((p) => p.clanId).sort()).toEqual(s.wars[0].realmAid!.map((p) => p.clanId).sort());
+  expect(battle.report.coalitionLosses).toEqual([]);
+  const lost = battle.report.realmLosses!.reduce((n, p) => n + p.losses, 0);
+  expect(saved.wars[0].realmAid!.reduce((n, p) => n + p.lost!, 0)).toBe(lost);
+  await shot(page, info, 'realm-battle');
+  await losses.getByRole('button').first().click();
+  await expect(report).toHaveCount(0);
+  await page.getByRole('dialog').last().getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(losses).toHaveText(text, { useInnerText: true });
+  await page.reload();
+  await page.getByRole('button', { name: /^Continue:/ }).click();
+  await expect(losses).toHaveText(text, { useInnerText: true });
+  await healthy(page, errors);
+});
+test('a stale realm letter can be cleared without ships, grudges or a new answer', async ({ page }, info) => {
+  const errors = watch(page),
+    s = world(),
+    d = vassal(s, 'mars'),
+    a = vassal(s, 'venus');
+  expect(declareHouseWar(s, a.id, clanRegions(s, d.id)[0].id)).toBe(true);
+  s.pending = [];
+  expect(queueEvent(s, EVENT_BY_ID.realm_call)).toBe(true);
+  s.clans[s.playerClanId].liege = 'none';
+  const seed = s.seed,
+    relations = structuredClone(s.relations);
+  await load(page, s);
+  const call = page.locator('.overlay').last();
+  await expect(call).toContainText('This call has passed');
+  await expect(call.getByRole('button', { name: /^Send half the fleet/ })).toBeDisabled();
+  await call.getByRole('button', { name: /^Stay home/ }).click();
+  await expect(call).toContainText('No refusal or grievance is recorded');
+  await shot(page, info, 'realm-stale-letter');
+  await call.getByRole('button', { name: /^Continue/ }).click();
+  await expect.poll(async () => (await stored(page)).pending.length).toBe(0);
+  const saved = await stored(page);
+  expect(saved.version).toBe(9);
+  expect(saved.fleet).toBe(120);
+  expect(saved.seed).toBe(seed);
+  expect(saved.relations).toEqual(relations);
+  expect(saved.aiWars[0].realmAid!.some((p) => p.clanId === s.playerClanId)).toBe(false);
+  await healthy(page, errors);
 });

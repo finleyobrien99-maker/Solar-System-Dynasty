@@ -62,12 +62,22 @@ export function randomSigil(s: Seeded, primary?: string): SigilSpec {
   return { shape: int(s, 0, 4), division: int(s, 0, 6), charge: int(s, 0, SIGIL_CHARGES - 1), c1, c2, c3 };
 }
 
+/**
+ * How far a house's fleet target closes the gap between its old peacetime levy and
+ * the cap you would have with the same lands (economy.ts fleetCap). Fin chose 0.4
+ * (AI-GROWTH-OPTIONS.md): Builder Sovereign by 150 fell from 80% to 25% in the
+ * harness, with passive survival still in band. AI ships are still free to build.
+ */
+export const AI_FLEET_PARITY = 0.4;
+
 export function fleetTarget(s: GameState, clanId: string): number {
   const regions = clanRegions(s, clanId);
   if (!regions.length) return 0;
   const devs = regions.reduce((a, r) => a + r.dev, 0);
   const rank = clanRank(s, clanId);
-  return Math.round(18 + regions.length * 16 + devs * 2.5 + (rank >= 3 ? 40 : 0) + vassalsOf(s, clanId).length * 5);
+  const levy = 18 + regions.length * 16 + devs * 2.5 + (rank >= 3 ? 40 : 0) + vassalsOf(s, clanId).length * 5;
+  const cap = 60 + regions.length * 35 + rank * 40;
+  return Math.round(levy + AI_FLEET_PARITY * Math.max(0, cap - levy));
 }
 
 function emptyState(seed: number): GameState {

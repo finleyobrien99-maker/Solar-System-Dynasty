@@ -1,5 +1,7 @@
 import { coalitionCall, recordExpansion } from './coalitions';
 import { aidBattleNotes, aidStrength, aidLosses, aidTruces, committedShips, recallAid, releaseAid, snapshotAid, warContributions } from './warAid';
+import { regencyOf } from './regency';
+import { realmPeaceBlocker } from './realmDefence';
 import { chooseAiSiege, performSiege } from './siege';
 import { recordMurder } from './secrets';
 import { breakPeace, isCloseKin, recordDeed } from './epithets';
@@ -200,6 +202,7 @@ export function declareHouseWar(s: GameState, attackerId: string, regionId: stri
   if (
     !alive(lord) ||
     lord.prisonerOf ||
+    !!regencyOf(s, attackerId) ||
     s.year - lord.born < 16 ||
     !clanRegions(s, attackerId).length ||
     committedShips(s, attackerId) ||
@@ -210,6 +213,7 @@ export function declareHouseWar(s: GameState, attackerId: string, regionId: stri
   const pacts = pactMap(s),
     kin = pacts.get(attackerId);
   if (kin?.has(defender.id) && !wouldBetray(s, lord, theirs)) return false;
+  if (realmPeaceBlocker(s, attackerId, defender.id, regionId)) return false;
   const oath = !!truceOf(s, attackerId, defender.id);
   if (oath && (!breakOath || !breakTruce(s, attackerId, defender.id))) return false;
   recallAid(s, defender.id);
@@ -297,7 +301,11 @@ export function tickAiWars(s: GameState): void {
           danger: 0.5,
         });
         for (const f of fates) if (f.died || f.captured) log(s, f.note, 'news');
-        for (const note of aidBattleNotes(s, aidSnapshot, a.id, attWins, helperLosses, 0.5)) log(s, note, 'news');
+        for (const note of aidBattleNotes(s, aidSnapshot, a.id, attWins, helperLosses, 0.5, {
+          commanderIds: new Set([ac, dc].filter((id): id is string => !!id)),
+          rulerIds: new Set([attackerRuler, defenderRuler]),
+        }))
+          log(s, note, 'news');
         if (order === 'assault')
           w.siege = {
             kind: order,
@@ -500,6 +508,7 @@ export function prune(s: GameState): void {
   for (const clan of Object.values(s.clans)) keep.add(clan.headId);
   for (const w of [...s.wars, ...s.aiWars]) {
     if (w.siege?.leaderId) keep.add(w.siege.leaderId);
+    for (const answer of w.realmCalls ?? []) if (answer.rulerId) keep.add(answer.rulerId);
     for (const p of warContributions(w)) if (p.commanderId) keep.add(p.commanderId);
   }
   for (const p of s.pending)

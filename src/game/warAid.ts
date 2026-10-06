@@ -59,13 +59,14 @@ export function committedShips(s: AidLedger, clanId: string): number {
 export function reserveAid(s: GameState, clanId: string, ships: number): FleetContribution | undefined {
   if (!s.clans[clanId] || !Number.isInteger(ships) || ships <= 0 || ships > homeFleet(s, clanId)) return undefined;
   setHomeFleet(s, clanId, homeFleet(s, clanId) - ships);
-  return { clanId, ships, sent: ships, commanderId: commanderOf(s, clanId)?.id };
+  return { clanId, ships, sent: ships, lost: 0, returned: 0, commanderId: commanderOf(s, clanId)?.id };
 }
 
 /** Return survivors once. The original sent count remains available for history and peace participants. */
 export function releaseAid(s: GameState, list: readonly FleetContribution[]): void {
   for (const p of list) {
     if (p.ships > 0 && s.clans[p.clanId]) setHomeFleet(s, p.clanId, homeFleet(s, p.clanId) + p.ships);
+    if (p.returned !== undefined) p.returned += p.ships;
     p.ships = 0;
   }
 }
@@ -88,6 +89,7 @@ export function aidLosses(s: GameState, list: readonly FleetContribution[], rate
     if (ships <= 0) continue;
     const losses = Math.min(ships, Math.round(ships * clamp(rate, 0, 1)));
     p.ships -= losses;
+    if (p.lost !== undefined) p.lost += losses;
     const row = byHouse.get(p.clanId) ?? { clanId: p.clanId, ships: 0, losses: 0 };
     row.ships += ships;
     row.losses += losses;
@@ -171,4 +173,17 @@ export function aidBattleNotes(
     );
   }
   return notes;
+}
+
+/** Pure report for one aid pool after the combined physical debit. */
+export function aidCasualties(snapshot: readonly AidSnapshot[], pool: readonly FleetContribution[]): AidCasualty[] {
+  const rows = new Map<string, AidCasualty>();
+  for (const before of snapshot) {
+    if (!pool.includes(before.contribution)) continue;
+    const row = rows.get(before.clanId) ?? { clanId: before.clanId, ships: 0, losses: 0 };
+    row.ships += before.ships;
+    row.losses += before.ships - before.contribution.ships;
+    rows.set(before.clanId, row);
+  }
+  return [...rows.values()];
 }

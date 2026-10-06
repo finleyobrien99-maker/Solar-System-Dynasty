@@ -1,10 +1,12 @@
 import { coalitionCall, recordExpansion } from './coalitions';
-import { answerRealmCall, realmCall, recordPlanetConquest } from './realmDefence';
+import { answerRealmCall, realmCall, recordPlanetConquest, realmPeaceBlocker } from './realmDefence';
+import { regencyOf } from './regency';
 import type { RealmCallAnswer } from './diplomacyTypes';
 import {
   homeFleet,
   reserveAid,
   aidBattleNotes,
+  aidCasualties,
   aidStrength,
   aidLosses,
   aidTruces,
@@ -89,7 +91,7 @@ export function cbOptions(s: GameState, region: Region): CBOption[] {
 export function warBlocker(s: GameState, region: Region, breakOath = false): string | null {
   if (s.gameOver) return 'The dynasty has ended.';
   if (region.owner === s.playerClanId) return 'You already hold this region.';
-  if (committedShips(s, s.playerClanId)) return 'Recall your coalition ships before starting another war.';
+  if (committedShips(s, s.playerClanId)) return 'Recall your committed ships before starting another war.';
   if (s.wars.length >= 3) return 'You are already fighting three wars.';
   if (atWarWith(s, region.owner)) return 'Already at war with this clan.';
   const r = ruler(s);
@@ -97,6 +99,8 @@ export function warBlocker(s: GameState, region: Region, breakOath = false): str
   if (s.year - r.born < 16 || regentHolding(s)) return 'A regency cannot declare war.';
   const enemy = s.clans[region.owner];
   if (!enemy) return 'Nobody holds this region.';
+  const protection = realmPeaceBlocker(s, s.playerClanId, enemy.id, region.id);
+  if (protection) return protection;
   const truce = truceOf(s, s.playerClanId, enemy.id);
   if (truce) return breakOath ? truceBreakBlocker(s, s.playerClanId, enemy.id) : `You swore a truce with House ${enemy.name} until ${truce.until}.`;
   return null;
@@ -168,9 +172,11 @@ export function aiDeclareWar(s: GameState, enemyId: string, cb: CasusBelli, targ
   if (s.gameOver || atWarWith(s, enemyId) || s.wars.length >= 3 || committedShips(s, enemyId)) return false;
   const enemy = s.clans[enemyId],
     head = ch(s, enemy?.headId);
-  if (!enemy || enemy.isPlayer || !alive(head) || head.prisonerOf || s.year - head.born < 16 || !clanRegions(s, enemyId).length) return false;
+  if (!enemy || enemy.isPlayer || !alive(head) || head.prisonerOf || regencyOf(s, enemyId) || s.year - head.born < 16 || !clanRegions(s, enemyId).length)
+    return false;
   const target = s.regions[targetRegionId];
   if (!target || target.owner !== s.playerClanId || (cb === 'revolt' && liegeOf(s, enemyId) !== s.playerClanId)) return false;
+  if (realmPeaceBlocker(s, enemyId, s.playerClanId, targetRegionId, cb)) return false;
   if (truceOf(s, enemyId, s.playerClanId) && (!breakOath || !breakTruce(s, enemyId, s.playerClanId))) return false;
   recallAid(s, s.playerClanId);
   const war: War = { id: newId(s, 'w'), enemy: enemyId, playerAttacker: false, target: targetRegionId, cb, score: 0, started: s.year, coalition: [] };
@@ -203,6 +209,8 @@ export function callRealm(
   regionId: string,
   cb: CasusBelli,
 ): { realmCalls: RealmCallAnswer[]; realmAid: FleetContribution[] } {
+  const existing = [...s.wars, ...s.aiWars].find((w) => w.id === warId);
+  if (existing?.realmCalls !== undefined) return { realmCalls: existing.realmCalls, realmAid: existing.realmAid ?? [] };
   const realmCalls = realmCall(s, { warId, attackerId, defenderId, regionId, cb });
   const realmAid: FleetContribution[] = [];
   for (const a of realmCalls) {
@@ -410,7 +418,12 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
     defenderShips: aiInitiated ? ownShips : theirShips,
     defenderLosses: aiInitiated ? playerLosses : enemyLosses,
   });
-  fateNotes.push(...aidBattleNotes(s, aidSnapshot, war.playerAttacker ? s.playerClanId : enemy.id, war.playerAttacker ? won : !won, helperLosses));
+  fateNotes.push(
+    ...aidBattleNotes(s, aidSnapshot, war.playerAttacker ? s.playerClanId : enemy.id, war.playerAttacker ? won : !won, helperLosses, 1, {
+      commanderIds: new Set([personal ? actorId : ownCommander, theirCommander].filter((id): id is string => !!id)),
+      rulerIds: new Set([actorId, enemyActorId]),
+    }),
+  );
   if (fateNotes.length) note = [note, ...fateNotes].filter(Boolean).join(' ');
 
   const report: BattleReport = {
@@ -428,7 +441,8 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
     personal,
     playerCommanderId: personal ? actorId : ownCommander,
     enemyCommanderId: theirCommander,
-    coalitionLosses: helperLosses,
+    coalitionLosses: aidCasualties(aidSnapshot, war.coalition ?? []),
+    realmLosses: aidCasualties(aidSnapshot, war.realmAid ?? []),
     note,
   };
   s.pending.push({ kind: 'battle', uid: newId(s, 'b'), report });

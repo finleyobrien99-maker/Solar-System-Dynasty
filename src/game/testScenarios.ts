@@ -1,6 +1,6 @@
 import { coalitionsTick } from './coalitions';
 // Test data built through actual engine actions; never imported by the app.
-import { declareWar, fightBattle } from './war';
+import { declareWar, fightBattle, warBlocker } from './war';
 import { createCharacter } from './character';
 import { alive, ch, clanRank, clanRegions } from './core';
 import { killCharacter } from './life';
@@ -95,6 +95,7 @@ export function coalitionCampaign() {
       (r) =>
         !r.capital &&
         r.owner !== s.playerClanId &&
+        !warBlocker(s, r) &&
         !s.truces.some((t) => (t.a === r.owner || t.b === r.owner) && t.until > s.year) &&
         alive(ch(s, s.clans[r.owner]?.headId)) &&
         !ch(s, s.clans[r.owner]?.headId)?.prisonerOf,
@@ -112,6 +113,7 @@ export function coalitionCampaign() {
   const target = Object.values(s.regions).find(
     (r) =>
       r.owner !== s.playerClanId &&
+      !warBlocker(s, r) &&
       !s.truces.some((t) => (t.a === r.owner || t.b === r.owner) && t.until > s.year) &&
       alive(ch(s, s.clans[r.owner]?.headId)) &&
       !ch(s, s.clans[r.owner]?.headId)?.prisonerOf,

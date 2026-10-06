@@ -228,6 +228,13 @@ export class NewerSaveError extends Error {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MIGRATIONS: Record<number, (s: any) => void> = {
+  // Existing wars keep their real loans; old wars receive no invented calls or casualties.
+  9: (s) => {
+    for (const w of [...(s.wars ?? []), ...(s.aiWars ?? [])]) {
+      w.realmAid ??= [];
+      w.realmCalls ??= [];
+    }
+  },
   // Fear and defence pledges begin with future conquests, not invented history.
   8: (s) => {
     s.houseThreat ??= {};
