@@ -1,0 +1,392 @@
+import { describe, expect, it } from 'vitest';
+import { ch, clanRegions, setOwner } from './core';
+import type { TreatyTerms } from './diplomacyTypes';
+import { buildCtx, EVENT_BY_ID, queueEvent } from './events';
+import { ENVOY_GAP } from './eventsDiplomacy';
+import {
+  answerUltimatum,
+  defendedMight,
+  demandableRegion,
+  fearedNeighbour,
+  foreignPolicyOf,
+  issueUltimatum,
+  migrateForeignPolicy,
+  pendingUltimatum,
+  risingPower,
+  rivalsOf,
+  stanceOf,
+  ultimatumAcceptance,
+  ultimatumBlocker,
+  ultimatumTarget,
+  type WithForeignPolicy,
+} from './foreignPolicy';
+import { houseRelation, migrateDiplomacy, rememberHouse } from './houseRelations';
+import { realmOf } from './realmDefence';
+import { aiResolvePromises, bestDeal, proposeTreaty, termsFor, treatyBetween } from './treaties';
+import type { Clan, GameState, Pending } from './types';
+import { createWorld, rollRuler, scenarioHouses, startGame } from './world';
+
+type Pend = Extract<Pending, { kind: 'event' }>;
+const PERSONAL = [
+  'brave',
+  'craven',
+  'wrathful',
+  'honest',
+  'deceitful',
+  'greedy',
+  'arrogant',
+  'ambitious',
+  'paranoid',
+  'just',
+  'content',
+  'shy',
+  'zealous',
+  'diligent',
+];
+
+/** You govern on Mars; every landed AI ruler is a free adult with 100 ships and no strong leanings. */
+function world(seed = 61): GameState {
+  const s = createWorld(seed);
+  const home = scenarioHouses(s, 'mars', 'governor')[0];
+  startGame(s, { clanId: home.id, ruler: rollRuler(seed, 'mars', 'F', 'Asha'), focus: 'dip', age: 40, family: 'married' });
+  Object.assign(s, { credits: 5000, prestige: 1000, fleet: 120, pending: [] });
+  for (const k of Object.values(s.clans)) {
+    if (k.isPlayer) continue;
+    const head = ch(s, k.headId);
+    if (head) {
+      head.born = Math.min(head.born, s.year - 35);
+      head.prisonerOf = undefined;
+      head.traits = head.traits.filter((t) => !PERSONAL.includes(t));
+    }
+    k.fleet = 100;
+    k.allied = false;
+    k.liege = 'none';
+  }
+  migrateDiplomacy(s);
+  migrateForeignPolicy(s);
+  return s;
+}
+/** Give yourself a second Mars region, so one can be demanded of you. */
+function secondRegion(s: GameState, not: string) {
+  if (clanRegions(s, s.playerClanId).length >= 2) return;
+  const extra = Object.values(s.regions).find((r) => r.planetId === 'mars' && !r.capital && r.owner !== s.playerClanId && r.owner !== not)!;
+  setOwner(s, extra, s.playerClanId);
+}
+const visible = (def: (typeof EVENT_BY_ID)[string], ctx: ReturnType<typeof buildCtx>) => def.choices.filter((c) => !c.show || c.show(ctx)).map((c) => c.label);
+/** A landed AI house of the planet with at least two regions (so one can be demanded). */
+function on(s: GameState, planet: string, skip: string[] = []): Clan {
+  return Object.values(s.clans).find((k) => !k.isPlayer && k.planetId === planet && clanRegions(s, k.id).length >= 2 && !skip.includes(k.id))!;
+}
+function lord(s: GameState, k: Clan, ...traits: string[]) {
+  ch(s, k.headId)!.traits.push(...traits);
+}
+function sign(s: GameState, terms: TreatyTerms) {
+  s.diplomacy!.treaties.push({ ...terms, id: 'tf' + s.diplomacy!.treaties.length, signed: s.year, until: s.year + terms.years });
+}
+/** A bully and a victim on the same world, the bully ambitious, wrathful and four times stronger. */
+function bully(s: GameState) {
+  const big = on(s, 'venus');
+  const small = on(s, 'venus', [big.id]);
+  big.fleet = 400;
+  lord(s, big, 'ambitious', 'wrathful');
+  return { big, small };
+}
+
+describe('stances', () => {
+  it('a house’s stance comes from its lord, with reasons; you have none', () => {
+    const s = world();
+    const k = on(s, 'venus');
+    expect(stanceOf(s, k.id)?.kind).toBe('cautious');
+    lord(s, k, 'ambitious', 'wrathful');
+    expect(stanceOf(s, k.id)).toMatchObject({ kind: 'expansionist' });
+    expect(stanceOf(s, k.id)!.reasons.map((r) => r.label)).toEqual(expect.arrayContaining(['Ambitious', 'Wrathful']));
+    const m = on(s, 'earth');
+    lord(s, m, 'greedy');
+    expect(stanceOf(s, m.id)?.kind).toBe('mercantile');
+    expect(stanceOf(s, s.playerClanId)).toBeUndefined();
+  });
+
+  it('an honourable lord all but never breaks a pact to attack', () => {
+    let broke = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+      const s = world();
+      const a = on(s, 'venus');
+      const d = on(s, 'earth');
+      lord(s, a, 'honest', 'just');
+      sign(s, termsFor(s, 'nonAggression', a.id, d.id));
+      s.seed = seed;
+      if (aiResolvePromises(s, a.id, d.id)) broke++;
+    }
+    expect(stanceOf(world(), on(world(), 'venus').id)).toBeTruthy();
+    expect(broke).toBeLessThanOrEqual(4);
+  });
+});
+
+describe('the balance of power', () => {
+  it('a house far stronger than the rest is a rising power its neighbours fear', () => {
+    const s = world();
+    const { big } = bully(s);
+    expect(risingPower(s, big.id)).toBe(true);
+    const neighbour = on(s, 'venus', [big.id]);
+    expect(fearedNeighbour(s, neighbour.id)).toBe(big.id);
+    expect(houseRelation(s, neighbour.id, big.id).reasons.some((r) => r.label === 'Fears their growing power')).toBe(true);
+  });
+
+  it('neighbours of a rising power look for a defensive pact with each other', () => {
+    const s = world();
+    const { big } = bully(s);
+    const pair = Object.values(s.clans).filter((k) => !k.isPlayer && k.id !== big.id && k.planetId === 'venus' && clanRegions(s, k.id).length);
+    const deals = pair.map((k) => bestDeal(s, k.id)).filter(Boolean);
+    expect(deals.some((d) => d!.terms.kind === 'defensive')).toBe(true);
+  });
+
+  it('reading stances, power and demands changes nothing', () => {
+    const s = world();
+    const { big, small } = bully(s);
+    const before = JSON.stringify(s);
+    stanceOf(s, big.id);
+    risingPower(s, big.id);
+    ultimatumTarget(s, big.id);
+    ultimatumAcceptance(s, big.id, small.id, { kind: 'tribute', amount: 30, years: 10 });
+    pendingUltimatum(s);
+    expect(JSON.stringify(s)).toBe(before);
+  });
+});
+
+describe('ultimatums', () => {
+  it('an expansionist bully picks a weak neighbour; a neighbour with a strong treaty partner is spared', () => {
+    const s = world();
+    const { big, small } = bully(s);
+    expect(ultimatumTarget(s, big.id)?.to).toBeTruthy();
+    for (const k of Object.values(s.clans)) if (k.id !== big.id && k.planetId === 'venus') k.fleet = 100;
+    const target = ultimatumTarget(s, big.id)!.to;
+    const protector = on(s, 'earth');
+    protector.fleet = 900;
+    sign(s, termsFor(s, 'defensive', protector.id, target));
+    expect(defendedMight(s, target, big.id)).toBeGreaterThan(400);
+    expect(ultimatumTarget(s, big.id)?.to).not.toBe(target);
+    void small;
+  });
+
+  it('a victim who gives in loses the region (or pays tribute); one who refuses is remembered, never attacked over something else', () => {
+    let seen = { cede: false, tribute: false, refused: false };
+    for (let seed = 1; seed < 200 && !(seen.cede && seen.tribute && seen.refused); seed++) {
+      const s = world();
+      const { big, small } = bully(s);
+      const region = demandableRegion(s, small.id)!;
+      const kind = seed % 2 ? 'cede' : 'tribute';
+      const demand = kind === 'cede' ? ({ kind, regionId: region.id } as const) : ({ kind, amount: 40, years: 10 } as const);
+      s.seed = seed;
+      const result = issueUltimatum(s, big.id, small.id, demand);
+      if (result === 'yielded' && kind === 'cede') {
+        seen.cede = true;
+        expect(s.regions[region.id].owner).toBe(big.id);
+        expect(small.memories?.length ?? 0).toBe(0); // AI-to-AI memories live in the diplomacy record
+        expect(s.diplomacy!.memories.some((m) => m.observer === small.id && m.subject === big.id && m.text.includes('by threat'))).toBe(true);
+      }
+      if (result === 'yielded' && kind === 'tribute') {
+        seen.tribute = true;
+        expect(treatyBetween(s, big.id, small.id, 'tribute')).toMatchObject({ a: big.id, b: small.id, amount: 40 });
+      }
+      if (result === 'refused') {
+        seen.refused = true;
+        expect(s.diplomacy!.memories.some((m) => m.observer === big.id && m.subject === small.id && m.text === 'Defied our demands')).toBe(true);
+        // The war over exactly this demand is the war lane's (declareWithGoal); no other war stands in for it.
+        expect(s.aiWars.some((w) => w.attacker === big.id && w.defender === small.id)).toBe(false);
+      }
+      expect(ultimatumBlocker(s, big.id, small.id, demand)).toBeTruthy(); // their cooldown
+    }
+    seen = { ...seen };
+    expect(seen).toEqual({ cede: true, tribute: true, refused: true });
+  });
+
+  it('you are asked: give in and the region goes; refuse and they remember it', () => {
+    for (const give of [true, false]) {
+      const s = world();
+      const big = on(s, 'earth');
+      big.fleet = 600;
+      lord(s, big, 'ambitious', 'wrathful');
+      const mine = clanRegions(s, s.playerClanId);
+      if (mine.length < 2) {
+        // Give yourself a second region so one can be demanded.
+        const extra = Object.values(s.regions).find((r) => r.planetId === 'mars' && !r.capital && r.owner !== s.playerClanId && r.owner !== big.id)!;
+        setOwner(s, extra, s.playerClanId);
+      }
+      const region = demandableRegion(s, s.playerClanId)!;
+      expect(realmOf(s, big.id)).not.toBe(realmOf(s, s.playerClanId));
+      expect(issueUltimatum(s, big.id, s.playerClanId, { kind: 'cede', regionId: region.id })).toBe('pending');
+      const def = EVENT_BY_ID.ultimatum;
+      expect(def.when!(s)).toBe(true);
+      expect(queueEvent(s, def)).toBe(true);
+      const ctx = buildCtx(s, s.pending.at(-1) as Pend);
+      expect(def.text(ctx)).not.toMatch(/undefined|NaN/);
+      const before = JSON.stringify(s);
+      for (const c of def.choices) c.describe(ctx);
+      expect(JSON.stringify(s)).toBe(before);
+      def.choices[give ? 0 : 1].run(ctx);
+      expect(pendingUltimatum(s)).toBeUndefined();
+      if (give) expect(s.regions[region.id].owner).toBe(big.id);
+      else {
+        expect(s.regions[region.id].owner).toBe(s.playerClanId);
+        expect(big.memories?.some((m) => m.text === 'Defied our demands')).toBe(true);
+        expect(s.wars.some((w) => w.enemy === big.id)).toBe(false); // the war lane declares over exactly this
+      }
+    }
+  });
+
+  it('your own demand: they give in, or refuse (no free claim: the war lane justifies a war over exactly it)', () => {
+    let seen = { gave: false, refused: false };
+    for (let seed = 1; seed < 80 && !(seen.gave && seen.refused); seed++) {
+      const s = world();
+      const target = on(s, 'venus');
+      s.fleet = 500;
+      const region = demandableRegion(s, target.id)!;
+      s.seed = seed;
+      const r = issueUltimatum(s, s.playerClanId, target.id, { kind: 'cede', regionId: region.id });
+      if (r === 'yielded') {
+        seen.gave = true;
+        expect(s.regions[region.id].owner).toBe(s.playerClanId);
+      }
+      if (r === 'refused') {
+        seen.refused = true;
+        expect(s.claims).not.toContain(region.id);
+        expect(s.regions[region.id].owner).toBe(target.id);
+      }
+    }
+    seen = { ...seen };
+    expect(seen).toEqual({ gave: true, refused: true });
+  });
+
+  it('you cannot threaten a treaty partner or a house of your own realm', () => {
+    const s = world();
+    const partner = on(s, 'venus');
+    sign(s, termsFor(s, 'nonAggression', s.playerClanId, partner.id));
+    expect(ultimatumBlocker(s, s.playerClanId, partner.id, { kind: 'tribute', amount: 30, years: 10 })).toMatch(/treaty/);
+    const sworn = Object.values(s.clans).find((k) => !k.isPlayer && clanRegions(s, k.id).length && realmOf(s, k.id) === realmOf(s, s.playerClanId));
+    if (sworn) expect(ultimatumBlocker(s, s.playerClanId, sworn.id, { kind: 'tribute', amount: 30, years: 10 })).toMatch(/realm/);
+  });
+
+  it('a regent answers for a child ruler, by the same odds', () => {
+    const s = world();
+    const big = on(s, 'earth');
+    big.fleet = 600;
+    s.characters[s.rulerId].born = s.year - 10;
+    const extra = Object.values(s.regions).find((r) => r.planetId === 'mars' && !r.capital && r.owner !== s.playerClanId && r.owner !== big.id)!;
+    setOwner(s, extra, s.playerClanId);
+    const result = issueUltimatum(s, big.id, s.playerClanId, { kind: 'tribute', amount: 30, years: 10 });
+    expect(['yielded', 'refused']).toContain(result);
+    expect(s.pending.some((p) => p.kind === 'notice' && p.title === 'Your Regent Answers')).toBe(true);
+    expect(answerUltimatum(s, true)).toBe(false);
+  });
+});
+
+describe('the ultimatum record', () => {
+  it('stale and repeated answers change nothing, and roll no dice', () => {
+    const s = world();
+    const big = on(s, 'earth');
+    big.fleet = 600;
+    secondRegion(s, big.id);
+    const region = demandableRegion(s, s.playerClanId)!;
+    expect(issueUltimatum(s, big.id, s.playerClanId, { kind: 'cede', regionId: region.id })).toBe('pending');
+    const id = pendingUltimatum(s)!.id;
+    let before = JSON.stringify(s);
+    expect(answerUltimatum(s, false, 'ul-none')).toBe(false);
+    expect(JSON.stringify(s)).toBe(before);
+    expect(answerUltimatum(s, true, id)).toBe(true);
+    expect(s.regions[region.id].owner).toBe(big.id);
+    before = JSON.stringify(s);
+    expect(answerUltimatum(s, true, id)).toBe(false);
+    expect(answerUltimatum(s, false, id)).toBe(false);
+    expect(JSON.stringify(s)).toBe(before);
+  });
+
+  it('a demand overtaken by events lapses: the event offers only a harmless way out', () => {
+    const s = world();
+    const big = on(s, 'earth');
+    big.fleet = 600;
+    secondRegion(s, big.id);
+    const region = demandableRegion(s, s.playerClanId)!;
+    issueUltimatum(s, big.id, s.playerClanId, { kind: 'cede', regionId: region.id });
+    const def = EVENT_BY_ID.ultimatum;
+    queueEvent(s, def);
+    const ctx = buildCtx(s, s.pending.at(-1) as Pend);
+    expect(visible(def, ctx)).toEqual(['Give in', 'Refuse']);
+    setOwner(s, region, big.id); // they took it anyway
+    expect(pendingUltimatum(s)).toBeUndefined();
+    expect(visible(def, ctx)).toEqual(['Send the envoys home']);
+    const before = JSON.stringify(s);
+    def.choices.find((c) => c.label === 'Send the envoys home')!.run(ctx);
+    expect(JSON.stringify(s)).toBe(before);
+  });
+
+  it('two houses can each wait for your answer', () => {
+    const s = world();
+    const a = on(s, 'earth');
+    const b = on(s, 'venus');
+    a.fleet = b.fleet = 600;
+    secondRegion(s, a.id);
+    expect(issueUltimatum(s, a.id, s.playerClanId, { kind: 'tribute', amount: 30, years: 10 })).toBe('pending');
+    expect(issueUltimatum(s, b.id, s.playerClanId, { kind: 'tribute', amount: 40, years: 10 })).toBe('pending');
+    const first = pendingUltimatum(s)!;
+    expect(first.from).toBe(a.id);
+    answerUltimatum(s, true, first.id);
+    expect(pendingUltimatum(s)?.from).toBe(b.id);
+  });
+
+  it('an old save gains an empty record, and migrating twice changes nothing', () => {
+    const s = world();
+    delete (s as WithForeignPolicy).foreignPolicy;
+    expect(foreignPolicyOf(s).ultimatums).toEqual([]);
+    migrateForeignPolicy(s);
+    const once = JSON.stringify(s);
+    migrateForeignPolicy(s);
+    expect(JSON.stringify(s)).toBe(once);
+    expect((s as WithForeignPolicy).foreignPolicy).toEqual({ ultimatums: [] });
+  });
+});
+
+describe('rivals', () => {
+  it('a house names whoever it fears and hates, worst first, by public reasons only', () => {
+    const s = world();
+    const { big, small } = bully(s);
+    const enemy = on(s, 'earth');
+    rememberHouse(s, small.id, enemy.id, { text: 'A private shame nobody may know', value: -90 });
+    const before = JSON.stringify(s);
+    const rivals = rivalsOf(s, small.id);
+    expect(JSON.stringify(s)).toBe(before);
+    expect(rivals.length).toBeLessThanOrEqual(3);
+    expect(rivals.find((r) => r.id === big.id)?.reasons.map((r) => r.label)).toContain('Fears their growing power');
+    expect(rivals.find((r) => r.id === enemy.id)?.reasons.map((r) => r.label)).toContain('Cold relations');
+    expect(JSON.stringify(rivals)).not.toContain('private shame');
+  });
+
+  it('your rivals are the houses set against you', () => {
+    const s = world();
+    const k = on(s, 'venus');
+    rememberHouse(s, k.id, s.playerClanId, { text: 'Burned our fleet', value: -80 });
+    expect(
+      rivalsOf(s, s.playerClanId)
+        .find((r) => r.id === k.id)
+        ?.reasons.map((r) => r.label),
+    ).toContain('Sworn rival');
+    expect(rivalsOf(s, k.id).find((r) => r.id === s.playerClanId)).toBeTruthy();
+  });
+});
+
+describe('envoys', () => {
+  it('envoys interrupt you at most once in a while; later offers wait in Realm', () => {
+    const s = world();
+    const [x, y] = Object.values(s.clans).filter((k) => !k.isPlayer && clanRegions(s, k.id).length && k.planetId !== 'mars');
+    const def = EVENT_BY_ID.treaty_offer;
+    expect(proposeTreaty(s, x.id, s.playerClanId, termsFor(s, 'defensive', x.id, s.playerClanId))).toBe('pending');
+    expect(def.when!(s)).toBe(true);
+    queueEvent(s, def);
+    s.cooldowns.treaty_offers = 0;
+    s.diplomacy!.proposals = [];
+    expect(proposeTreaty(s, y.id, s.playerClanId, termsFor(s, 'defensive', y.id, s.playerClanId))).toBe('pending');
+    expect(def.when!(s)).toBe(false);
+    s.year += ENVOY_GAP;
+    s.diplomacy!.proposals[0].expires = s.year + 1;
+    expect(def.when!(s)).toBe(true);
+  });
+});

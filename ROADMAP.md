@@ -8,6 +8,26 @@
 
 Live build: https://finleyobrien99-maker.github.io/Solar-System-Dynasty/ (deploys on every push to `main`).
 
+### 6 October 2026: houses with a foreign policy (Wave 5, slice 3, Claude's half; built locally, not released)
+
+Every AI house now has a foreign policy, read from its lord:
+- **Seven stances.** The lord's traits and stated ambition make a house expansionist, honourable, planet first, zealous, mercantile, a schemer or cautious, and a new lord can turn it around. Stances change which treaties a house wants and accepts, and how readily it breaks its word: an honourable lord all but never does.
+- **The balance of power.** A house with 2.5× the typical fleet is a *rising power*, you included. Its neighbours fear it (−10), grow warier of its offers and sign defensive pacts with each other against it.
+- **Ultimatums.** Expansionist lords who clearly outgun a neighbour, counting that neighbour's sworn treaty defenders, demand a region or tribute. AI targets weigh explained odds. You get *An Ultimatum*; a regent answers for a child. You can make the same demands from a house's profile.
+- **Rivals.** Every house names up to three it is publicly set against, with reasons. Private knowledge never shows.
+- **Envoys at Court** now interrupts you at most once every 6 cycles; other offers wait in Realm.
+
+A refusal is remembered. The war over exactly the refused demand comes with Codex's war goals (`declareWithGoal`, `s.warJustifications`), never as a war over some other target. Pending ultimatums need save v11 (Codex's). Handoff: FOREIGN-POLICY-HANDOFF.md.
+
+| Measured: same 20 seeds × 150, against the live `65e16f3` | Before | After |
+|---|---|---|
+| Builder Sovereign | 25% | 20% |
+| Warmonger Sovereign | 95% | 90% |
+| Passive endings by 100 | 0% | 5% (back in the 5–15% band) |
+| Breeder endings by 100 | 5% | 5% |
+
+AI houses sign about 100–130 treaties per game. 143 distinct events fire, none over 3%: Envoys at Court 2.3%, An Ultimatum 0.4%. Checks: 860 unit tests and 120 browser tests at 1280px and 390px pass. Age Up on the same 10k state is unchanged (160–163 ms against 158–164 ms).
+
 ### 6 October 2026: houses deal with each other (Wave 5, slice 2)
 
 Every house now regards every other, with stated reasons:

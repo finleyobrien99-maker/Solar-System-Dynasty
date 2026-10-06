@@ -39,6 +39,9 @@ export function offerTerms(s: GameState, p: TreatyProposal): string {
 
 const id = (c: Ctx) => String(c.data.offer);
 
+/** Envoys interrupt you at most this often; offers between visits wait in Realm (EnvoysSection). */
+export const ENVOY_GAP = 6;
+
 export const DIPLOMACY_EVENTS: EventDef[] = [
   defineEvent({
     id: 'treaty_offer',
@@ -46,8 +49,9 @@ export const DIPLOMACY_EVENTS: EventDef[] = [
     icon: 'peace',
     weight: 1,
     urgent: true,
-    // Only weighty offers interrupt you; trade and non-aggression offers wait in Realm (EnvoysSection).
-    when: (s) => canAct(s) && urgentOffers(s).length > 0,
+    cooldown: ENVOY_GAP,
+    // Only weighty offers interrupt you, and not too often; the rest wait in Realm (EnvoysSection).
+    when: (s) => canAct(s) && (s.eventCooldowns.treaty_offer ?? 0) <= s.year && urgentOffers(s).length > 0,
     subject: (s) => {
       const p = urgentOffers(s)[0];
       return p ? s.characters[s.clans[p.from]?.headId ?? ''] : undefined;

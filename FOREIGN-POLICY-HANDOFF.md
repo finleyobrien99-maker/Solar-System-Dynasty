@@ -1,0 +1,99 @@
+# Foreign policy (Wave 5 slice 3, Claude's half): handoff
+
+Built on `65e16f3` (live treaties, save v10, AI_FLEET_PARITY 0.4) in `phase-0-foundations`, committed locally, not pushed. The war lane's half (war goals, peace terms, `warGoals.ts`, v11) is Codex's, per WAVE-5-CONTRACT.md "Slice 3 agreed war-lane interface" and Codex's later note at the top of the contract.
+
+## What it does
+
+- **Stances.** Every AI house has one of seven outlooks, read fresh from its lord's traits and stated ambition: expansionist, honourable, planet first, zealous, mercantile, schemer or cautious. A new lord can turn the house around. Stances shift what a house offers and accepts (`treaties.ts`): honourable lords like pacts and all but never break them, mercantile ones chase trade, expansionists dislike non-aggression, schemers sign non-aggression pacts they mean to break and are likelier to betray.
+- **The balance of power.** A house with 2.5× the median landed fleet (`RISING_POWER`) is a *rising power*, you included. Its neighbours in other realms regard it 10 worse ("Fears their growing power"), are warier of its offers, and look for defensive pacts with each other against it, even at lukewarm relations.
+- **Ultimatums.** An expansionist lord who is a free adult, at peace and 1.5× stronger than a neighbour plus that neighbour's sworn treaty defenders may demand a region (never a throne-region or a last region) or tribute. It considers this at 6% a cycle, with 10 cycles between demands.
+  - An AI target answers with one roll at explained odds: the might ratio, craven, brave, pride, "land is dearer than money", trusted allies, hatred.
+  - You are asked through the urgent *An Ultimatum* event. A regent answers for a child ruler by the same odds.
+  - Giving in hands over the region (`setOwner`) or signs a tribute treaty, and the victim remembers.
+  - On refusal, the demander remembers ("Defied our demands"). **The war over exactly that demand is the war lane's** (see below). Until it is merged, a refusal brings no war, and never a war over some other target.
+- **Your demands.** The house profile has *Press a demand*: hand over a named region, or pay tribute, at the odds shown, with a second-tap confirmation. A 5-cycle cooldown follows. A refusal gives you no free claim.
+- **Rivals.** `rivalsOf` names up to three houses a house is publicly set against, worst first: at war, fears their power, sworn rival, broken promises, forced tribute, cold relations. It never uses private knowledge. For you, it names the houses set against you. The house profile shows them.
+- **Envoys ration themselves.** *Envoys at Court* now interrupts you at most once every 6 cycles (`ENVOY_GAP`). Offers in between wait in Realm's *Envoys waiting*, which already lists every offer. Fear of rising powers had pushed the event to 2.9% of all events.
+
+## The interface
+
+From `src/game/foreignPolicy.ts`. Reads are pure.
+
+| Contract item | Supplied |
+|---|---|
+| `stanceOf(s, houseId, viewerId?) -> {kind; reasons}` | Yes. The reasons are traits and the stated ambition, both already public on the lord's card, so every viewer sees the same. `undefined` for the player. `STANCE_NAME` has display names. |
+| `rivalsOf(s, houseId, viewerId?)` -> public rival IDs/reasons | Yes: `Rival[] = {id; reasons: Reason[]}[]`, at most `MAX_RIVALS` = 3. |
+| Ultimatum state, `migrateForeignPolicy(s)` from `MIGRATIONS[11]` | `ForeignPolicyState = {ultimatums: SavedUltimatum[]}` (`diplomacyTypes.ts`) holds **only ultimatums waiting for your answer** (`{id, from, to, goal, year, expires}`, `ANSWER_YEARS` = 2). AI targets answer at once. The migration adds an empty record, invents nothing and is idempotent. |
+| Goal shapes | `DemandGoal` (`diplomacyTypes.ts`) is exactly your `WarGoal`'s cede and tribute members: `{kind:'cede'; regionId}` and `{kind:'tribute'; amount; years}`. `tributeDemand(s, payer)` gives the usual terms (15 + 10 × rank credits a cycle for 10 cycles, inside your 1000 and 20-cycle caps). You can alias one to the other. |
+| Refused demands | **Yours**, as your note asks (`recordRefusedDemand` / `refusedWarDemand`, `s.warJustifications`). I keep no copy. |
+
+Answers name the exact ultimatum (`answerUltimatum(s, give, id)`). Stale or repeated answers change nothing and roll no dice. A demand overtaken by events (a war, a lost region) hides both answers and offers only "Send the envoys home". `foreignPolicyTick` drops lapsed entries.
+
+## Wiring at the merge (Codex's shared files, then two small edits in foreignPolicy.ts)
+
+Until v11, my code reads and writes `s.foreignPolicy` through `WithForeignPolicy` (an optional intersection type), exactly as diplomacy did before v10. None of it is released.
+
+1. `types.ts`: `foreignPolicy?: ForeignPolicyState` on `GameState`. `WithForeignPolicy` can then become plain `GameState`.
+2. `world.ts` `emptyState`: `foreignPolicy: { ultimatums: [] }`.
+3. `save.ts` `MIGRATIONS[11]`: call `migrateForeignPolicy(s)`.
+4. v11 fixtures: include an ultimatum waiting for the player (the contract asks for a pending ultimatum).
+5. **`refuse(s, u, _id?)`** in foreignPolicy.ts already receives the ultimatum's own id when you refuse. AI targets get none, so make one. After the memory and log lines, add:
+   ```ts
+   const id = _id ?? newId(s, 'ul');
+   if (recordRefusedDemand(s, id, u.from, u.to, u.demand, s.year + GRIEVANCE_YEARS) && u.from !== s.playerClanId)
+     declareWithGoal(s, u.from, u.to, u.demand, { justification: id });
+   ```
+   That is the real decision followed by the exact saved goal. No second roll, no other target. Your own justified war is then offered from the war screen.
+6. **`yieldTo(s, u)`**: replace its physical lines (`setOwner` + `recordExpansion` + the cede memory, and `signTreaty`) with `settleDemand(s, u.from, u.to, u.demand)`. `settleDemand` already writes the "Yielded" memory and the log. Keep my tribute memory ("Forced tribute from us", −25), which `settleDemand` does not write. Drop my "gives in" log line, or keep it for AI–AI news. Tribute then becomes a `peaceTributes` obligation instead of a slice 2 tribute treaty, so the payer no longer gets the receiver's protection. That is the right reading for extortion.
+7. Copy to restore once (5) is in:
+   - the refusal outcome in `eventsForeignPolicy.ts` already reports what happened ("House X declares war." or "House X will not forget it.");
+   - the hint under *Press a demand* (`HouseDiplomacySection.tsx`), today "If they refuse, they will remember it.", becomes "If they refuse, you may go to war over exactly this.";
+   - the refusal e2e (`e2e/foreignPolicy.spec.ts`) can again expect *War Declared!* and the realm call.
+
+## Edits to shared files this slice (please review)
+
+- `treaties.ts`:
+  - stance effects in `treatyAcceptance` ("Wary of your growing power" −15%; honourable, mercantile, expansionist, planet-first and schemer shifts);
+  - `commonThreat` counts rising powers;
+  - `bestDeal` reads stances and lets the neighbours of a rising power seek defensive pacts at relations of 5 or more (+10 utility);
+  - `mightBreakPromises` and `aiResolvePromises` read stances (schemer +15%; an honourable lord's chance is 0.5%);
+  - `diplomacyTick` calls `foreignPolicyTick` before `houseMemoriesTick`.
+  
+  You also edited treaties.ts; keep your capped-payment and atomic-breach review.
+- `houseRelations.ts`: "Fears their growing power" −10.
+- `events.ts`: `...FOREIGN_POLICY_EVENTS`.
+- `eventsDiplomacy.ts`: `ENVOY_GAP`.
+- `HouseDiplomacySection.tsx`: the stance line with a *Rising power* pill, *Rivals*, and *Press a demand*.
+
+## Measured
+
+Same 20 seeds × 150 cycles (80 games), against the live `65e16f3`. This is my half alone; with it, refusals bring no war.
+
+| | Before | After |
+|---|---|---|
+| Passive endings by 100 | 0% | 5% (back inside the 5–15% band) |
+| Builder Sovereign by 150 | 25% | 20% |
+| Builder endings by 100 | 0% | 5% |
+| Warmonger Sovereign by 150 | 95% | 90% (battles won/lost 35/13 → 33.5/10) |
+| Breeder endings by 100 | 5% | 5% |
+| Treaties signed per game | 73–105 | 101–129 |
+
+- **Events.** 143 distinct events fire, none over 3%: pirates 2.36%, Envoys at Court 2.34% (1.79% before; 2.89% without `ENVOY_GAP`), An Ultimatum 0.37%.
+- **Speed.** Age Up on the same saved 10k state, alternating serial runs: medians 160–163 ms against 158–164 ms for `65e16f3` (one noisy run at 220 ms).
+  - The first build was about 35% slower: `bestDeal` asked `commonThreat` about many more pairs, and each call rebuilt the marriage-pact map.
+  - Fixed: lukewarm pairs only check for a rising power next to both (`risingThreat`), and the pact map is passed through.
+
+## Tests
+
+- `foreignPolicy.test.ts` (18 tests):
+  - stances, and that honourable lords keep their word;
+  - rising power and fear; defensive pacts against a giant; purity;
+  - target choice and protector deterrence;
+  - AI cede and tribute; refusals remembered with no stand-in war;
+  - your answer (give in or refuse), and your demands, with no free claim;
+  - blockers; the regent answering;
+  - stale and repeated answers inert with dice untouched; lapsed event options; two waiting ultimatums;
+  - migration idempotence; rivals (public reasons only); the envoy gap.
+- `e2e/foreignPolicy.spec.ts`, desktop and 390px:
+  - an ultimatum arrives with both fleets and you refuse;
+  - a house shows its stance and rivals, and you press a demand.

@@ -6,6 +6,18 @@
 import { houseRelation, treatyName, trustOf } from '../../game/houseRelations';
 import type { TreatyKind } from '../../game/diplomacyTypes';
 import { breakTreaty, breakTreatyBlocker, proposeTreaty, termsFor, treatiesOf, treatyAcceptance, treatyBlocker, tradeIncomeOf } from '../../game/treaties';
+import {
+  demandableRegion,
+  issueUltimatum,
+  rivalsOf,
+  risingPower,
+  stanceOf,
+  STANCE_NAME,
+  ultimatumAcceptance,
+  tributeDemand,
+  ultimatumBlocker,
+  type Demand,
+} from '../../game/foreignPolicy';
 import { Btn, ClanBadge, Opinion, Section } from '../components';
 import { useGame } from '../store';
 
@@ -51,12 +63,44 @@ export function HouseDiplomacySection({ clanId }: { clanId: string }) {
   }
 
   const theirs = houseRelation(s, clanId, me);
+  const stance = stanceOf(s, clanId, me);
+  const rivals = rivalsOf(s, clanId, me);
+  const region = demandableRegion(s, clanId);
+  const tribute = tributeDemand(s, clanId);
+  const demands: { label: string; demand: Demand }[] = [
+    ...(region ? [{ label: `Hand over ${region.name} or face war`, demand: { kind: 'cede', regionId: region.id } as Demand }] : []),
+    { label: `Pay ${tribute.amount} credits a cycle or face war`, demand: tribute },
+  ];
   const between = treatiesOf(s, me).filter((t) => t.a === clanId || t.b === clanId);
   const trustThem = trustOf(s, clanId, me),
     trustYou = trustOf(s, me, clanId);
   return (
     <Section title="Diplomacy" icon="peace" info={INFO}>
       <div className="card flat stack" style={{ overflowWrap: 'anywhere' }}>
+        {stance && (
+          <div>
+            <b>{STANCE_NAME[stance.kind]}</b>
+            {risingPower(s, clanId) && (
+              <span className="pill red" style={{ marginLeft: 'var(--space-6px)' }}>
+                Rising power
+              </span>
+            )}
+            <div className="dim">{stance.reasons.map((r) => r.label).join(' · ')}</div>
+          </div>
+        )}
+        {rivals.length > 0 && (
+          <div>
+            <span>Rivals: </span>
+            <span className="dim">
+              {rivals
+                .map(
+                  (r) =>
+                    `${r.id === me ? 'You' : `House ${s.clans[r.id]?.name}`} (${r.reasons.map((x) => (x.value === undefined ? x.label : `${x.label} ${x.value}`)).join(', ')})`,
+                )
+                .join(' · ')}
+            </span>
+          </div>
+        )}
         <div className="spread wrap">
           <span>How they regard you</span>
           <Opinion v={theirs.value} />
@@ -94,6 +138,41 @@ export function HouseDiplomacySection({ clanId }: { clanId: string }) {
             ))}
           </div>
         )}
+
+        <div className="stack" style={{ gap: 'var(--space-6px)' }}>
+          <b>Press a demand</b>
+          <div className="dim" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
+            If they refuse, they will remember it.
+          </div>
+          {demands.map((d) => {
+            const block = ultimatumBlocker(s, me, clanId, d.demand);
+            const odds = block ? undefined : ultimatumAcceptance(s, me, clanId, d.demand);
+            return (
+              <div key={d.demand.kind} className="stack" style={{ gap: 'var(--space-2px)' }}>
+                <div className="spread wrap">
+                  <span>{d.label}</span>
+                  <Btn
+                    small
+                    kind="danger"
+                    reason={block}
+                    confirm="Tap again: send the ultimatum"
+                    onClick={() => {
+                      const result = act((x) => issueUltimatum(x, x.playerClanId, clanId, d.demand));
+                      toast(result === 'yielded' ? 'They give in.' : result === 'refused' ? 'They refuse.' : 'Your envoys were turned away.');
+                    }}
+                  >
+                    {odds ? `Demand (${Math.round(odds.chance * 100)}%)` : 'Demand'}
+                  </Btn>
+                </div>
+                {odds && (
+                  <div className="dim" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
+                    {odds.reasons.map((r) => `${r.label} (${(r.value ?? 0) > 0 ? '+' : ''}${r.value ?? 0}%)`).join(' · ')}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         <div className="stack" style={{ gap: 'var(--space-6px)' }}>
           <b>Make an offer</b>

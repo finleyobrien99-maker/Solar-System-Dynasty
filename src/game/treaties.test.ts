@@ -298,17 +298,20 @@ describe('money', () => {
 
 describe('AI houses make their own deals', () => {
   it('over time AI houses sign treaties with each other, deterministically, and only between living landed houses', () => {
+    const signed = new Set<string>();
     const run = () => {
       const s = world(7);
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 40; i++) {
         s.year += 1;
         diplomacyTick(s);
+        for (const t of diplomacyOf(s).treaties) signed.add(t.id);
       }
       return s;
     };
     const s = run();
     const treaties = diplomacyOf(s).treaties;
-    expect(treaties.length).toBeGreaterThan(0);
+    // Counted as they are signed: a ten-cycle treaty may have run its course by the end.
+    expect(signed.size).toBeGreaterThan(0);
     for (const t of treaties) {
       expect(clanRegions(s, t.a).length).toBeGreaterThan(0);
       expect(clanRegions(s, t.b).length).toBeGreaterThan(0);

@@ -14,6 +14,8 @@ import { pactMap, type Pacts } from './aiCourt';
 import { alive, ch, clanRank, clanRegions, ruler } from './core';
 import type { DiplomacyState, HouseMemory, Reason, Treaty, TreatyKind } from './diplomacyTypes';
 import { remember } from './memory';
+import { risingPower } from './foreignPolicy';
+import { realmOf } from './realmDefence';
 import { neighbourPlanets } from './planets';
 import { opinionOf } from './relations';
 import { clamp } from './rng';
@@ -222,6 +224,7 @@ export function houseRelation(s: GameState, from: string, to: string, pacts?: Pa
   if (trust) add(trust > 0 ? 'Trust built by kept promises' : 'Broken promises', trust / 4);
   for (const t of treatiesBetween(s, from, to)) add(TREATY_NAME[t.kind], t.kind === 'tribute' && t.b === from ? -10 : TREATY_REGARD[t.kind]);
   if (warBetween(s, from, to)) add('At war', -40);
+  if (from !== s.playerClanId && risingPower(s, to) && neighbours(s, from, to) && realmOf(s, from) !== realmOf(s, to)) add('Fears their growing power', -10);
   const rf = clanRank(s, from),
     rt = clanRank(s, to);
   if (rt >= 3 && rf < 3 && neighbours(s, from, to) && clanRegions(s, to).length > clanRegions(s, from).length * 2) add('Wary of a great neighbour', -5);
