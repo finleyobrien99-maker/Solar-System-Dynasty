@@ -479,6 +479,22 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               rival profiles show theirs, and income breakdowns show War-weary lands. AI uses its own fatigue and the same multipliers. Old saves start at zero,
               with no reconstructed campaign costs.
             </p>
+            <h3>Realm defence</h3>
+            <p>
+              External territorial attacks call the defender's actual realm. Its sovereign sends half the available home fleet unless unable; sworn houses weigh
+              duty, loyalty to their direct liege, reciprocal marriage, the rulers' faith and temperament. Internal planetary feuds stay local. A sovereign's
+              existing truce protects its vassals from indirect attacks too.
+            </p>
+            <p>
+              As a sworn house you choose half your available fleet, a tenth, or refusal. A token squadron earns a -5 personal grievance from your liege;
+              refusal earns -15. Sovereigns answer under the same rules as AI. Ships are detached, bear their own casualties and return once. Realm duties and
+              reports show actual ships, losses and returned survivors.
+            </p>
+            <p>
+              Two foreign territorial conquests before memories fade unite a world for ten cycles. Its eligible landed houses then defend against outsiders,
+              including independent rivals. One remembered conquest fades for every ten quiet cycles. Captivity, regencies, existing campaigns, committed
+              fleets, alliances and sworn peace can prevent a house answering. Forecasts and saved answers explain why.
+            </p>
             <h3>Fear and defensive coalitions</h3>
             <p>
               Each territorial victory adds 12 threat to the attacking house, or 20 for naked conquest, plus 20 for a throne-region. Threat caps at 100 and

@@ -23,6 +23,7 @@ import { ageOf, alive, ch, clanRegions, hasTrait, liegeOf, log, regentHolding, r
 import type { RealmCallAnswer, RealmCallOffer, RealmRole, Reason } from './diplomacyTypes';
 import { clearFlag, getFlag, setFlag } from './eventKit';
 import { truceOf } from './peace';
+import { regencyOf } from './regency';
 import { committedShips } from './warAid';
 import { PLANET_BY_ID } from './planets';
 import { addFeeling, opinionOf } from './relations';
@@ -80,9 +81,10 @@ export function realmMembers(s: GameState, defender: string): string[] {
 }
 
 /** A war the realm answers: territorial, between two real houses, and from outside the defender's realm. */
-export function realmCallApplies(s: GameState, attackerId: string, defenderId: string, cb: CasusBelli = 'conquest'): boolean {
+export function realmCallApplies(s: GameState, attackerId: string, defenderId: string, cb: CasusBelli = 'conquest', regionId?: string): boolean {
   return (
     TERRITORIAL.includes(cb) &&
+    s.clans[attackerId]?.planetId !== (s.regions[regionId ?? '']?.planetId ?? s.clans[defenderId]?.planetId) &&
     attackerId !== defenderId &&
     !!s.clans[attackerId] &&
     !!s.clans[defenderId] &&
@@ -141,11 +143,15 @@ interface Ctx {
 
 /** Ships already out of a house's home fleet: league loans and realm loans alike (warAid.ts). */
 function lent(s: GameState, id: string): number {
-  return committedShips(s, id);
+  return (
+    committedShips(s, id) +
+    s.successionCrises.flatMap((c) => (c.stage === 'civil-war' ? c.contributions : [])).reduce((n, p) => n + (p.clanId === id ? p.ships : 0), 0)
+  );
 }
 
 function atWar(s: GameState, id: string): boolean {
-  if (id === s.playerClanId) return s.wars.length > 0;
+  if (s.successionCrises.some((c) => c.stage === 'civil-war' && c.clanId === id)) return true;
+  if (id === s.playerClanId) return s.wars.length > 0 || s.aiWars.some((w) => w.attacker === id || w.defender === id);
   return s.wars.some((w) => w.enemy === id) || s.aiWars.some((w) => w.attacker === id || w.defender === id);
 }
 
@@ -160,7 +166,7 @@ function blocker(s: GameState, c: Ctx, id: string): string | undefined {
   const head = headOf(s, id);
   if (!alive(head)) return 'Nobody leads the house';
   if (head.prisonerOf) return 'Their ruler is a captive';
-  if (ageOf(s, head) < 16 || (id === s.playerClanId && regentHolding(s))) return 'A regent will not risk the fleet';
+  if (ageOf(s, head) < 16 || !!regencyOf(s, id)) return 'A regent will not risk the fleet';
   if (lent(s, id)) return 'Their ships are already lent elsewhere';
   if (atWar(s, id)) return 'Already at war';
   if (truceOf(s, id, c.attacker)) return 'Sworn peace with the attacker';
@@ -204,9 +210,10 @@ function offer(s: GameState, c: Ctx, id: string): RealmCallOffer {
     const label = c.defender === id ? 'Defends its own realm' : `Sovereign of the realm: bound to defend ${house(s, c.defender)}`;
     return { clanId: id, liegeId, role, chance: 1, proposedShips, reasons: [{ label }] };
   }
-  const reasons: Reason[] = [{ label: `Sworn to ${house(s, c.top)}` }];
+  const lord = liegeId ?? c.top;
+  const reasons: Reason[] = [{ label: `Sworn to ${house(s, lord)}` }];
   let p = DUTY;
-  const loyal = Math.round(loyalty(s, id, c.top));
+  const loyal = Math.round(loyalty(s, id, lord));
   p += clamp(loyal / 200, -0.3, 0.3);
   if (loyal >= 10) reasons.push({ label: 'Loyal to their liege', value: loyal });
   else if (loyal <= -10) reasons.push({ label: 'Resents their liege', value: loyal });
@@ -233,11 +240,11 @@ function offer(s: GameState, c: Ctx, id: string): RealmCallOffer {
       p += n;
       reasons.push({ label });
     }
-  const faith = s.clans[id]?.faithId;
-  if (c.cb === 'holy' && faith === s.clans[c.attacker]?.faithId) {
+  const faith = head.faithId;
+  if (c.cb === 'holy' && faith === headOf(s, c.attacker)?.faithId) {
     p -= 0.25;
     reasons.push({ label: "Shares the attacker's faith in a holy war" });
-  } else if (faith === s.clans[c.defender]?.faithId) {
+  } else if (faith === headOf(s, c.defender)?.faithId) {
     p += 0.05;
     reasons.push({ label: 'Same faith as the defender' });
   }
@@ -245,10 +252,10 @@ function offer(s: GameState, c: Ctx, id: string): RealmCallOffer {
 }
 
 function context(s: GameState, attacker: string, defender: string, regionId: string, cb: CasusBelli): Ctx | undefined {
-  if (!realmCallApplies(s, attacker, defender, cb)) return undefined;
+  if (!realmCallApplies(s, attacker, defender, cb, regionId)) return undefined;
   const planet = s.regions[regionId]?.planetId ?? s.clans[defender].planetId;
   const foreign = s.clans[attacker].planetId !== planet;
-  return { attacker, defender, top: realmOf(s, defender), planet, united: foreign && !!unitedUntil(s, planet), cb, pacts: pactMap(s) };
+  return { attacker, defender, top: realmOf(s, defender), planet, united: foreign && !!unitedUntil(s, planet), cb, pacts: pactMap(s, true) };
 }
 
 /** The defender's realm, and every landed house of the world while it stands united; never the attacker's own realm. */
@@ -343,22 +350,26 @@ function announce(s: GameState, c: Ctx, answers: RealmCallAnswer[]): void {
 type RealmAiWar = AiWar & { realmCalls?: RealmCallAnswer[] };
 
 /** The saved war whose realm is waiting on your answer, and the waiting answer. Pure. */
-export function pendingRealmCall(s: GameState): { war: RealmAiWar; answer: RealmCallAnswer } | undefined {
-  for (const war of s.aiWars as RealmAiWar[]) {
+function validCall(s: GameState, war: RealmAiWar): boolean {
+  if (s.gameOver || s.regions[war.target]?.owner !== war.defender || !clanRegions(s, war.attacker).length) return false;
+  const c = context(s, war.attacker, war.defender, war.target, 'conquest');
+  return !!c && called(s, c).includes(s.playerClanId);
+}
+
+export function pendingRealmCall(s: GameState, warId?: string): { war: RealmAiWar; answer: RealmCallAnswer } | undefined {
+  for (const war of s.aiWars) {
+    if (warId !== undefined && war.id !== warId) continue;
     const answer = war.realmCalls?.find((a) => a.clanId === s.playerClanId && a.answer === 'pending');
-    if (answer) return { war, answer };
+    if (answer && validCall(s, war)) return { war, answer };
   }
   return undefined;
 }
 
-/** Why you cannot send ships now, revalidated against today's war, ruler, fleet and oaths; null if you can. Pure. */
+/** Pure revalidation against this specific war, current allegiance, ruler, fleet and oaths. */
 export function answerBlocker(s: GameState, warId: string): string | null {
-  const p = pendingRealmCall(s);
-  if (!p || p.war.id !== warId) return 'The call has passed.';
-  const { attacker, defender } = p.war;
-  if (!s.clans[attacker] || !s.clans[defender] || !clanRegions(s, defender).length) return 'The call has passed.';
-  const c = context(s, attacker, defender, p.war.target, 'conquest');
-  if (!c) return 'The call has passed.';
+  const p = pendingRealmCall(s, warId);
+  if (!p) return 'The call has passed.';
+  const c = context(s, p.war.attacker, p.war.defender, p.war.target, 'conquest')!;
   return blocker(s, c, s.playerClanId) ?? null;
 }
 
@@ -370,8 +381,9 @@ export function answerBlocker(s: GameState, warId: string): string | null {
  * nothing changed (no such call, or you can no longer send ships).
  */
 export function answerRealmCall(s: GameState, warId: string, accept: boolean, share = REALM_SHARE): RealmCallAnswer | undefined {
-  const p = pendingRealmCall(s);
-  if (!p || p.war.id !== warId) return undefined;
+  const p = pendingRealmCall(s, warId);
+  if (!p || !alive(ruler(s)) || ruler(s).prisonerOf || ageOf(s, ruler(s)) < 16 || regentHolding(s)) return undefined;
+  if (accept && (!Number.isFinite(share) || share <= 0 || share > REALM_SHARE)) return undefined;
   const { attacker, defender } = p.war;
   if (accept) {
     if (answerBlocker(s, warId)) return undefined;
@@ -394,9 +406,33 @@ export function answerRealmCall(s: GameState, warId: string, accept: boolean, sh
 
 /** Expire finished unity and faded outrage. */
 export function realmDefenceTick(s: GameState): void {
+  for (const war of s.aiWars) {
+    if (validCall(s, war)) continue;
+    for (const a of war.realmCalls ?? [])
+      if (a.answer === 'pending') {
+        a.answer = 'blocked';
+        a.blocker = 'The call has passed.';
+        a.reasons = [...a.reasons, { label: a.blocker }];
+      }
+  }
   if (!s.flags) return;
   for (const key of Object.keys(s.flags)) {
     if (key.startsWith(UNITED) && s.flags[key].due <= s.year) delete s.flags[key];
     else if (key.startsWith(OUTRAGE) && !planetOutrageOf(s, key.slice(OUTRAGE.length))) delete s.flags[key];
   }
+}
+
+/** A sovereign's existing peace protects its realm from indirect external attacks too.
+ * Indirect declarations cannot silently consume or evade that house's oath. */
+export function realmPeaceBlocker(s: GameState, attacker: string, defender: string, regionId: string, cb: CasusBelli = 'conquest'): string | null {
+  if (!realmCallApplies(s, attacker, defender, cb, regionId)) return null;
+  const seen = new Set<string>([defender]);
+  let lord = liegeOf(s, defender);
+  while (lord && !seen.has(lord)) {
+    seen.add(lord);
+    const peace = truceOf(s, attacker, lord);
+    if (peace) return `Your sworn peace with ${house(s, lord)} protects this realm until ${peace.until}.`;
+    lord = liegeOf(s, lord);
+  }
+  return null;
 }

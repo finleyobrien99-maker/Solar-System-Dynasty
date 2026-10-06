@@ -11,6 +11,8 @@ export interface WarParticipantRow {
   remaining: number;
   /** Actual casualties, if recorded. A recalled survivor is not a loss. */
   lost?: number;
+  returned?: number;
+  role?: 'sovereign' | 'vassal' | 'planet';
   chance?: number;
   leaderId?: string;
 }
@@ -65,12 +67,14 @@ export function WarParticipantsSection({ rows, title = 'Coalition defence', defe
                 <span className={`pill ${row.answer === 'accepted' ? 'green' : row.answer === 'refused' ? 'red' : ''}`}>{ANSWERS[row.answer]}</span>
               </div>
               <div className="muted">{row.source === 'realm' ? 'Realm defence call' : 'Coalition defence pledge'}</div>
+              {row.role && <div className="muted">{row.role === 'sovereign' ? 'Sovereign' : row.role === 'vassal' ? 'Sworn house' : 'United world'}</div>}
               {row.answer === 'accepted' ? (
                 <>
                   <div>
                     {row.remaining} of {row.sent} ships remain
                   </div>
                   {row.remaining === 0 && <div className="muted">No ships currently deployed.</div>}
+                  {!!row.returned && <div className="muted">{row.returned} ships returned home</div>}
                   {row.lost !== undefined && <div className={row.lost ? 'bad' : 'muted'}>{row.lost} ships lost</div>}
                 </>
               ) : (

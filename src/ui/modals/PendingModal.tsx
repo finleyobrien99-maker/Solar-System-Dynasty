@@ -112,18 +112,18 @@ function BattleView({ p }: { p: { uid: string; report: BattleReport } }) {
           <Fleet n={r.playerShips} color={me.color} seed={7} />
           <b>House {me.name}</b>
           <div className="muted" style={{ fontSize: '0.8rem' }}>
-            {r.playerShips} ships · strength {r.playerStrength}
+            {r.playerShips} side ships · strength {r.playerStrength}
           </div>
-          <div className="bad">-{r.playerLosses} ships</div>
+          <div className="bad">-{r.playerLosses} own-house ships</div>
         </div>
         <div className="vs">VS</div>
         <div className="side">
           <Fleet n={r.enemyShips} color={enemy?.color ?? '#888'} seed={99} flip />
           <b>House {enemy?.name}</b>
           <div className="muted" style={{ fontSize: '0.8rem' }}>
-            {r.enemyShips} ships · strength {r.enemyStrength}
+            {r.enemyShips} side ships · strength {r.enemyStrength}
           </div>
-          <div className="bad">-{r.enemyLosses} ships</div>
+          <div className="bad">-{r.enemyLosses} own-house ships</div>
         </div>
       </div>
       {(ownCommander || enemyCommander) && (
@@ -142,19 +142,25 @@ function BattleView({ p }: { p: { uid: string; report: BattleReport } }) {
           You led the fleet in person.
         </p>
       )}
-      {!!r.coalitionLosses?.length && (
-        <div className="card flat stack" aria-label="Coalition casualties">
-          <b>Coalition defenders</b>
-          {r.coalitionLosses.map((row) => (
-            <div className="spread wrap" key={row.clanId}>
-              <ClanBadge clanId={row.clanId} />
-              <span>
-                {row.ships} committed · <span className="bad">{row.losses} lost</span>
-              </span>
+      {[
+        { title: 'Realm defenders', label: 'Realm casualties', rows: r.realmLosses },
+        { title: 'Coalition defenders', label: 'Coalition casualties', rows: r.coalitionLosses },
+      ].map(
+        ({ title, label, rows }) =>
+          !!rows?.length && (
+            <div key={label} className="card flat stack" aria-label={label}>
+              <b>{title}</b>
+              {rows.map((row) => (
+                <div className="spread wrap" key={row.clanId}>
+                  <ClanBadge clanId={row.clanId} />
+                  <span>
+                    {row.ships} committed · <span className="bad">{row.losses} lost</span>
+                  </span>
+                </div>
+              ))}
+              <div className="muted">These losses come from each defender's own ships. Surviving crews return when the campaign ends.</div>
             </div>
-          ))}
-          <div className="muted">These losses come from each defender's own ships. Surviving crews return when the campaign ends.</div>
-        </div>
+          ),
       )}
       {r.note && <p className="gold">{r.note}</p>}
       <div style={{ marginTop: 12 }}>

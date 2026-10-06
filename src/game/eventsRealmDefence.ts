@@ -41,16 +41,27 @@ export const REALM_DEFENCE_EVENTS: EventDef[] = [
     },
     // Only a sworn house is asked: a sovereign (you included) is bound to answer without a choice.
     text: ({ s, subject, data }) => {
+      if (!pendingRealmCall(s, String(data.war))) return 'This call has passed. No fleet is needed and no refusal will be recorded.';
       const from = PLANET_BY_ID[s.clans[String(data.attacker)]?.planetId]?.name ?? 'beyond the realm';
-      return `${house(s, String(data.attacker))} of ${from} has attacked ${house(s, String(data.defender))}, whose ruler ${fullName(s, subject!)} needs every ship. ${house(s, String(data.top))} calls every house of the realm to its defence, yours included.`;
+      return `${house(s, String(data.attacker))} of ${from} has attacked ${house(s, String(data.defender))}, whose ruler ${subject ? fullName(s, subject) : 'is unknown,'} needs every ship. ${house(s, String(data.top))} calls every house of the realm to its defence, yours included.`;
     },
     options: [
       {
         label: 'Send half the fleet',
         needs: [{ test: free, why: 'You cannot send ships now' }],
         then: {
-          do: [{ run: (c) => void answerRealm(c.s, war(c), true, REALM_SHARE), text: (c) => `${c.data.half} ships sail to the realm's defence` }],
-          text: (c) => `The fleet sails within the day. ${house(c.s, String(c.data.defender))} will not forget who came.`,
+          do: [
+            {
+              run: (c) => {
+                c.data.answered = Number(answerRealm(c.s, war(c), true, REALM_SHARE));
+              },
+              text: 'Half your available fleet joins the defence',
+            },
+          ],
+          text: (c) =>
+            c.data.answered
+              ? `The fleet sails within the day. ${house(c.s, String(c.data.defender))} will not forget who came.`
+              : 'The call has passed. No ships leave home.',
         },
       },
       {
@@ -59,18 +70,33 @@ export const REALM_DEFENCE_EVENTS: EventDef[] = [
         then: {
           do: [
             {
-              run: (c) => void answerRealm(c.s, war(c), true, TOKEN_SHARE),
-              text: (c) => `${c.data.token} ships go; your liege notices how few`,
+              run: (c) => {
+                c.data.answered = Number(answerRealm(c.s, war(c), true, TOKEN_SHARE));
+              },
+              text: 'A tenth of your available fleet joins the defence',
             },
           ],
-          text: 'A few ships, a fine flag and a carefully worded letter. Everyone knows exactly what it means.',
+          text: (c) =>
+            c.data.answered
+              ? 'A few ships, a fine flag and a carefully worded letter. Everyone knows exactly what it means.'
+              : 'The call has passed. No ships leave home.',
         },
       },
       {
         label: 'Stay home',
         then: {
-          do: [{ run: (c) => void answerRealm(c.s, war(c), false), text: 'Your liege will remember who stayed home' }],
-          text: 'Your fleet stays in dock. Somebody else can bleed for the realm this time.',
+          do: [
+            {
+              run: (c) => {
+                c.data.answered = Number(answerRealm(c.s, war(c), false));
+              },
+              text: 'Your liege will remember who stayed home',
+            },
+          ],
+          text: (c) =>
+            c.data.answered
+              ? 'Your fleet stays in dock. Somebody else can bleed for the realm this time.'
+              : 'The call has passed. No refusal or grievance is recorded.',
         },
       },
     ],

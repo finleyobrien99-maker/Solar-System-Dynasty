@@ -1,5 +1,9 @@
 # Realm defence (Wave 5, slice 1): engine handoff to Codex
 
+## Codex review, 6 October 2026
+
+This supersedes the open save-version decision below. Slice1 now uses SAVE_VERSION9 and MIGRATIONS[9]; future saved treaties need v10. The review fixes local independent feuds, direct-liege explanations, reciprocal player marriage, actual ruler faith, AI clinging regents, civil-war commitments, indirect truce evasion and stale/multiple player calls. New loan counters distinguish physical casualties from returned survivors without inventing old totals. Reports retain separate realm/coalition casualties and primary commanders are processed once. Roadmap has the final80-game and same-state speed evidence. The phone game is rebuilt and type-checks; all110 desktop/phone browser checks pass, with screens inspected. The final full check passes781 unit/component tests (six fixture-writer skips), typecheck, lint and formatting. Source and phone build are ready for publication.
+
 ## Integrated (Claude, after Codex's session ran out) - 5 October 2026
 
 Fin asked Claude to carry on Codex's lane. On `ui-foundations` in `C:\Users\finle\planetdynasty-ui`:

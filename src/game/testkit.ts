@@ -16,6 +16,7 @@ import { chance, pick, type Seeded } from './rng';
 import { openRoute } from './trade';
 import type { GameState } from './types';
 import { cbOptions, declareWar, fightBattle, warBlocker } from './war';
+import { warContributions } from './warAid';
 import { appointCommander, eligibleCommanders } from './commanders';
 import { guardianWard, nameGuardian, regentCandidates } from './regency';
 
@@ -61,11 +62,16 @@ export function checkInvariants(s: GameState): void {
     }
   }
   for (const war of [...s.wars, ...s.aiWars]) {
-    const loans = war.coalition ?? [];
+    const loans = warContributions(war);
     expect(new Set(loans.map((p) => p.clanId)).size).toBe(loans.length);
     for (const p of loans) {
       expect(s.clans[p.clanId]).toBeTruthy();
       expect(Number.isInteger(p.ships) && p.ships >= 0 && p.ships <= p.sent).toBe(true);
+      if (p.lost !== undefined || p.returned !== undefined) {
+        expect(Number.isInteger(p.lost) && p.lost! >= 0).toBe(true);
+        expect(Number.isInteger(p.returned) && p.returned! >= 0).toBe(true);
+        expect(p.ships + p.lost! + p.returned!).toBe(p.sent);
+      }
     }
     if (war.siege) {
       expect(s.clans[war.siege.attacker]).toBeTruthy();

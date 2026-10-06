@@ -167,7 +167,7 @@ describe('threat and defensive leagues', () => {
     expect(joinCoalition(s, attacker.id)).toBe(true);
     expect(joinCoalition(s, attacker.id)).toBe(false);
     const list = coalitionCall(s, attacker.id, defender.id);
-    expect(list).toEqual([{ clanId: s.playerClanId, ships: 150, sent: 150, commanderId: undefined }]);
+    expect(list).toEqual([{ clanId: s.playerClanId, ships: 150, sent: 150, lost: 0, returned: 0, commanderId: undefined }]);
     expect(s.fleet).toBe(150);
     storeLoan(s, attacker.id, defender.id, list);
     coalitionLosses(s, list, 0.2);

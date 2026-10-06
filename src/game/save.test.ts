@@ -9,7 +9,10 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { setImmediate } from 'node:timers/promises';
 import { compressToUTF16, decompressFromBase64 } from 'lz-string';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { conductSiege, endWar, fightBattle } from './war';
+import { declareHouseWar } from './ai';
+import { pendingRealmCall } from './realmDefence';
+import { clanRegions } from './core';
+import { declareWar, conductSiege, endWar, fightBattle } from './war';
 import { createCharacter } from './character';
 import { appointCommander, commandersTick } from './commanders';
 import { SAVE_VERSION } from './core';
@@ -149,7 +152,73 @@ describe.runIf(WRITE)('freeze coalition ships and siege orders', () => {
   });
 });
 
+describe.runIf(WRITE)('freeze realm decisions and physical history', () => {
+  it('freezes actual realm defenders and an unanswered call', () => {
+    for (const name of ['realm-campaign', 'realm-call']) {
+      const file = new URL(`save-v${SAVE_VERSION}-${name}.json`, DIR);
+      if (existsSync(file)) continue;
+      const s = createWorld(61),
+        home = scenarioHouses(s, 'mars', 'governor')[0];
+      startGame(s, { clanId: home.id, ruler: rollRuler(61, 'mars', 'F', 'Asha'), focus: 'cmd', age: 40, family: 'married' });
+      Object.assign(s, { fleet: 120, prestige: 1000, pending: [] });
+      for (const k of Object.values(s.clans)) {
+        const h = s.characters[k.headId];
+        h.born = s.year - 40;
+        h.prisonerOf = undefined;
+        k.fleet = 100;
+        k.allied = false;
+      }
+      const d = Object.values(s.clans).find(
+        (k) =>
+          !k.isPlayer &&
+          k.planetId === (name === 'realm-call' ? 'mars' : 'neptune') &&
+          clanRegions(s, k.id).length &&
+          !clanRegions(s, k.id).some((r) => r.capital),
+      )!;
+      const target = clanRegions(s, d.id)[0].id;
+      if (name === 'realm-campaign') {
+        expect(declareWar(s, target, 'conquest')).toBe(true);
+        expect(fightBattle(s, s.wars[0].id)?.realmLosses?.length).toBeGreaterThan(0);
+      } else {
+        const a = Object.values(s.clans).find((k) => k.planetId === 'venus')!;
+        expect(declareHouseWar(s, a.id, target)).toBe(true);
+        expect(pendingRealmCall(s)).toBeTruthy();
+      }
+      checkInvariants(s);
+      writeFileSync(file, exportSave(s) + '\n');
+    }
+  });
+});
+
 describe('save migrations', () => {
+  it('v9 invents no past and preserves existing calls, oaths and uncertain loan history', () => {
+    const { s, war } = coalitionCampaign();
+    s.version = 8;
+    const loans = structuredClone(war.coalition),
+      calls = structuredClone(war.realmCalls),
+      aid = structuredClone(war.realmAid),
+      truces = structuredClone(s.truces),
+      seed = s.seed;
+    const first = migrate(s);
+    expect(first.version).toBe(9);
+    expect(war.realmCalls).toEqual(calls);
+    expect(war.realmAid).toEqual(aid);
+    expect(war.coalition).toEqual(loans);
+    expect(s.truces).toEqual(truces);
+    expect(s.seed).toBe(seed);
+    expect(migrate(structuredClone(first))).toEqual(first);
+    const old = structuredClone(first);
+    old.version = 8;
+    for (const w of [...old.wars, ...old.aiWars]) {
+      delete w.realmAid;
+      delete w.realmCalls;
+    }
+    migrate(old);
+    for (const w of [...old.wars, ...old.aiWars]) {
+      expect(w.realmAid).toEqual([]);
+      expect(w.realmCalls).toEqual([]);
+    }
+  });
   it('keeps foreign rulers alive when replacing the starting household, and recovers legacy missing heads once', () => {
     const s = createWorld(31),
       house = scenarioHouses(s, 'mars', 'viceroy')[0];

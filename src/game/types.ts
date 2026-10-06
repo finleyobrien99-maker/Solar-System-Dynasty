@@ -206,6 +206,9 @@ export interface FleetContribution {
   ships: number; // Surviving detached ships, absent from the house's home fleet.
   sent: number;
   commanderId?: string;
+  /** Cumulative physical counts on newly recorded loans. Legacy totals remain unknown. */
+  lost?: number;
+  returned?: number;
 }
 
 export interface Coalition {
@@ -283,6 +286,7 @@ export interface BattleReport {
   playerCommanderId?: string;
   enemyCommanderId?: string;
   coalitionLosses?: { clanId: string; ships: number; losses: number }[];
+  realmLosses?: { clanId: string; ships: number; losses: number }[];
   note?: string;
 }
 

@@ -227,6 +227,9 @@ export function RealmTab() {
                         reasons: a.reasons,
                         sent: loan?.sent ?? 0,
                         remaining: loan?.ships ?? 0,
+                        role: a.role,
+                        lost: loan?.lost,
+                        returned: loan?.returned,
                         chance: a.chance > 0 && a.chance < 1 ? a.chance : undefined,
                         leaderId: loan?.commanderId,
                       };
@@ -238,6 +241,8 @@ export function RealmTab() {
                       reasons: [],
                       sent: loan.sent,
                       remaining: loan.ships,
+                      lost: loan.lost,
+                      returned: loan.returned,
                       leaderId: loan.commanderId,
                     })),
                   ]}
@@ -277,7 +282,7 @@ export function RealmTab() {
       <Section
         title="Fleet"
         icon="fleet"
-        info="Ships are your battle strength. Command adds 4% per point; Mars adds 15%; traits and flagships add more. Each ship costs 0.8 credits upkeep per cycle, including your ships committed to coalition defence. Committed ships keep their place in your capacity and return on peace or withdrawal. Capacity grows with regions and rank."
+        info="Ships are your battle strength. Command adds 4% per point; Mars adds 15%; traits and flagships add more. Each ship costs 0.8 credits upkeep per cycle, including your ships committed to defence. Committed ships keep their place in your capacity and return on peace or withdrawal. Capacity grows with regions and rank."
       >
         <div className="card">
           <div className="spread">
@@ -289,7 +294,7 @@ export function RealmTab() {
                 </span>
               </div>
               <div className="muted" style={{ fontSize: 'var(--font-size-0_8rem)' }}>
-                {s.fleet} ships at home{committed > 0 ? ` · ${committed} committed to coalition defence` : ''}
+                {s.fleet} ships at home{committed > 0 ? ` · ${committed} committed to defence` : ''}
                 <br />
                 {sc} credits per new ship · upkeep {Math.round(totalFleet * UPKEEP_PER_SHIP)}/cycle
               </div>

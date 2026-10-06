@@ -255,3 +255,30 @@ describe('ephemeral pre-battle aid snapshots', () => {
     expect(successor.reputation?.deeds.battlesLost ?? 0).toBe(0);
   });
 });
+
+describe('recorded loan history', () => {
+  it('distinguishes casualties from returned survivors and leaves legacy totals unknown', () => {
+    const { s, helper } = fixture(),
+      p = reserveAid(s, helper.id, 50)!;
+    aidLosses(s, [p], 0.2);
+    releaseAid(s, [p]);
+    releaseAid(s, [p]);
+    expect(p).toMatchObject({ ships: 0, sent: 50, lost: 10, returned: 40 });
+    const old = { clanId: helper.id, sent: 80, ships: 20 };
+    aidLosses(s, [old], 0.1);
+    releaseAid(s, [old]);
+    expect(old).not.toHaveProperty('lost');
+    expect(old).not.toHaveProperty('returned');
+  });
+});
+
+it('does not reroll or credit a leader already processed on the primary side', () => {
+  const { s, attacker, helper, head } = fixture();
+  appointCommander(s, helper.id, head.id);
+  const list = [reserveAid(s, helper.id, 50)!],
+    snapshot = snapshotAid(s, list),
+    losses = aidLosses(s, list, 0.1);
+  const before = structuredClone(s);
+  expect(aidBattleNotes(s, snapshot, attacker.id, false, losses, 1, { commanderIds: new Set([head.id]), rulerIds: new Set([head.id]) })).toEqual([]);
+  expect(s).toEqual(before);
+});

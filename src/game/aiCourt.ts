@@ -45,14 +45,14 @@ export type Pacts = Map<string, Set<string>>;
  * people who made them die (and sibling ties when the parents who linked
  * them are long forgotten).
  */
-export function pactMap(s: GameState): Pacts {
+export function pactMap(s: GameState, includePlayer = false): Pacts {
   const bloodOf = new Map<string, string[]>();
   const add = (id: string, clanId: string) => {
     const c = s.characters[id];
     if (alive(c)) (bloodOf.get(id) ?? bloodOf.set(id, []).get(id)!).push(clanId);
   };
-  for (const k of landedAi(s)) {
-    const h = ch(s, k.headId);
+  for (const k of includePlayer ? Object.values(s.clans).filter((k) => clanRegions(s, k.id).length) : landedAi(s)) {
+    const h = k.id === s.playerClanId ? ruler(s) : ch(s, k.headId);
     if (!alive(h)) continue;
     const blood = new Set<string>([h.id, ...h.childrenIds]);
     for (const p of [h.fatherId, h.motherId]) for (const id of ch(s, p)?.childrenIds ?? []) blood.add(id);

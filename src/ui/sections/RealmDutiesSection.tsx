@@ -7,7 +7,7 @@ import { useGame } from '../store';
 
 export function RealmDutiesSection() {
   const { s } = useGame();
-  const loans = s.aiWars.flatMap((w) => (w.realmAid ?? []).filter((p) => p.clanId === s.playerClanId && p.ships > 0).map((p) => ({ w, p })));
+  const loans = s.aiWars.flatMap((w) => (w.realmAid ?? []).filter((p) => p.clanId === s.playerClanId && p.sent > 0).map((p) => ({ w, p })));
   const united = PLANETS.map((p) => ({ p, until: unitedUntil(s, p.id) })).filter((x) => x.until);
   if (!loans.length && !united.length) return null;
   return (
@@ -25,6 +25,8 @@ export function RealmDutiesSection() {
             <b>
               {p.ships} of {p.sent} ships
             </b>
+            {p.lost !== undefined && <span className={p.lost ? 'bad' : 'muted'}>{p.lost} ships lost</span>}
+            {!!p.returned && <span className="muted">{p.returned} ships returned home</span>}
           </div>
         ))}
         {united.map(({ p, until }) => (

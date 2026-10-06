@@ -95,7 +95,8 @@ describe('realm defence in real wars', () => {
     const w = s.wars[0];
     const total = ships(s);
     const report = fightBattle(s, w.id)!;
-    const lost = report.playerLosses + report.enemyLosses + (report.coalitionLosses ?? []).reduce((n, r) => n + r.losses, 0);
+    const lost =
+      report.playerLosses + report.enemyLosses + [...(report.coalitionLosses ?? []), ...(report.realmLosses ?? [])].reduce((n, r) => n + r.losses, 0);
     expect(ships(s)).toBe(total - lost);
     endWar(s, w, 'white');
     for (const p of w.realmAid!) {
