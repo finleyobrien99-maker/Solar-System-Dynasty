@@ -76,15 +76,7 @@ export function setHouseIdentity(s: GameState, id: string, name: string, spec: S
     [spec.division, SIGIL_PATTERNS.length],
     [spec.charge, SIGIL_SYMBOLS.length],
   ];
-  if (
-    !clan ||
-    id !== s.playerClanId ||
-    !n ||
-    n.length > 24 ||
-    colours.some((c) => !c) ||
-    indices.some(([v, count]) => !Number.isInteger(v) || v < 0 || v >= count)
-  )
-    return false;
+  if (!clan || !n || n.length > 24 || colours.some((c) => !c) || indices.some(([v, count]) => !Number.isInteger(v) || v < 0 || v >= count)) return false;
   clan.name = n;
   clan.sigil = { shape: spec.shape, division: spec.division, charge: spec.charge, c1: colours[0]!, c2: colours[1]!, c3: colours[2]! };
   clan.color = clan.sigil.c1;

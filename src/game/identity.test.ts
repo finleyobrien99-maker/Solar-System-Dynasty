@@ -34,14 +34,13 @@ describe('cosmetic identity', () => {
     expect(clan.sigil.c2).toBe('#345678');
     expect(importSave(exportSave(s)).clans[clan.id]).toEqual(clan);
   });
-  it('allows own dynasty and spouse, gates rival cosmetics, and never allows rival house edits', () => {
+  it('allows own dynasty and spouse portraits, and gates rival portrait cosmetics', () => {
     const s = goalWorld(),
       c = ruler(s),
       foreign = Object.values(s.characters).find((x) => x.clanId !== s.playerClanId)!;
     expect(canEditPortrait(s, c)).toBe(true);
     const before = structuredClone(s);
     expect(setPortrait(s, foreign.id, { face: 3 })).toBe(false);
-    expect(setHouseIdentity(s, foreign.clanId, 'Nope', s.clans[foreign.clanId].sigil)).toBe(false);
     expect(setPortrait(s, 'missing', {})).toBe(false);
     expect(s).toEqual(before);
     c.spouseId = foreign.id;
@@ -49,7 +48,23 @@ describe('cosmetic identity', () => {
     c.spouseId = undefined;
     s.vip = { on: true };
     expect(setPortrait(s, foreign.id, { face: 1 })).toBe(true);
-    expect(setHouseIdentity(s, foreign.clanId, 'Nope', s.clans[foreign.clanId].sigil)).toBe(false);
+  });
+  it('allows other house identities without VIP while preserving everything except their name and colours', () => {
+    const s = goalWorld(),
+      foreign = Object.values(s.clans).find((c) => c.id !== s.playerClanId)!;
+    expect(s.vip?.on).toBeFalsy();
+    const before = structuredClone(s);
+    const spec = { shape: 2, division: 5, charge: 7, c1: '#112233', c2: '#ddeeff', c3: '#ffcc66' };
+    expect(setHouseIdentity(s, foreign.id, 'Aurora', spec)).toBe(true);
+    const expected = structuredClone(before);
+    Object.assign(expected.clans[foreign.id], { name: 'Aurora', color: spec.c1, sigil: spec });
+    expect(s).toEqual(expected);
+    expect(importSave(exportSave(s))).toEqual(JSON.parse(JSON.stringify(s)));
+    const saved = structuredClone(s);
+    expect(setHouseIdentity(s, 'missing', 'Aurora', spec)).toBe(false);
+    expect(setHouseIdentity(s, foreign.id, '', spec)).toBe(false);
+    expect(setHouseIdentity(s, foreign.id, 'Aurora', { ...spec, c2: 'invalid' })).toBe(false);
+    expect(s).toEqual(saved);
   });
   it.each([{ face: -1 }, { hairStyle: 8 }, { beard: 1.5 }, { eyes: NaN }, { hairColor: 'red' }, { skinColor: 'url(example)' }, { base: 30 }, []])(
     'invalid appearance %j is wholly inert',

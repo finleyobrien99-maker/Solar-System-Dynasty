@@ -13,7 +13,8 @@ import { routeBlocker, openRoute, tradeTick, partnerPort } from './trade';
 import { TRAITS } from './traits';
 import type { GameState } from './types';
 import { declareWar } from './war';
-import { createWorld, rollRuler, startGame } from './world';
+import { cadetSigil, createWorld, rollRuler, startGame } from './world';
+import { exportSave, importSave } from './save';
 
 function game(seed = 3): GameState {
   const s = createWorld(seed);
@@ -52,6 +53,8 @@ describe('cadet branches', () => {
   it('founding moves the founder and descendants and swears fealty', () => {
     const s = game();
     const { extra, kin, grandkid } = withKin(s);
+    const parent = structuredClone(s.clans[s.playerClanId].sigil);
+    const seed = s.seed;
     expect(cadetBlocker(s, kin.id, extra.id)).toBeNull();
     const id = foundCadet(s, kin.id, extra.id, 'Test-Branch')!;
     expect(s.clans[id].cadetOf).toBe(s.playerClanId);
@@ -60,6 +63,35 @@ describe('cadet branches', () => {
     expect(extra.owner).toBe(id);
     expect(liegeOf(s, id)).toBe(s.playerClanId);
     expect(isBloodlineClan(s, id)).toBe(true);
+    const branch = s.clans[id];
+    expect([branch.sigil.shape, branch.sigil.division, branch.sigil.charge]).toEqual([parent.shape, parent.division, parent.charge]);
+    expect(new Set([branch.sigil.c1, branch.sigil.c2, branch.sigil.c3]).size).toBe(3);
+    for (const colour of [branch.sigil.c1, branch.sigil.c2, branch.sigil.c3]) expect([parent.c1, parent.c2, parent.c3]).not.toContain(colour);
+    expect(branch.color).toBe(branch.sigil.c1);
+    expect(s.clans[s.playerClanId].sigil).toEqual(parent);
+    expect(s.seed).toBe(seed);
+    expect(importSave(exportSave(s)).clans[id].sigil).toEqual(branch.sigil);
+  });
+
+  it('cadet colours are deterministic, varied and independent of future simulation rolls', () => {
+    const parent = { shape: 4, division: 6, charge: 15, c1: '#c8102e', c2: '#1f4fbf', c3: '#d4a017' };
+    const before = structuredClone(parent),
+      rng = { seed: 123 },
+      palettes = new Set<string>();
+    for (let i = 0; i < 100; i++) {
+      const arms = cadetSigil(rng, parent, `branch-${i}`);
+      expect(arms).toEqual(cadetSigil({ seed: 123 }, parent, `branch-${i}`));
+      expect([arms.shape, arms.division, arms.charge]).toEqual([4, 6, 15]);
+      expect(new Set([arms.c1, arms.c2, arms.c3]).size).toBe(3);
+      for (const c of [arms.c1, arms.c2, arms.c3]) {
+        expect(c).toMatch(/^#[a-f\d]{6}$/);
+        expect([parent.c1, parent.c2, parent.c3]).not.toContain(c);
+      }
+      palettes.add([arms.c1, arms.c2, arms.c3].join(','));
+    }
+    expect(palettes.size).toBeGreaterThan(80);
+    expect(rng.seed).toBe(123);
+    expect(parent).toEqual(before);
   });
 
   it('locked genes reach cadet children', () => {

@@ -59,7 +59,7 @@ export function CadetSection() {
 
 /** Grant-a-region panel shown on a main-house relative's character card. */
 export function FoundCadetPanel({ c }: { c: Character }) {
-  const { s, act, openClan } = useGame();
+  const { s, act, closePanels } = useGame();
   const regions = clanRegions(s, s.playerClanId).filter((r) => !r.capital);
   const [regionId, setRegionId] = useState(regions[0]?.id ?? '');
   const [name, setName] = useState('');
@@ -69,7 +69,8 @@ export function FoundCadetPanel({ c }: { c: Character }) {
       <summary className="gold">Found a cadet branch</summary>
       <div className="stack" style={{ gap: 'var(--space-8px)', marginTop: 'var(--space-8px)' }}>
         <div className="muted" style={{ fontSize: 'var(--font-size-0_84rem)' }}>
-          Grant {c.name} a region. They, and their descendants still in your house, become a new house of your bloodline, sworn to you.
+          Grant {c.name} a region. They, and their descendants still in your house, become a new house of your bloodline, sworn to you. Their shield and flag
+          keep your shape, pattern and symbol, with three freshly chosen colours.
         </div>
         <div className="row wrap" style={{ gap: 'var(--space-8px)' }}>
           <select
@@ -104,7 +105,8 @@ export function FoundCadetPanel({ c }: { c: Character }) {
             confirm="Tap again to grant the land"
             onClick={() => {
               const id = act((d) => foundCadet(d, c.id, regionId, name));
-              if (id) openClan(id);
+              // Let the founding notice take focus without competing profile windows.
+              if (id) closePanels();
             }}
           >
             Found House {name.trim() || (regionId ? defaultCadetName(s, regionId) : '')}

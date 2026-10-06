@@ -3,13 +3,15 @@ import { inflateString } from '../src/game/codec';
 import { hashString } from '../src/game/rng';
 import type { GameState } from '../src/game/types';
 import { goalWorld } from '../src/game/warGoalScenarios';
+import { createCharacter } from '../src/game/character';
+import { ruler, setOwner } from '../src/game/core';
+import { cadetBlocker } from '../src/game/cadets';
 
 async function saved(page: Page): Promise<GameState | null> {
   const text = await page.evaluate(() => localStorage.getItem('solar-dynasty:auto'));
   return text ? JSON.parse(inflateString(JSON.parse(text).data)) : null;
 }
-async function load(page: Page) {
-  const s = goalWorld();
+async function load(page: Page, s = goalWorld()) {
   s.version = 11;
   await page.goto('/');
   await page.getByRole('button', { name: 'Load game', exact: true }).click();
@@ -138,4 +140,94 @@ test('new dynasty uses the shared appearance and house designers without VIP', a
   expect(after.clans[after.playerClanId].sigil.charge).toBe(12);
   expect(after.clans[after.playerClanId].color).toBe('#224466');
   expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBe(0);
+});
+
+test('other houses can be renamed and redesigned without VIP through their public profile', async ({ page }, info) => {
+  const s = await load(page);
+  const foreign = Object.values(s.clans).find((c) => c.id !== s.playerClanId)!;
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('tab', { name: /^System/ })
+    .click();
+  await page.getByRole('tablist', { name: 'System views' }).getByRole('tab', { name: 'Houses', exact: true }).click();
+  await page.getByRole('button', { name: 'View House ' + foreign.name, exact: true }).click();
+  const dialog = page.getByRole('dialog').last();
+  await dialog.locator('summary').filter({ hasText: 'House identity & flag' }).click();
+  await dialog.getByLabel('House name', { exact: true }).fill('Aurora');
+  await dialog.getByLabel('Shield shape', { exact: true }).selectOption('2');
+  await dialog.getByLabel('Flag pattern', { exact: true }).selectOption('5');
+  await dialog.getByLabel('House symbol', { exact: true }).selectOption('7');
+  await dialog.getByLabel('Field colour hex', { exact: true }).fill('#112233');
+  await dialog.getByLabel('Pattern colour hex', { exact: true }).fill('#ddeeff');
+  await dialog.getByLabel('Symbol colour hex', { exact: true }).fill('#ffcc66');
+  expect((await saved(page))!.clans[foreign.id]).toEqual(foreign);
+  await dialog.getByRole('button', { name: 'Save house design', exact: true }).click();
+  await expect.poll(async () => (await saved(page))?.clans[foreign.id].name).toBe('Aurora');
+  const expected = structuredClone(s);
+  expected.version = 12;
+  Object.assign(expected.clans[foreign.id], {
+    name: 'Aurora',
+    color: '#112233',
+    sigil: { shape: 2, division: 5, charge: 7, c1: '#112233', c2: '#ddeeff', c3: '#ffcc66' },
+  });
+  expect(await saved(page)).toEqual(expected);
+  expect((await saved(page))!.vip?.on).toBeFalsy();
+  await screenshot(page, info, 'foreign-house-editor');
+  await page.reload();
+  await page.getByRole('button', { name: /^Continue:/ }).click();
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('tab', { name: /^System/ })
+    .click();
+  await page.getByRole('tablist', { name: 'System views' }).getByRole('tab', { name: 'Houses', exact: true }).click();
+  await page.getByRole('button', { name: 'View House Aurora', exact: true }).click();
+  await page.getByRole('dialog').last().locator('summary').filter({ hasText: 'House identity & flag' }).click();
+  await expect(page.getByRole('dialog').last().getByLabel('House symbol', { exact: true })).toHaveValue('7');
+});
+
+test('founding a cadet keeps the parent design with new colours and survives reload', async ({ page }, info) => {
+  const s = goalWorld(),
+    r = ruler(s),
+    parent = s.clans[s.playerClanId];
+  parent.sigil = { shape: 4, division: 6, charge: 15, c1: '#c8102e', c2: '#1f4fbf', c3: '#d4a017' };
+  parent.color = parent.sigil.c1;
+  const extra = Object.values(s.regions).find((x) => x.planetId === 'mars' && !x.capital && x.owner !== parent.id)!;
+  setOwner(s, extra, parent.id);
+  const heir = createCharacter(s, { born: s.year - 24, gender: 'M', clanId: parent.id, planetId: 'mars', fatherId: r.id, motherId: r.spouseId });
+  const kin = createCharacter(s, { born: s.year - 20, gender: 'F', name: 'Lyra', clanId: parent.id, planetId: 'mars', fatherId: r.id, motherId: r.spouseId });
+  r.childrenIds.push(heir.id, kin.id);
+  s.dynasty.designatedHeir = heir.id;
+  expect(cadetBlocker(s, kin.id, extra.id)).toBeNull();
+  const seed = s.seed;
+  await load(page, s);
+  const parentDialog = await openEditor(page, 'house');
+  await parentDialog.getByRole('button', { name: /Lyra/ }).click();
+  const profile = page.getByRole('dialog').last();
+  await profile.locator('summary').filter({ hasText: 'Found a cadet branch' }).click();
+  await profile.getByLabel('Region to grant').selectOption(extra.id);
+  await profile.getByLabel('New house name').fill('Starlight');
+  await profile.getByRole('button', { name: 'Found House Starlight', exact: true }).click();
+  await profile.getByRole('button', { name: 'Tap again to grant the land', exact: true }).click();
+  await page.getByRole('dialog', { name: 'A Cadet Branch is Founded', exact: true }).getByRole('button', { name: 'Continue', exact: true }).click();
+  await expect.poll(async () => Object.values((await saved(page))?.clans ?? {}).some((c) => c.name === 'Starlight')).toBe(true);
+  const after = (await saved(page))!,
+    cadet = Object.values(after.clans).find((c) => c.name === 'Starlight')!;
+  expect([cadet.sigil.shape, cadet.sigil.division, cadet.sigil.charge]).toEqual([4, 6, 15]);
+  expect(new Set([cadet.sigil.c1, cadet.sigil.c2, cadet.sigil.c3]).size).toBe(3);
+  for (const c of [cadet.sigil.c1, cadet.sigil.c2, cadet.sigil.c3]) expect([parent.sigil.c1, parent.sigil.c2, parent.sigil.c3]).not.toContain(c);
+  expect(cadet.color).toBe(cadet.sigil.c1);
+  expect(cadet.cadetOf).toBe(parent.id);
+  expect(after.clans[parent.id].sigil).toEqual(parent.sigil);
+  expect(after.seed).toBe(seed);
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('tab', { name: /^System/ })
+    .click();
+  await page.getByRole('tablist', { name: 'System views' }).getByRole('tab', { name: 'Houses', exact: true }).click();
+  await page.getByRole('button', { name: 'View House Starlight', exact: true }).click();
+  await page.getByRole('dialog').last().locator('summary').filter({ hasText: 'House identity & flag' }).click();
+  await screenshot(page, info, 'cadet-design');
+  await page.reload();
+  await page.getByRole('button', { name: /^Continue:/ }).click();
+  await expect.poll(async () => (await saved(page))?.clans[cadet.id].sigil).toEqual(cadet.sigil);
 });

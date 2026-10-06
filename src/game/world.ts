@@ -24,7 +24,7 @@ import { makeItem } from './items';
 import { remember } from './memory';
 import { refreshShop } from './realm';
 import { makeName, PLANETS, PLANET_BY_ID } from './planets';
-import { chance, clamp, int, pick, rand, range, shuffle, type Seeded } from './rng';
+import { chance, clamp, int, pick, rand, range, seeded, shuffle, type Seeded } from './rng';
 import { addTrait } from './traits';
 import { STAT_KEYS, type Appearance, type Character, type Clan, type GameState, type Gender, type ScenarioId, type SigilSpec, type StatKey } from './types';
 
@@ -60,6 +60,17 @@ export function randomSigil(s: Seeded, primary?: string): SigilSpec {
     others.filter((c) => c !== c2),
   );
   return { shape: int(s, 0, 4), division: int(s, 0, 6), charge: int(s, 0, SIGIL_CHARGES - 1), c1, c2, c3 };
+}
+
+/** An offshoot keeps its parent's design. Cosmetic rolls never advance the simulation seed. */
+export function cadetSigil(s: Seeded, parent: SigilSpec, branchId: string): SigilSpec {
+  const previous = [parent.c1, parent.c2, parent.c3].map((c) => c.toLowerCase());
+  const rng = seeded(`cadet-arms:${s.seed}:${branchId}`);
+  const [c1, c2, c3] = shuffle(
+    rng,
+    SIGIL_COLORS.filter((c) => !previous.includes(c)),
+  ).slice(0, 3);
+  return { shape: parent.shape, division: parent.division, charge: parent.charge, c1, c2, c3 };
 }
 
 /**

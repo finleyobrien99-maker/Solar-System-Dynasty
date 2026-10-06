@@ -61,7 +61,9 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
             <p>
               Menu → House identity &amp; flag opens your house’s designer: 5 shield shapes, 7 patterns and 16 symbols, with three full colour controls. Shield
               and flag share a design. Saving the field colour also updates your ships, clothing and map regions; renaming keeps the same house, titles and
-              diplomatic ties. The same designers are available when founding a new dynasty. VIP’s separate editor still handles stats and traits.
+              diplomatic ties. You can also edit any other house from its profile in System → Houses, without VIP. The same designers are available when
+              founding a new dynasty. New cadet branches keep their parent's shape, pattern and symbol, with three different colours chosen from the house
+              palette. Existing branches keep their saved designs. VIP’s separate editor still handles stats and traits.
             </p>
             <h3>A ruler's purpose</h3>
             <p>

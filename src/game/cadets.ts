@@ -10,7 +10,7 @@ import { currentHeir } from './life';
 import { remember } from './memory';
 import { granted } from './relations';
 import type { Character, Clan, GameState } from './types';
-import { fleetTarget } from './world';
+import { cadetSigil, fleetTarget } from './world';
 
 export const CADET_COST: Cost = { credits: 250, prestige: 100 };
 
@@ -53,15 +53,15 @@ export function foundCadet(s: GameState, charId: string, regionId: string, name?
   const founder = s.characters[charId];
   const reg = s.regions[regionId];
   const id = newId(s, 'cadet');
+  const sigil = cadetSigil(s, main.sigil, id);
   const cadet: Clan = {
     id,
     name: name?.trim() || defaultCadetName(s, regionId),
     planetId: reg.planetId,
     faithId: main.faithId,
     headId: founder.id,
-    // A cadet's arms echo the main house's with the colours swapped.
-    sigil: { ...main.sigil, c1: main.sigil.c2, c2: main.sigil.c1, division: (main.sigil.division + 1) % 7 },
-    color: main.sigil.c2,
+    sigil,
+    color: sigil.c1,
     credits: 120,
     fleet: 0,
     prestige: 60,

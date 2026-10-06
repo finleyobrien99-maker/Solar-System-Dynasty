@@ -8,6 +8,12 @@
 
 Live build: https://finleyobrien99-maker.github.io/Solar-System-Dynasty/ (deploys on every push to `main`).
 
+### 6 October 2026: edit every house and recognise cadet arms
+
+Every house profile now offers House identity & flag, including rivals and cadets, without VIP. Saving changes only the chosen house's name, sigil and matching map/ship/clothing colour; IDs, resources, territory and diplomacy remain unchanged. New cadet branches copy their parent's exact shape, division and symbol, choosing three distinct colours from the existing house palette and excluding the parent's colours. The art generator is seeded from the current game seed and the new branch ID, without advancing the simulation seed. Existing cadets retain their saved arms; no schema change or save-version bump.
+
+Founding closes the profile stack so its notice can take focus, fixing a blocked Continue button found by the new real-founding browser test. The guide and founding panel explain the design rule. Regression coverage includes foreign-house save/reload with an exact whole-state comparison, actual paid cadet founding, copied design, fresh colours and unchanged simulation seed. Full check passes1029tests; all142desktop/phone browser checks pass and four new screenshots were inspected. All151frozen saves still load/play/round-trip. Phone game rebuilt (1276.12KB single HTML/gzip487.12KB); no native wrapper changes or balance tuning.
+
 ### 6 October 2026: character appearance and house identity designers (local, save v12)
 
 The new-dynasty builder and existing profiles now share reusable designers. Menu links open your ruler's **Character appearance** and **House identity & flag**. Your dynasty and current spouse can be styled without VIP; the existing VIP editor still handles stats, traits, age and names, and permits foreign portrait styling. Cosmetic overrides are separate from inherited looks: children, skills, traits, resources, relationships and the random seed are unchanged. Save, discard and inherited-look reset are explicit; invalid draft hex colours never reach the renderer or save.
