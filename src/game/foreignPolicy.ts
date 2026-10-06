@@ -5,7 +5,8 @@
 // new lord can turn the house around. Houses fear whoever grows too strong
 // (you included) and draw together against them. And expansionist lords bully
 // weaker neighbours with ultimatums: yield a region or pay tribute, or face a
-// war. You can make the same demands.
+// war. You can make the same demands. A new lord reviews the treaties a
+// predecessor signed and may repudiate them, and so may you early in a reign.
 //
 // Stances and rivals are read fresh, never saved. Ultimatums waiting for your
 // answer are saved (the v11 record, WAVE-5-CONTRACT.md). A refusal justifies
@@ -15,16 +16,29 @@
 import { aiAmbition } from './aiAmbition';
 import { pactMap } from './aiCourt';
 import { recordExpansion } from './coalitions';
-import { canAct, clanRegions, cooldownReady, hasTrait, log, newId, notice, setCooldown, setOwner } from './core';
-import type { DemandGoal, ForeignPolicyState, Reason, SavedUltimatum } from './diplomacyTypes';
-import { headOf, houseRelation, mightOf, neighbours, rememberHouse, treatiesBetween, trustOf } from './houseRelations';
+import { canAct, clanRegions, cooldownReady, fullName, hasTrait, log, newId, notice, ruler, setCooldown, setOwner } from './core';
+import type { DemandGoal, ForeignPolicyState, Reason, SavedUltimatum, Treaty } from './diplomacyTypes';
+import {
+  adjustTrust,
+  diplomacyOf,
+  ensureDiplomacy,
+  headOf,
+  houseMemorySum,
+  houseRelation,
+  mightOf,
+  neighbours,
+  rememberHouse,
+  treatiesBetween,
+  treatyName,
+  trustOf,
+} from './houseRelations';
 import { isRival } from './memory';
 import { truceOf } from './peace';
 import { PLANET_BY_ID } from './planets';
 import { realmOf } from './realmDefence';
 import { regencyOf } from './regency';
 import { chance, clamp } from './rng';
-import { pactDefenders, signTreaty, tributeAmount, treatyWarBlocker, TREATY_YEARS } from './treaties';
+import { pactDefenders, signTreaty, treatiesOf, tributeAmount, treatyWarBlocker, TREATY_YEARS } from './treaties';
 import type { GameState, Region } from './types';
 import { committedShips } from './warAid';
 
@@ -172,7 +186,7 @@ export function rivalsOf(s: GameState, id: string, _viewerId?: string): Rival[] 
 /** GameState with the foreign-policy record the v11 save adds (WAVE-5-CONTRACT.md). Read through these helpers only. */
 export type WithForeignPolicy = GameState & { foreignPolicy?: ForeignPolicyState };
 
-const EMPTY: ForeignPolicyState = Object.freeze({ ultimatums: [] }) as ForeignPolicyState;
+const EMPTY: ForeignPolicyState = Object.freeze({ ultimatums: [], heads: {} }) as ForeignPolicyState;
 
 /** The record, or an empty one for a save that has none yet. Never writes. */
 export function foreignPolicyOf(s: GameState): ForeignPolicyState {
@@ -182,12 +196,17 @@ export function foreignPolicyOf(s: GameState): ForeignPolicyState {
 /** The record, created empty if missing: for code about to change it. */
 export function ensureForeignPolicy(s: GameState): ForeignPolicyState {
   const w = s as WithForeignPolicy;
-  w.foreignPolicy ??= { ultimatums: [] };
+  w.foreignPolicy ??= { ultimatums: [], heads: {} };
   w.foreignPolicy.ultimatums ??= [];
+  w.foreignPolicy.heads ??= {};
   return w.foreignPolicy;
 }
 
-/** A save from before foreign policy starts with no ultimatums on record: no invented history. Safe to run twice. Called from MIGRATIONS[11]. */
+/**
+ * A save from before foreign policy starts with no ultimatums on record and
+ * no lords noted, so the first cycle notes them without inventing a
+ * succession. Safe to run twice. Called from MIGRATIONS[11].
+ */
 export function migrateForeignPolicy(s: GameState): void {
   ensureForeignPolicy(s);
 }
@@ -217,6 +236,11 @@ export interface Ultimatum {
 /** Tribute terms for a demand on `payer`: the usual amount, for the usual years. */
 export function tributeDemand(s: GameState, payer: string): Extract<Demand, { kind: 'tribute' }> {
   return { kind: 'tribute', amount: tributeAmount(s, payer), years: TREATY_YEARS.tribute };
+}
+
+/** Your ruler can speak for the house: grown, out of regency and not a captive (as freeAdult is for AI lords). */
+export function rulerFree(s: GameState): boolean {
+  return canAct(s) && !ruler(s).prisonerOf;
 }
 
 function freeAdult(s: GameState, id: string): boolean {
@@ -258,6 +282,7 @@ export function ultimatumBlocker(s: GameState, from: string, to: string, demand:
   if (s.gameOver || from === to || !s.clans[from] || !s.clans[to]) return 'Choose another house.';
   if (!clanRegions(s, from).length || !clanRegions(s, to).length) return 'Only landed houses make demands.';
   if (from === s.playerClanId ? !canAct(s) : !freeAdult(s, from)) return 'A regency makes no demands.';
+  if (from === s.playerClanId && !rulerFree(s)) return 'A captive ruler makes no demands.';
   if (!cooldownReady(s, `ultimatum:${from}`)) return 'Your last demand is too recent.';
   if (realmOf(s, from) === realmOf(s, to)) return 'A quarrel inside one realm is for its liege.';
   if (atWarBetween(s, from, to)) return 'You are already at war.';
@@ -342,16 +367,21 @@ export function issueUltimatum(s: GameState, from: string, to: string, demand: D
   if (ultimatumBlocker(s, from, to, demand)) return null;
   setCooldown(s, `ultimatum:${from}`, from === s.playerClanId ? 5 : ULTIMATUM_GAP);
   const u: Ultimatum = { from, to, demand: { ...demand } };
-  if (to === s.playerClanId && canAct(s)) {
+  if (to === s.playerClanId && rulerFree(s)) {
     ensureForeignPolicy(s).ultimatums.push({ id: newId(s, 'ul'), from, to, goal: u.demand, year: s.year, expires: s.year + ANSWER_YEARS });
     return 'pending';
   }
   const yes = chance(s, ultimatumAcceptance(s, from, to, demand).chance);
-  if (to === s.playerClanId)
-    notice(s, 'Your Regent Answers', `House ${s.clans[from].name} demanded ${describeDemand(s, demand)}. Your regent ${yes ? 'gave in' : 'refused'}.`, {
-      icon: 'war',
-      tone: 'bad',
-    });
+  if (to === s.playerClanId) {
+    // A child's regent answers, or the council while you are a captive.
+    const who = canAct(s) ? 'council' : 'regent';
+    notice(
+      s,
+      `Your ${who === 'council' ? 'Council' : 'Regent'} Answers`,
+      `House ${s.clans[from].name} demanded ${describeDemand(s, demand)}. Your ${who} ${yes ? 'gave in' : 'refused'}.`,
+      { icon: 'war', tone: 'bad' },
+    );
+  }
   if (yes) yieldTo(s, u);
   else refuse(s, u);
   return yes ? 'yielded' : 'refused';
@@ -403,10 +433,104 @@ export function ultimatumTarget(s: GameState, from: string): Ultimatum | undefin
   return best?.u;
 }
 
-/** Each cycle, after treaties: stale ultimatums are dropped, then a few expansionist lords press demands on weaker neighbours. */
+// ── A new lord reviews the treaties ───────────────────────────────────────
+
+/** Repudiating a predecessor's treaty costs the partner's trust and a memory: far less than a breach, since the oath was not the new lord's. */
+export const REPUDIATE_TRUST = -15;
+export const REPUDIATE_MEMORY = -20;
+/** You may repudiate a predecessor's treaties this many cycles into your reign. */
+export const REPUDIATE_WINDOW = 5;
+
+const otherSide = (t: Treaty, id: string) => (t.a === id ? t.b : t.a);
+
+/**
+ * Why a house's new lord would repudiate a treaty, as a phrase ("unwilling to
+ * bleed for another world"), or null if they keep it. Honourable lords keep
+ * every word, and schemers keep non-aggression pacts they mean to betray. Pure.
+ */
+export function repudiationReason(s: GameState, id: string, t: Treaty): string | null {
+  const stance = stanceKind(s, id);
+  if (stance === 'honourable' || (stance === 'schemer' && t.kind === 'nonAggression')) return null;
+  const other = otherSide(t, id);
+  if (!s.clans[other]) return null;
+  if (houseRelation(s, id, other).value <= -30) return `despising House ${s.clans[other].name}`;
+  if (stance === 'expansionist' && t.kind === 'nonAggression' && mightOf(s, other) * ULTIMATUM_EDGE <= mightOf(s, id))
+    return 'wanting a free hand against a weaker neighbour';
+  if (stance === 'planetFirst' && (t.kind === 'defensive' || (t.kind === 'guarantee' && t.a === id)) && s.clans[other].planetId !== s.clans[id].planetId)
+    return 'unwilling to bleed for another world';
+  const head = headOf(s, id);
+  if (t.kind === 'tribute' && t.b === id && mightOf(s, id) >= mightOf(s, other) * 0.8 && !(head && hasTrait(head, 'craven')))
+    return 'unwilling to pay tribute to a house no stronger than their own';
+  return null;
+}
+
+function repudiate(s: GameState, id: string, t: Treaty, why: string): void {
+  const d = ensureDiplomacy(s);
+  d.treaties = d.treaties.filter((x) => x !== t);
+  const other = otherSide(t, id);
+  const name = treatyName(t.kind).toLowerCase();
+  adjustTrust(s, other, id, REPUDIATE_TRUST);
+  rememberHouse(s, other, id, { text: `Repudiated our ${name}`, value: REPUDIATE_MEMORY, decay: 0.05 });
+  if (id === s.playerClanId) {
+    log(s, `You repudiate your predecessor's ${name} with House ${s.clans[other].name}.`, 'info');
+    return;
+  }
+  const lord = headOf(s, id);
+  const text = `The new head of House ${s.clans[id].name}${lord ? `, ${fullName(s, lord)},` : ''} repudiates the ${name} with House ${s.clans[other].name}, ${why}.`;
+  if (other === s.playerClanId) notice(s, 'A Treaty Repudiated', text, { icon: 'war', tone: 'bad' });
+  else log(s, text, 'news');
+}
+
+/** Each AI house whose lord has changed since its last review reviews its treaties once. A regency keeps the house's word. */
+function reviewTreaties(s: GameState, fp: ForeignPolicyState): void {
+  for (const id of Object.keys(fp.heads)) if (!s.clans[id]) delete fp.heads[id];
+  for (const id of Object.keys(s.clans).sort()) {
+    if (id === s.playerClanId || !clanRegions(s, id).length) continue;
+    const known = fp.heads[id];
+    const head = s.clans[id].headId;
+    fp.heads[id] = head;
+    if (!known || known === head || !freeAdult(s, id)) continue;
+    for (const t of treatiesOf(s, id)) {
+      const why = repudiationReason(s, id, t);
+      if (why) repudiate(s, id, t, why);
+    }
+  }
+}
+
+/** The year your ruler took the throne. */
+function reignStart(s: GameState): number | undefined {
+  return s.dynasty.rulers.find((r) => r.id === s.rulerId && r.to === undefined)?.from;
+}
+
+/** A treaty of yours signed before your ruler's reign began. Pure. */
+export function predecessorTreaty(s: GameState, treatyId: string): boolean {
+  const t = diplomacyOf(s).treaties.find((x) => x.id === treatyId && x.until > s.year);
+  const from = reignStart(s);
+  return !!t && (t.a === s.playerClanId || t.b === s.playerClanId) && from !== undefined && t.signed < from;
+}
+
+/** Why you cannot repudiate this treaty now; null if you can. Pure. */
+export function repudiateBlocker(s: GameState, treatyId: string): string | null {
+  if (!canAct(s)) return 'A regency keeps the house’s word.';
+  if (!rulerFree(s)) return 'A captive ruler cannot speak for the house.';
+  if (!predecessorTreaty(s, treatyId)) return 'You signed it yourself: only breaking it is left.';
+  if (s.year - (reignStart(s) ?? s.year) > REPUDIATE_WINDOW) return `Only in the first ${REPUDIATE_WINDOW} cycles of a reign.`;
+  return null;
+}
+
+/** Repudiate a treaty your predecessor signed: they lose some trust in you and remember it, but it is no breach. */
+export function repudiateTreaty(s: GameState, treatyId: string): boolean {
+  if (repudiateBlocker(s, treatyId)) return false;
+  const t = diplomacyOf(s).treaties.find((x) => x.id === treatyId)!;
+  repudiate(s, s.playerClanId, t, '');
+  return true;
+}
+
+/** Each cycle, after treaties: stale ultimatums are dropped, new lords review their treaties, then a few expansionist lords press demands on weaker neighbours. */
 export function foreignPolicyTick(s: GameState): void {
-  const fp = (s as WithForeignPolicy).foreignPolicy;
-  if (fp?.ultimatums.length) fp.ultimatums = fp.ultimatums.filter((u) => s.clans[u.to] && stands(s, u));
+  const fp = ensureForeignPolicy(s);
+  if (fp.ultimatums.length) fp.ultimatums = fp.ultimatums.filter((u) => s.clans[u.to] && stands(s, u));
+  reviewTreaties(s, fp);
   for (const id of Object.keys(s.clans).sort()) {
     if (id === s.playerClanId || !clanRegions(s, id).length) continue;
     if (!cooldownReady(s, `ultimatum:${id}`) || !chance(s, ULTIMATUM_RATE)) continue;
@@ -418,6 +542,45 @@ export function foreignPolicyTick(s: GameState): void {
       issueUltimatum(s, u.from, u.to, u.demand);
     }
   }
+}
+
+// ── What the events look for ─────────────────────────────────────────────
+
+/** Two AI houses with a public quarrel (a grudge of 25 or worse, or broken promises), one of them next to you, at peace with each other and with you. Pure. */
+export function quarrelNearYou(s: GameState): { a: string; b: string } | undefined {
+  const me = s.playerClanId;
+  const d = diplomacyOf(s);
+  const pairs = new Set<string>();
+  for (const m of d.memories) if (m.value < 0) pairs.add(`${m.observer}>${m.subject}`);
+  for (const [key, v] of Object.entries(d.trust)) if (v <= -30) pairs.add(key);
+  for (const key of [...pairs].sort()) {
+    const [a, b] = key.split('>');
+    if (a === me || b === me || !clanRegions(s, a).length || !clanRegions(s, b).length || !headOf(s, a) || !headOf(s, b)) continue;
+    if (!(neighbours(s, a, me) || neighbours(s, b, me)) || atWarBetween(s, a, b) || atWarBetween(s, a, me) || atWarBetween(s, b, me)) continue;
+    if (houseMemorySum(s, a, b) <= -25 || trustOf(s, a, b) <= -30) return { a, b };
+  }
+  return undefined;
+}
+
+/** AI houses next to you, in other realms, that fear you as a rising power, mightiest first. Pure. */
+export function fearfulOfYou(s: GameState): string[] {
+  const me = s.playerClanId;
+  if (!risingPower(s, me)) return [];
+  return Object.keys(s.clans)
+    .filter((id) => id !== me && clanRegions(s, id).length && headOf(s, id) && neighbours(s, id, me) && realmOf(s, id) !== realmOf(s, me))
+    .sort((a, b) => mightOf(s, b) - mightOf(s, a) || (a < b ? -1 : 1));
+}
+
+/** Someone of a house set against you (a sworn rival, or one that loathes you) who might flee its court: an adult, free, not its lord. Pure. */
+export function defectorFrom(s: GameState): { clanId: string; personId: string } | undefined {
+  for (const k of Object.values(s.clans).sort((a, b) => (a.id < b.id ? -1 : 1))) {
+    if (k.isPlayer || !clanRegions(s, k.id).length || !(isRival(k) || k.opinion <= -40)) continue;
+    const who = Object.values(s.characters)
+      .filter((c) => c.clanId === k.id && c.died === undefined && c.id !== k.headId && !c.prisonerOf && s.year - c.born >= 18)
+      .sort((a, b) => (a.id < b.id ? -1 : 1))[0];
+    if (who) return { clanId: k.id, personId: who.id };
+  }
+  return undefined;
 }
 
 export { describeDemand, prize as demandableRegion };

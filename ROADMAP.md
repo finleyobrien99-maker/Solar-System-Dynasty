@@ -28,6 +28,15 @@ A refusal is remembered. The war over exactly the refused demand comes with Code
 
 AI houses sign about 100–130 treaties per game. 143 distinct events fire, none over 3%: Envoys at Court 2.3%, An Ultimatum 0.4%. Checks: 860 unit tests and 120 browser tests at 1280px and 390px pass. Age Up on the same 10k state is unchanged (160–163 ms against 158–164 ms).
 
+**Second local commit:**
+- A new lord reviews the old lord's treaties and may repudiate some, for stated reasons. That costs the partner's trust and a memory, but it is no breach. You may do the same in the first 5 cycles of a reign.
+- Houses plot against those they have quarrelled with, and sabotage a rising power next door.
+- Three new events: *A Border Incident*, *The Neighbours Confer* and *A Defector*.
+- Codex entries for treaties and foreign policy.
+- Codex's review fixes: a captive ruler cannot repudiate or make demands, and the defector's raid is now ordinary covert sabotage.
+
+Measured: Builder Sovereign 30%, Warmonger 85%, Passive endings 0% (one game in twenty), 145 distinct events with none over 3%. AI assassinations are unchanged (33 → 35 in 20 games) and sabotage is up 60%. Age Up is unchanged. Checks: 878 unit tests and 122 browser tests pass.
+
 ### 6 October 2026: houses deal with each other (Wave 5, slice 2)
 
 Every house now regards every other, with stated reasons:

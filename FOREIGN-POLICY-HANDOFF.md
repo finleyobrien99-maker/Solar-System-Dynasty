@@ -23,7 +23,7 @@ From `src/game/foreignPolicy.ts`. Reads are pure.
 |---|---|
 | `stanceOf(s, houseId, viewerId?) -> {kind; reasons}` | Yes. The reasons are traits and the stated ambition, both already public on the lord's card, so every viewer sees the same. `undefined` for the player. `STANCE_NAME` has display names. |
 | `rivalsOf(s, houseId, viewerId?)` -> public rival IDs/reasons | Yes: `Rival[] = {id; reasons: Reason[]}[]`, at most `MAX_RIVALS` = 3. |
-| Ultimatum state, `migrateForeignPolicy(s)` from `MIGRATIONS[11]` | `ForeignPolicyState = {ultimatums: SavedUltimatum[]}` (`diplomacyTypes.ts`) holds **only ultimatums waiting for your answer** (`{id, from, to, goal, year, expires}`, `ANSWER_YEARS` = 2). AI targets answer at once. The migration adds an empty record, invents nothing and is idempotent. |
+| Ultimatum state, `migrateForeignPolicy(s)` from `MIGRATIONS[11]` | `ForeignPolicyState = {ultimatums: SavedUltimatum[]; heads: Record<string, string>}` (`diplomacyTypes.ts`). `ultimatums` holds **only ultimatums waiting for your answer** (`{id, from, to, goal, year, expires}`, `ANSWER_YEARS` = 2); AI targets answer at once. `heads` notes each AI house's lord at its last treaty review (see below). The migration adds an empty record and invents nothing: the first cycle only notes the lords, so no succession is invented. It is idempotent. |
 | Goal shapes | `DemandGoal` (`diplomacyTypes.ts`) is exactly your `WarGoal`'s cede and tribute members: `{kind:'cede'; regionId}` and `{kind:'tribute'; amount; years}`. `tributeDemand(s, payer)` gives the usual terms (15 + 10 × rank credits a cycle for 10 cycles, inside your 1000 and 20-cycle caps). You can alias one to the other. |
 | Refused demands | **Yours**, as your note asks (`recordRefusedDemand` / `refusedWarDemand`, `s.warJustifications`). I keep no copy. |
 
@@ -34,7 +34,7 @@ Answers name the exact ultimatum (`answerUltimatum(s, give, id)`). Stale or repe
 Until v11, my code reads and writes `s.foreignPolicy` through `WithForeignPolicy` (an optional intersection type), exactly as diplomacy did before v10. None of it is released.
 
 1. `types.ts`: `foreignPolicy?: ForeignPolicyState` on `GameState`. `WithForeignPolicy` can then become plain `GameState`.
-2. `world.ts` `emptyState`: `foreignPolicy: { ultimatums: [] }`.
+2. `world.ts` `emptyState`: `foreignPolicy: { ultimatums: [], heads: {} }`.
 3. `save.ts` `MIGRATIONS[11]`: call `migrateForeignPolicy(s)`.
 4. v11 fixtures: include an ultimatum waiting for the player (the contract asks for a pending ultimatum).
 5. **`refuse(s, u, _id?)`** in foreignPolicy.ts already receives the ultimatum's own id when you refuse. AI targets get none, so make one. After the memory and log lines, add:
@@ -50,6 +50,34 @@ Until v11, my code reads and writes `s.foreignPolicy` through `WithForeignPolicy
    - the hint under *Press a demand* (`HouseDiplomacySection.tsx`), today "If they refuse, they will remember it.", becomes "If they refuse, you may go to war over exactly this.";
    - the refusal e2e (`e2e/foreignPolicy.spec.ts`) can again expect *War Declared!* and the realm call.
 
+## Added while you built war goals (second local commit)
+
+- **A new lord reviews the treaties.** When an AI house's lord changes, through any route (death, crisis, usurping regent), the new lord reviews the house's treaties once (`reviewTreaties` in `foreignPolicyTick`). They may repudiate one for a stated reason (`repudiationReason`):
+  - they despise the partner (relations of −30 or worse);
+  - an expansionist wants a free hand against a weaker neighbour (non-aggression);
+  - a planet-first lord won't bleed for another world (defensive pact, guarantee given);
+  - a payer won't keep paying tribute to a house no stronger than their own.
+
+  Honourable lords keep every word; schemers keep non-aggression pacts they mean to betray; a regency keeps the house's word. Repudiation is no breach: the partner loses 15 trust (`REPUDIATE_TRUST`) and remembers it (−20), with no prestige loss and no Oathbreaker name. You get *A Treaty Repudiated* if it was yours.
+- **You may repudiate too.** In the first 5 cycles of a reign (`REPUDIATE_WINDOW`), on the same terms, a treaty signed before your ruler took the throne gets a *Repudiate* button beside *Break it* in the house profile (`predecessorTreaty`, `repudiateBlocker`, `repudiateTreaty`).
+- **Rivals plot.** In `aiIntrigue.ts` `aiPlans`, the houses' own quarrels now add to a lord's hatred, in full: house-to-house memories (kept apart from the lords' personal feelings, so nothing counts twice) plus 15 for broken promises. A rising power next door is a sabotage target even without hatred (+55). Plots against you still come from `ai.ts`; untouched.
+- **Three events** in `eventsForeignPolicy.ts`:
+  - *A Border Incident*: two quarrelling neighbours of yours ask you to judge. Mediate (40 credits, +20 prestige, both cool), side with either, or stay out.
+  - *The Neighbours Confer*: you are a rising power and at least two neighbours meet about it. Buy off their host (80 credits), parade the fleet (+25 prestige, all of them like you less), or let them talk.
+  - *A Defector*: someone flees a house set against you. Your options:
+    - send your saboteurs with their maps: `runScheme(s, 'sabotage', house)`, the ordinary paid scheme with its usual odds, cost and exposure, using one of your schemes this cycle and no fleet;
+    - shelter them and nothing more;
+    - send them back;
+    - let them go.
+
+  Each of the first two leaves the memory "Sheltered our traitor". Other effects are memories, so grave grudges cap the goodwill (memory.ts).
+- **Codex's review (FOREIGN-POLICY-REVIEW.md), both fixed:**
+  - A captive ruler can no longer repudiate (`rulerFree`: grown, out of regency, not a captive). The same rule now covers pressing demands and answering them: while you are captive, your council answers an ultimatum (*Your Council Answers*), as a regent does for a child.
+  - The defector no longer "raids" with ships you may not have. It is covert sabotage by the existing rules (above).
+
+  Regressions: a captive repudiation changes nothing (whole state and seed); captive demands are blocked and the council answers; the defector with no fleet still sabotages at the scheme's cost, and with no credits that option is greyed while the others stay open.
+- **Codex entries** (`CodexModal.tsx`): *Treaties and trust* (slice 2 had none) and *Foreign policy*.
+
 ## Edits to shared files this slice (please review)
 
 - `treaties.ts`:
@@ -63,7 +91,9 @@ Until v11, my code reads and writes `s.foreignPolicy` through `WithForeignPolicy
 - `houseRelations.ts`: "Fears their growing power" −10.
 - `events.ts`: `...FOREIGN_POLICY_EVENTS`.
 - `eventsDiplomacy.ts`: `ENVOY_GAP`.
-- `HouseDiplomacySection.tsx`: the stance line with a *Rising power* pill, *Rivals*, and *Press a demand*.
+- `HouseDiplomacySection.tsx`: the stance line with a *Rising power* pill, *Rivals*, *Press a demand* and *Repudiate*.
+- `aiIntrigue.ts`: house quarrels and rising powers in `aiPlans` (above).
+- `CodexModal.tsx`: two entries, after *Marriage ties between houses*.
 
 ## Measured
 
@@ -83,9 +113,28 @@ Same 20 seeds × 150 cycles (80 games), against the live `65e16f3`. This is my h
   - The first build was about 35% slower: `bestDeal` asked `commonThreat` about many more pairs, and each call rebuilt the marriage-pact map.
   - Fixed: lukewarm pairs only check for a rising power next to both (`risingThreat`), and the pact map is passed through.
 
+### Second commit, measured (same 20 seeds × 150, all four bots)
+
+| | First commit (6170afa) | Second commit |
+|---|---|---|
+| Builder Sovereign by 150 | 20% | 30% |
+| Warmonger Sovereign by 150 | 90% | 85% |
+| Passive endings by 100 | 5% | 0% (one game in twenty; below the 5–15% band again) |
+| Builder / Breeder endings by 100 | 5% / 5% | 10% / 10% |
+| Treaties signed per game | 101–129 | 81–122 (new lords repudiate) |
+
+- **Events.** 145 distinct events, none over 3%. Envoys at Court 1.96%, An Ultimatum 0.27%, A Defector 0.14%, A Border Incident 0.02%, The Neighbours Confer 0.02%. The last two are rare by design: a public quarrel next door, or you as a rising power facing neighbours of another realm. Their frequency is a feel call for Fin.
+- **AI intrigue,** 20 passive games × 150 cycles against `65e16f3` (scratch counter over the log):
+  - assassinations 33 → 35, caught assassins 25 → 32;
+  - shipyard sabotage 415 → 669 (aimed at rising powers and at houses with grudges);
+  - 86 treaties repudiated by new lords (about 4 a game).
+- **Speed.** Age Up on the same saved 10k state, serial and alternating: medians 174–178 ms against 170–176 ms for `65e16f3`.
+
 ## Tests
 
-- `foreignPolicy.test.ts` (18 tests):
+- Second commit: `foreignPolicy.test.ts` adds new-lord reviews (no invented succession; expansionist heir; honourable heir and regency keep the word; you are told), your repudiation (window, self-signed, captive), and rival plots (house quarrels, rising powers). `eventsForeignPolicy.test.ts` covers the three new events (conditions, each option, pure previews).
+- `e2e/foreignPolicy.spec.ts` adds *Repudiate* on a predecessor's treaty but not yours (desktop and 390px).
+- First commit, `foreignPolicy.test.ts` (18 tests):
   - stances, and that honourable lords keep their word;
   - rising power and fear; defensive pacts against a giant; purity;
   - target choice and protector deterrence;

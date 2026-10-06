@@ -216,6 +216,21 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               quarter of their fleet in defence and 15% in attack; anyone related to both sides stays home. Ties lapse as people die. Treacherous, hostile
               rulers can betray even their in-laws.
             </p>
+            <h3>Treaties and trust</h3>
+            <p>
+              Every house regards every other, for reasons its profile lists. Treaties have terms and an end: non-aggression, defensive pacts, trade, guarantees
+              and tribute. AI houses make them with each other and offer them to you; weighty offers arrive as envoys, the rest wait in Realm. Trust grows while
+              promises hold. Breaking one costs the victim's trust, a little of everyone's, 50 prestige and a memory they keep. A new ruler may repudiate a
+              predecessor's treaties in the first 5 cycles of the reign: the partner minds (−15 trust and a memory), but it is no breach.
+            </p>
+            <h3>Foreign policy</h3>
+            <p>
+              Each AI house has a stance read from its lord's traits and ambition: expansionist, honourable, planet first, zealous, mercantile, schemer or
+              cautious. It shapes which treaties the house wants and how readily it breaks them, and a new lord reviews the old lord's treaties. A house with
+              2.5 times the typical fleet is a rising power, you included: its neighbours fear it and band together against it. Expansionist lords demand a
+              region or tribute from weaker neighbours, counting the ships their treaty partners would send. You can make the same demands from a house's
+              profile. Each house names up to three rivals, for public reasons only, and houses plot against those they have quarrelled with.
+            </p>
             <h3>Earned epithets</h3>
             <p>
               Every house head can earn 57 names from their deeds: the Just, the Cruel, the Conqueror, the Builder and more. Your profile lists every earned

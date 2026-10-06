@@ -4,7 +4,9 @@
 // They choose by personality and by how they feel about each rival (grief and
 // vendettas included), pay from their treasury, roll odds shaped like the
 // player's, and leave the same scars: personal grief, feuds, deeds for
-// epithets. The player hears about it as news. Plots against the player
+// epithets. Quarrels between the houses count as well as the lords' own
+// feelings (land taken by threat, broken treaties, defied demands), and a
+// rising power next door invites sabotage. The player hears about it as news. Plots against the player
 // still come from sworn rivals (ai.ts) and from events.
 
 import { consumeHook, hooksOf } from './secrets';
@@ -12,6 +14,8 @@ import { ageOf, alive, ch, clanRank, clanRegions, effStats, fullName, hasTrait, 
 import { pactMap, pactsOf, type Pacts } from './aiCourt';
 import { aiAmbition, ambitionHouse, type AmbitionKind } from './aiAmbition';
 import { recordDeed } from './epithets';
+import { fearedNeighbour } from './foreignPolicy';
+import { houseMemorySum, trustOf } from './houseRelations';
 import { killCharacter } from './life';
 import { addFeeling, attempted, blackmailed, cuckolded, lovers, murdered, opinionOf } from './relations';
 import { chance, clamp, int, weighted } from './rng';
@@ -65,18 +69,24 @@ export function aiPlans(s: GameState, k: Clan, pacts: Pacts = pactMap(s)): AiPla
   const plans: AiPlan[] = [];
   const has = (t: string) => hasTrait(head, t);
   const merciless = (has('cruel') ? 15 : 0) + (has('wrathful') ? 10 : 0) + (has('ambitious') ? 10 : 0) - (has('kind') ? 25 : 0) - (has('honest') ? 15 : 0);
+  const feared = fearedNeighbour(s, k.id);
   for (const other of Object.values(s.clans)) {
     if (other.isPlayer || other.id === k.id || !clanRegions(s, other.id).length) continue;
     const t = adultHead(s, other);
     if (!t) continue;
     const war = atWar(s, k.id, other.id);
+    // The houses' own quarrels count as well as the lords' feelings (kept apart, so nothing counts twice), and broken promises.
+    const feud = Math.max(0, -houseMemorySum(s, k.id, other.id)) + (trustOf(s, k.id, other.id) <= -30 ? 15 : 0);
     // Kin by marriage get the benefit of the doubt.
-    const hate = -opinionOf(s, head, t) + (war ? 30 : 0) - (kin.has(other.id) ? 25 : 0);
+    const hate = -opinionOf(s, head, t) + (war ? 30 : 0) - (kin.has(other.id) ? 25 : 0) + feud;
     const blood = vendetta(s, head, t);
     const avenging = aim.kind === 'revenge' && aim.target === t.id;
     if (hate >= 60 || blood) plans.push({ kind: 'assassinate', target: t, score: hate - 50 + merciless + (blood ? 40 : 0) + (avenging ? 30 : 0) });
     const breaking = other.id === aimHouse && aim.kind !== 'security';
-    if (war || hate >= 60 || breaking) plans.push({ kind: 'sabotage', target: t, score: hate - 40 + (war ? 25 : 0) + (breaking ? 30 : 0) });
+    // A rising power next door is worth slowing down, even without hatred.
+    const fearing = other.id === feared;
+    if (war || hate >= 60 || breaking || fearing)
+      plans.push({ kind: 'sabotage', target: t, score: hate - 40 + (war ? 25 : 0) + (breaking ? 30 : 0) + (fearing ? 55 : 0) });
     if ((has('greedy') || has('deceitful')) && other.credits >= 100 && hooksOf(s, head.id).some((h) => h.targetId === t.id))
       plans.push({ kind: 'blackmail', target: t, score: 15 + hate / 3 + (has('greedy') ? 10 : 0) });
     const spouse = ch(s, t.spouseId);

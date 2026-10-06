@@ -122,8 +122,33 @@ test('a house shows its stance, and you can press a demand on it', async ({ page
   await shot(page, info, 'press-a-demand');
   await demand.click();
   await diplomacy.getByRole('button', { name: 'Tap again: send the ultimatum', exact: true }).click();
-  await expect(page.getByText(/They give in\.|They refuse\. You now hold a claim\./)).toBeVisible();
+  await expect(page.getByText(/^(They give in|They refuse)\.$/)).toBeVisible();
   // Either way they will not hear another demand for a while.
   await expect(diplomacy.getByRole('button', { name: /^Demand \(\d+%\)/ })).toHaveCount(0);
+  await healthy(page, failures);
+});
+
+test('a new ruler can repudiate a predecessor’s treaty, but not one they signed', async ({ page }, info) => {
+  const failures = watch(page);
+  const s = world();
+  const partner = on(s, 'venus');
+  s.dynasty.rulers.find((r) => r.id === s.rulerId && r.to === undefined)!.from = s.year;
+  s.diplomacy!.treaties.push(
+    { id: 'told', kind: 'defensive', a: s.playerClanId, b: partner.id, years: 10, signed: s.year - 4, until: s.year + 6 },
+    { id: 'tnew', kind: 'trade', a: s.playerClanId, b: partner.id, years: 10, signed: s.year, until: s.year + 10 },
+  );
+  await load(page, s);
+  const house = await openHouse(page, partner.name);
+  const diplomacy = house.locator('.section').filter({ has: page.getByRole('heading', { name: /^Diplomacy/ }) });
+  const pact = diplomacy.locator('.spread').filter({ hasText: /Defensive pact · until/ });
+  const trade = diplomacy.locator('.spread').filter({ hasText: /Trade agreement: \+/ });
+  await expect(trade).toHaveCount(1);
+  await expect(trade.getByRole('button', { name: 'Repudiate' })).toHaveCount(0);
+  await pact.scrollIntoViewIfNeeded();
+  await shot(page, info, 'repudiate');
+  await pact.getByRole('button', { name: 'Repudiate', exact: true }).click();
+  await diplomacy.getByRole('button', { name: 'Tap again: repudiate your predecessor’s treaty', exact: true }).click();
+  await expect(diplomacy.locator('.spread').filter({ hasText: /Defensive pact · until/ })).toHaveCount(0);
+  await expect(trade).toHaveCount(1);
   await healthy(page, failures);
 });

@@ -122,4 +122,6 @@ export interface SavedUltimatum {
 
 export interface ForeignPolicyState {
   ultimatums: SavedUltimatum[];
+  /** The lord each AI house had when it last reviewed its treaties, so a new lord's review happens once. */
+  heads: Record<string, string>;
 }

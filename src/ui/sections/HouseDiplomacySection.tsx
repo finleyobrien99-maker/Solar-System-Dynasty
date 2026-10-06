@@ -9,6 +9,9 @@ import { breakTreaty, breakTreatyBlocker, proposeTreaty, termsFor, treatiesOf, t
 import {
   demandableRegion,
   issueUltimatum,
+  predecessorTreaty,
+  repudiateBlocker,
+  repudiateTreaty,
   rivalsOf,
   risingPower,
   stanceOf,
@@ -125,15 +128,27 @@ export function HouseDiplomacySection({ clanId }: { clanId: string }) {
                   {t.kind === 'tribute' ? `: ${t.amount} credits a cycle ${t.a === me ? 'to you' : 'from you'}` : ''}
                   <span className="muted"> · until {t.until}</span>
                 </span>
-                <Btn
-                  small
-                  kind="danger"
-                  reason={breakTreatyBlocker(s, me, t.id)}
-                  confirm="Tap again: everyone will hear of it"
-                  onClick={() => act((d) => breakTreaty(d, d.playerClanId, t.id))}
-                >
-                  Break it
-                </Btn>
+                <span className="row wrap" style={{ gap: 'var(--space-6px)' }}>
+                  {predecessorTreaty(s, t.id) && (
+                    <Btn
+                      small
+                      reason={repudiateBlocker(s, t.id)}
+                      confirm="Tap again: repudiate your predecessor’s treaty"
+                      onClick={() => act((d) => repudiateTreaty(d, t.id))}
+                    >
+                      Repudiate
+                    </Btn>
+                  )}
+                  <Btn
+                    small
+                    kind="danger"
+                    reason={breakTreatyBlocker(s, me, t.id)}
+                    confirm="Tap again: everyone will hear of it"
+                    onClick={() => act((d) => breakTreaty(d, d.playerClanId, t.id))}
+                  >
+                    Break it
+                  </Btn>
+                </span>
               </div>
             ))}
           </div>

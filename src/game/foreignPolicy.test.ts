@@ -8,10 +8,16 @@ import {
   defendedMight,
   demandableRegion,
   fearedNeighbour,
+  foreignPolicyTick,
   foreignPolicyOf,
   issueUltimatum,
   migrateForeignPolicy,
   pendingUltimatum,
+  predecessorTreaty,
+  repudiateBlocker,
+  repudiateTreaty,
+  REPUDIATE_TRUST,
+  REPUDIATE_WINDOW,
   risingPower,
   rivalsOf,
   stanceOf,
@@ -20,7 +26,8 @@ import {
   ultimatumTarget,
   type WithForeignPolicy,
 } from './foreignPolicy';
-import { houseRelation, migrateDiplomacy, rememberHouse } from './houseRelations';
+import { houseRelation, migrateDiplomacy, rememberHouse, trustOf } from './houseRelations';
+import { aiPlans } from './aiIntrigue';
 import { realmOf } from './realmDefence';
 import { aiResolvePromises, bestDeal, proposeTreaty, termsFor, treatyBetween } from './treaties';
 import type { Clan, GameState, Pending } from './types';
@@ -266,6 +273,19 @@ describe('ultimatums', () => {
     if (sworn) expect(ultimatumBlocker(s, s.playerClanId, sworn.id, { kind: 'tribute', amount: 30, years: 10 })).toMatch(/realm/);
   });
 
+  it('a captive ruler makes no demands, and the council answers those made of you', () => {
+    const s = world();
+    const big = on(s, 'earth');
+    big.fleet = 600;
+    secondRegion(s, big.id);
+    const target = on(s, 'venus');
+    s.characters[s.rulerId].prisonerOf = big.id;
+    expect(ultimatumBlocker(s, s.playerClanId, target.id, { kind: 'tribute', amount: 30, years: 10 })).toMatch(/captive/);
+    expect(['yielded', 'refused']).toContain(issueUltimatum(s, big.id, s.playerClanId, { kind: 'tribute', amount: 30, years: 10 }));
+    expect(s.pending.some((p) => p.kind === 'notice' && p.title === 'Your Council Answers')).toBe(true);
+    expect(pendingUltimatum(s)).toBeUndefined();
+  });
+
   it('a regent answers for a child ruler, by the same odds', () => {
     const s = world();
     const big = on(s, 'earth');
@@ -341,7 +361,7 @@ describe('the ultimatum record', () => {
     const once = JSON.stringify(s);
     migrateForeignPolicy(s);
     expect(JSON.stringify(s)).toBe(once);
-    expect((s as WithForeignPolicy).foreignPolicy).toEqual({ ultimatums: [] });
+    expect((s as WithForeignPolicy).foreignPolicy).toEqual({ ultimatums: [], heads: {} });
   });
 });
 
@@ -388,5 +408,138 @@ describe('envoys', () => {
     s.year += ENVOY_GAP;
     s.diplomacy!.proposals[0].expires = s.year + 1;
     expect(def.when!(s)).toBe(true);
+  });
+});
+
+/** Hand a house to another adult of its blood, with only the given leanings. */
+function newLord(s: GameState, k: Clan, ...traits: string[]) {
+  const heir = Object.values(s.characters).find((c) => c.clanId === k.id && c.died === undefined && c.id !== k.headId && s.year - c.born >= 20)!;
+  heir.traits = heir.traits.filter((x) => !PERSONAL.includes(x)).concat(traits);
+  heir.prisonerOf = undefined;
+  k.headId = heir.id;
+  return heir;
+}
+
+describe('a new lord reviews the treaties', () => {
+  function pact() {
+    const s = world();
+    const a = on(s, 'venus');
+    const b = on(s, 'earth');
+    a.fleet = 600;
+    b.fleet = 100;
+    sign(s, termsFor(s, 'nonAggression', a.id, b.id));
+    foreignPolicyTick(s); // the lords are noted: nobody has succeeded anyone yet
+    return { s, a, b };
+  }
+
+  it('the first look at a house invents no succession', () => {
+    const s = world();
+    const a = on(s, 'venus');
+    const b = on(s, 'earth');
+    a.fleet = 600;
+    lord(s, a, 'ambitious', 'wrathful');
+    sign(s, termsFor(s, 'nonAggression', a.id, b.id));
+    foreignPolicyTick(s);
+    expect(treatyBetween(s, a.id, b.id, 'nonAggression')).toBeTruthy();
+  });
+
+  it('an expansionist heir repudiates a pact with a weaker neighbour: the partner minds, nobody else does', () => {
+    const { s, a, b } = pact();
+    const third = on(s, 'mercury') ?? on(s, 'jupiter');
+    newLord(s, a, 'ambitious', 'wrathful');
+    foreignPolicyTick(s);
+    expect(treatyBetween(s, a.id, b.id, 'nonAggression')).toBeUndefined();
+    expect(trustOf(s, b.id, a.id)).toBe(REPUDIATE_TRUST);
+    expect(s.diplomacy!.memories.some((m) => m.observer === b.id && m.subject === a.id && m.text === 'Repudiated our non-aggression pact')).toBe(true);
+    if (third) expect(trustOf(s, third.id, a.id)).toBe(0); // no breach: the oath was not theirs
+    expect(s.log.some((l) => l.t.includes('repudiates the non-aggression pact'))).toBe(true);
+  });
+
+  it('an honourable heir keeps the word of the house, and so does a regency', () => {
+    const { s, a, b } = pact();
+    newLord(s, a, 'honest', 'just', 'ambitious');
+    foreignPolicyTick(s);
+    expect(treatyBetween(s, a.id, b.id, 'nonAggression')).toBeTruthy();
+    const child = newLord(s, a, 'ambitious', 'wrathful');
+    child.born = s.year - 8;
+    foreignPolicyTick(s);
+    expect(treatyBetween(s, a.id, b.id, 'nonAggression')).toBeTruthy();
+  });
+
+  it('a new lord tells you when they tear up your treaty', () => {
+    const s = world();
+    const a = on(s, 'venus');
+    a.fleet = 600;
+    s.fleet = 100;
+    sign(s, termsFor(s, 'nonAggression', a.id, s.playerClanId));
+    foreignPolicyTick(s);
+    newLord(s, a, 'ambitious', 'wrathful');
+    foreignPolicyTick(s);
+    expect(treatyBetween(s, a.id, s.playerClanId, 'nonAggression')).toBeUndefined();
+    expect(s.pending.some((p) => p.kind === 'notice' && p.title === 'A Treaty Repudiated')).toBe(true);
+  });
+});
+
+describe('you may repudiate a predecessor’s treaty', () => {
+  it('early in your reign, at a fraction of a breach; never one you signed yourself', () => {
+    const s = world();
+    const partner = on(s, 'venus');
+    const reign = s.dynasty.rulers.find((r) => r.id === s.rulerId && r.to === undefined)!;
+    reign.from = s.year;
+    sign(s, termsFor(s, 'defensive', s.playerClanId, partner.id));
+    const old = s.diplomacy!.treaties.at(-1)!;
+    old.signed = s.year - 3;
+    sign(s, termsFor(s, 'trade', s.playerClanId, partner.id));
+    const mine = s.diplomacy!.treaties.at(-1)!;
+    expect(predecessorTreaty(s, old.id)).toBe(true);
+    expect(predecessorTreaty(s, mine.id)).toBe(false);
+    expect(repudiateBlocker(s, mine.id)).toMatch(/yourself/);
+    expect(repudiateBlocker(s, old.id)).toBeNull();
+    const prestige = s.prestige;
+    const before = partner.opinion;
+    expect(repudiateTreaty(s, old.id)).toBe(true);
+    expect(treatyBetween(s, s.playerClanId, partner.id, 'defensive')).toBeUndefined();
+    expect(s.prestige).toBe(prestige);
+    expect(partner.memories?.some((m) => m.text === 'Repudiated our defensive pact')).toBe(true);
+    expect(trustOf(s, partner.id, s.playerClanId)).toBe(REPUDIATE_TRUST);
+    expect(repudiateTreaty(s, old.id)).toBe(false);
+    void before;
+    reign.from = s.year - REPUDIATE_WINDOW - 1;
+    mine.signed = reign.from - 1;
+    expect(repudiateBlocker(s, mine.id)).toMatch(/first/);
+  });
+
+  it('a captive ruler cannot repudiate: nothing changes, not even the dice', () => {
+    const s = world();
+    const partner = on(s, 'venus');
+    s.dynasty.rulers.find((r) => r.id === s.rulerId && r.to === undefined)!.from = s.year;
+    sign(s, termsFor(s, 'defensive', s.playerClanId, partner.id));
+    const old = s.diplomacy!.treaties.at(-1)!;
+    old.signed = s.year - 1;
+    s.characters[s.rulerId].prisonerOf = partner.id;
+    const before = JSON.stringify(s);
+    expect(repudiateBlocker(s, old.id)).toMatch(/captive/);
+    expect(repudiateTreaty(s, old.id)).toBe(false);
+    expect(JSON.stringify(s)).toBe(before);
+  });
+});
+
+describe('rivals plot', () => {
+  it('a house plots against one it has a grave quarrel with, though the lords never met', () => {
+    const s = world();
+    const k = on(s, 'venus');
+    const enemy = on(s, 'earth');
+    k.credits = 1000;
+    const before = aiPlans(s, k).filter((p) => p.target.id === enemy.headId);
+    expect(before.some((p) => p.kind === 'assassinate')).toBe(false);
+    rememberHouse(s, k.id, enemy.id, { text: 'Broke the defensive pact', value: -70 });
+    expect(aiPlans(s, k).some((p) => p.target.id === enemy.headId && (p.kind === 'assassinate' || p.kind === 'sabotage'))).toBe(true);
+  });
+
+  it('a rising power next door invites sabotage', () => {
+    const s = world();
+    const { big, small } = bully(s);
+    small.credits = 1000;
+    expect(aiPlans(s, small).some((p) => p.kind === 'sabotage' && p.target.id === big.headId)).toBe(true);
   });
 });
