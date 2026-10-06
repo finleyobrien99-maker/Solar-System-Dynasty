@@ -157,6 +157,7 @@ describe('siege orders', () => {
     const [a, d] = houses;
     a.fleet = 200;
     a.credits = 1000;
+    a.prestige = 1000;
     ch(s, a.headId)!.born = s.year - 40;
     for (const c of Object.values(s.characters)) c.spouseId = undefined;
     expect(declareHouseWar(s, a.id, clanRegions(s, d.id)[0].id)).toBe(true);

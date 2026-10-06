@@ -20,6 +20,7 @@ function fixture() {
     ch(s, k.headId)!.born = s.year - 40;
     ch(s, k.headId)!.prisonerOf = undefined;
     k.fleet = 100;
+    k.prestige = 1000; // Both sides must fund the existing conquest price.
     k.allied = false;
     k.liege = 'none';
   }

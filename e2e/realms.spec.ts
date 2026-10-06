@@ -25,6 +25,7 @@ function world(): GameState {
       head.traits = head.traits.filter((t) => !PERSONAL.includes(t));
     }
     k.fleet = 100;
+    k.prestige = 1000; // Both sides must fund the existing conquest price.
     k.allied = false;
   }
   return s;

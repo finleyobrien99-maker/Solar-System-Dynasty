@@ -1,3 +1,4 @@
+import { houseFunds, moveFunds } from './warGoals';
 // Treaties between houses (WAVE-5-DIPLOMACY.md slice 2). Any two houses, AI
 // with AI as well as with you, can agree a non-aggression pact, a defensive
 // pact, a trade agreement, a guarantee of independence or tribute. Every
@@ -312,7 +313,7 @@ export function breakTreatyBlocker(s: GameState, breaker: string, treatyId: stri
   const t = diplomacyOf(s).treaties.find((x) => x.id === treatyId && x.until > s.year);
   if (!t) return 'No such treaty stands.';
   if (t.a !== breaker && t.b !== breaker) return 'Not your treaty to break.';
-  if (breaker === s.playerClanId && !canAct(s)) return 'A regency cannot break treaties.';
+  if (!canActHouse(s, breaker)) return 'A free adult ruler must answer for this treaty.';
   return null;
 }
 
@@ -322,7 +323,7 @@ export function breakTreatyBlocker(s: GameState, breaker: string, treatyId: stri
  * for abandoning a defensive pact or guarantee). Ending a trade agreement
  * early is a smaller betrayal.
  */
-export function breakTreaty(s: GameState, breaker: string, treatyId: string, why?: string): boolean {
+export function breakTreaty(s: GameState, breaker: string, treatyId: string, why?: string, charge = true): boolean {
   if (breakTreatyBlocker(s, breaker, treatyId)) return false;
   const d = ensureDiplomacy(s);
   const t = d.treaties.find((x) => x.id === treatyId)!;
@@ -339,8 +340,11 @@ export function breakTreaty(s: GameState, breaker: string, treatyId: string, why
     decay: abandoned ? undefined : 0.05,
     grave: abandoned || undefined,
   });
-  if (promise) recordDeed(s, headOf(s, breaker)?.id, 'oathsBroken');
-  if (breaker === s.playerClanId && promise) s.prestige -= BREACH_PRESTIGE;
+  if (promise && charge) recordDeed(s, headOf(s, breaker)?.id, 'oathsBroken');
+  if (promise && charge) {
+    if (breaker === s.playerClanId) s.prestige -= BREACH_PRESTIGE;
+    else s.clans[breaker].prestige -= BREACH_PRESTIGE;
+  }
   if (breaker === s.playerClanId || victim === s.playerClanId)
     log(s, `${houseName(s, breaker)} breaks the ${treatyName(t.kind).toLowerCase()} with ${houseName(s, victim)}.`, breaker === s.playerClanId ? 'bad' : 'war');
   else if (promise) log(s, `${houseName(s, breaker)} breaks its ${treatyName(t.kind).toLowerCase()} with ${houseName(s, victim)}.`, 'news');
@@ -375,7 +379,7 @@ export function mightBreakPromises(s: GameState, attacker: string): boolean {
 export function aiResolvePromises(s: GameState, attacker: string, defender: string): boolean {
   if (!treatyWarBlocker(s, attacker, defender)) return true;
   const h = headOf(s, attacker);
-  if (!h || attacker === s.playerClanId) return false;
+  if (!h || attacker === s.playerClanId || houseFunds(s, attacker, 'prestige') < treatyWarCost(s, attacker, defender)) return false;
   let p = 0.03;
   if (hasTrait(h, 'deceitful')) p += 0.3;
   if (hasTrait(h, 'ambitious')) p += 0.1;
@@ -388,10 +392,19 @@ export function aiResolvePromises(s: GameState, attacker: string, defender: stri
 }
 
 /** Declaring war anyway: every treaty between the two ends, each promise broken by the attacker. Returns how many. */
+export function treatyWarCost(s: GameState, attacker: string, defender: string): number {
+  return treatiesBetween(s, attacker, defender).some((t) => PROMISES.includes(t.kind)) ? BREACH_PRESTIGE : 0;
+}
 export function breakTreatiesForWar(s: GameState, attacker: string, defender: string): number {
+  const treaties = treatiesBetween(s, attacker, defender);
+  const cost = treatyWarCost(s, attacker, defender);
   let n = 0;
-  for (const t of treatiesBetween(s, attacker, defender))
-    if (breakTreaty(s, attacker, t.id, `Made war on us despite the ${treatyName(t.kind).toLowerCase()}`)) n++;
+  for (const t of treaties) if (breakTreaty(s, attacker, t.id, 'Made war on us despite the ' + treatyName(t.kind).toLowerCase(), false)) n++;
+  if (n && cost) {
+    if (attacker === s.playerClanId) s.prestige -= cost;
+    else s.clans[attacker].prestige -= cost;
+    recordDeed(s, headOf(s, attacker)?.id, 'oathsBroken');
+  }
   return n;
 }
 
@@ -410,6 +423,8 @@ export interface PactDefender {
 }
 
 function lentOrFighting(s: GameState, id: string): string | undefined {
+  if (s.successionCrises.some((c) => c.stage === 'civil-war' && (c.clanId === id || c.contributions.some((p) => p.clanId === id && p.ships > 0))))
+    return 'Committed to a civil war';
   if (committedShips(s, id)) return 'Their ships are already lent elsewhere';
   const fighting =
     id === s.playerClanId ? s.wars.length > 0 : s.wars.some((w) => w.enemy === id) || s.aiWars.some((w) => w.attacker === id || w.defender === id);
@@ -486,26 +501,31 @@ export function pactRefused(s: GameState, partner: string, treatyId: string): vo
 // ── Money ─────────────────────────────────────────────────────────────────
 
 /** Your credit lines from treaties, for the economy screen and Age Up (the war lane adds them to creditLines). Pure. */
-export function diplomacyCreditLines(s: GameState): { label: string; value: number }[] {
+export function diplomacyCreditLines(s: GameState, includeTribute = true): { label: string; value: number }[] {
   const lines: { label: string; value: number }[] = [];
   for (const t of treatiesOf(s, s.playerClanId)) {
     const other = t.a === s.playerClanId ? t.b : t.a;
     if (t.kind === 'trade') lines.push({ label: `Trade with House ${s.clans[other]?.name}`, value: tradeIncomeOf(s, t) });
-    else if (t.kind === 'tribute' && t.a === s.playerClanId) lines.push({ label: `Tribute from House ${s.clans[other]?.name}`, value: t.amount ?? 0 });
-    else if (t.kind === 'tribute' && t.b === s.playerClanId) lines.push({ label: `Tribute to House ${s.clans[other]?.name}`, value: -(t.amount ?? 0) });
+    else if (includeTribute && t.kind === 'tribute' && t.a === s.playerClanId)
+      lines.push({ label: `Tribute from House ${s.clans[other]?.name}`, value: Math.min(Math.max(0, t.amount ?? 0), houseFunds(s, t.b)) });
+    else if (includeTribute && t.kind === 'tribute' && t.b === s.playerClanId)
+      lines.push({ label: `Tribute to House ${s.clans[other]?.name}`, value: -Math.min(Math.max(0, t.amount ?? 0), houseFunds(s, t.b)) });
   }
   return lines;
 }
 
-/** AI houses' side of every payment; your own side is in your credit lines. */
+/** Trade income plus both sides of each capped physical tribute transfer. */
 function payments(s: GameState): void {
+  if (s.cooldowns.treatyPayments === s.year) return;
+  s.cooldowns.treatyPayments = s.year;
   for (const t of diplomacyOf(s).treaties) {
     if (t.until <= s.year) continue;
     if (t.kind === 'trade') {
       for (const id of [t.a, t.b]) if (id !== s.playerClanId && s.clans[id]) s.clans[id].credits += tradeIncomeOf(s, t);
     } else if (t.kind === 'tribute' && t.amount) {
-      if (t.b !== s.playerClanId && s.clans[t.b]) s.clans[t.b].credits = Math.max(0, s.clans[t.b].credits - t.amount);
-      if (t.a !== s.playerClanId && s.clans[t.a]) s.clans[t.a].credits += t.amount;
+      const paid = moveFunds(s, t.b, t.a, t.amount);
+      if (t.a === s.playerClanId || t.b === s.playerClanId)
+        log(s, 'Treaty tribute: ' + houseName(s, t.b) + ' pays ' + houseName(s, t.a) + ' ' + paid + ' of ' + t.amount + ' credits owed.', 'info');
     }
   }
 }
@@ -614,4 +634,9 @@ export function diplomacyTick(s: GameState): void {
 /** For tests and screens: the full record, or undefined for a save without one. */
 export function diplomacyRecord(s: GameState) {
   return (s as WithDiplomacy).diplomacy;
+}
+
+function canActHouse(s: GameState, id: string): boolean {
+  const h = headOf(s, id);
+  return !s.gameOver && !!h && !h.prisonerOf && ageOf(s, h) >= 16 && !regencyOf(s, id);
 }

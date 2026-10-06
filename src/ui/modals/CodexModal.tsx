@@ -450,11 +450,22 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
               Pick a region on the System map. You need a justification: a <b>claim</b> (forge one with a scheme), a <b>blood feud</b> (from insults or caught
               assassins), a <b>holy war</b> against another faith (150 faith), or <b>naked conquest</b> (120 prestige, everyone likes you less).
             </p>
+            <h3>Stated war goals</h3>
+            <p>
+              House profiles let you fight for one exact goal: cede a named region, pay 1–1000 credits each cycle for 1–20 cycles, yield up to 200 prestige, or
+              free a named direct vassal. Ordinary declarations cost 120 prestige for either side. A recorded refused demand justifies one war for its exact
+              terms until its expiry; it cannot bypass truces, other promises, captivity or a regency.
+            </p>
+            <p>
+              Non-territorial victory takes no land and offers no siege. Liberation rechecks the vassal's current allegiance. Tribute begins next cycle, pays
+              only actual available whole credits once per year, and promises no protection. Humiliation transfers only the loser's available prestige. Wars
+              saved before stated goals keep their original settlement.
+            </p>
             <h3>Battles</h3>
             <p>
               Launch one battle per war per cycle; the enemy also attacks once a cycle. Each win pushes the war score toward +100 and kills more of their ships.
-              At +100 you win the region (or independence). At -100 you lose. Allies send 30% of their fleets; loyal vassals 20%. If a vassal is attacked by an
-              outsider, their liege helps them.
+              At +100 your side wins its saved terms (or independence). At -100 it loses. Allies send 30% of their fleets; loyal vassals 20%. If a vassal is
+              attacked by an outsider, their liege helps them.
             </p>
             <h3>Named commanders</h3>
             <p>
@@ -548,8 +559,10 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
             <p>+15% strength and extra prestige, with a chance of glory (War Hero), wounds, scars or death.</p>
             <h3>Peace</h3>
             <p>
-              Offer peace once a cycle. With a big lead the enemy may hand over the prize; around zero they may accept a white peace. Wars end on their own
-              after 7 cycles.
+              For a stated-goal war, negotiate white peace, the exact attacking goal, or capped credit reparations on Realm. Each option explains the enemy's
+              signed war score, weariness and your envoy's Diplomacy. Send one envoy per war each cycle; rejection uses that allowance. Incoming offers wait two
+              cycles for your explicit answer and survive reload. Acceptance rechecks the actual war and ownership or allegiance before any transfer. A
+              defender's victory receives capped reparations rather than unrelated land. Player wars time out after 7 cycles, AI–AI wars after 5.
             </p>
           </>
         )}

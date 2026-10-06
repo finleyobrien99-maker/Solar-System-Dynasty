@@ -142,6 +142,7 @@ export function siegeBlocker(s: GameState, warId: string, kind: SiegeKind, aiIni
   if (c.playerWar && c.playerWar.playerAttacker === aiInitiated) return 'Only the attacking house can order this siege.';
   if (c.aiWar && !aiInitiated) return 'This campaign is led by another house.';
   if (c.aiWar && (c.attacker.id === s.playerClanId || c.defender.id === s.playerClanId)) return 'This is not a valid house campaign.';
+  if (c.war.goal && c.war.goal.kind !== 'cede') return 'This goal has no territorial siege.';
   if (c.playerWar && (c.playerWar.cb === 'independence' || c.playerWar.cb === 'revolt')) return 'This war has no territorial siege.';
   if (!c.target || c.target.owner !== c.defender.id) return 'The war target has changed hands.';
   if (!clanRegions(s, c.attacker.id).length) return 'The attacking house has no lands.';

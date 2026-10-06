@@ -1,8 +1,21 @@
+import {
+  NAKED_WAR_PRESTIGE,
+  civilWarBlocker,
+  refusedWarDemand,
+  goalBlocker,
+  goalJustified,
+  goalCampaignValid,
+  goalLabel,
+  houseFunds,
+  warSides,
+  type WarGoal,
+} from './warGoals';
+import { settlePeace, aiPeaceTurn } from './peace';
 import { coalitionCall, recordExpansion } from './coalitions';
 import { aidBattleNotes, aidStrength, aidLosses, aidTruces, committedShips, recallAid, releaseAid, snapshotAid, warContributions } from './warAid';
 import { regencyOf } from './regency';
 import { realmPeaceBlocker } from './realmDefence';
-import { aiResolvePromises, mightBreakPromises, treatyWarBlocker } from './treaties';
+import { aiResolvePromises, mightBreakPromises, treatyWarBlocker, treatyWarCost, breakTreatiesForWar } from './treaties';
 import { chooseAiSiege, performSiege } from './siege';
 import { recordMurder } from './secrets';
 import { breakPeace, isCloseKin, recordDeed } from './epithets';
@@ -37,7 +50,7 @@ import { capOpinion, grudgeOpinion, isRival, opinionCeiling } from './memory';
 import { addFeeling, feelingsSum, murdered, opinionOf } from './relations';
 import { aiIntrigueTick } from './aiIntrigue';
 import { aiDynastyTick } from './aiDynasty';
-import { battleWeariness, warStrengthFactor, aiMayBreakTruce, breakTruce, makeTruce, mayAttack, truceOf } from './peace';
+import { battleWeariness, warStrengthFactor, aiMayBreakTruce, breakTruce, makeTruce, mayAttack, truceOf, truceBreakBlocker, OATH_BREAK_COST } from './peace';
 import { allMentorships, allWardships, aiWardsTick } from './wards';
 import { commandedBattleFates, commanderOf, commandersTick, leadFactor } from './commanders';
 import { aiAmbition, ambitionHouse, AMBITION_AGGRESSION, type AmbitionKind } from './aiAmbition';
@@ -200,7 +213,12 @@ function startAiWar(s: GameState): void {
 }
 
 /** The validated AI-vs-AI entry point; explicit oath-breaking uses the same own-house cost. */
-export function declareHouseWar(s: GameState, attackerId: string, regionId: string, breakOath = false): boolean {
+export function declareHouseWar(s: GameState, attackerId: string, regionId: string, breakOath = false, goal?: WarGoal, justification?: string): boolean {
+  goal ??= { kind: 'cede', regionId };
+  if (goal.kind === 'cede' && goal.regionId !== regionId) return false;
+  if (justification && !goalJustified(s, justification, attackerId, s.regions[regionId]?.owner, goal)) return false;
+  if (goal && goalBlocker(s, attackerId, s.regions[regionId]?.owner, goal)) return false;
+  if (civilWarBlocker(s, attackerId, s.regions[regionId]?.owner)) return false;
   const attacker = s.clans[attackerId],
     target = s.regions[regionId];
   const defender = target && s.clans[target.owner];
@@ -222,17 +240,33 @@ export function declareHouseWar(s: GameState, attackerId: string, regionId: stri
     kin = pacts.get(attackerId);
   if (kin?.has(defender.id) && !wouldBetray(s, lord, theirs)) return false;
   if (realmPeaceBlocker(s, attackerId, defender.id, regionId)) return false;
+  const warCost = justification ? 0 : NAKED_WAR_PRESTIGE;
   const oath = !!truceOf(s, attackerId, defender.id);
-  if (oath && (!breakOath || !breakTruce(s, attackerId, defender.id))) return false;
+  if (oath && (!breakOath || truceBreakBlocker(s, attackerId, defender.id))) return false;
+  if (houseFunds(s, attackerId, 'prestige') < warCost + (oath ? OATH_BREAK_COST : 0) + treatyWarCost(s, attackerId, defender.id)) return false;
   if (!aiResolvePromises(s, attackerId, defender.id)) return false;
+  if (oath) breakTruce(s, attackerId, defender.id);
+  breakTreatiesForWar(s, attackerId, defender.id);
+  attacker.prestige -= warCost;
   recallAid(s, defender.id);
-  const war: AiWar = { id: newId(s, 'aw'), attacker: attackerId, defender: defender.id, target: regionId, started: s.year, progress: 0, coalition: [] };
+  const war: AiWar = {
+    id: newId(s, 'aw'),
+    attacker: attackerId,
+    defender: defender.id,
+    target: goal && goal.kind !== 'cede' ? '' : regionId,
+    goal: goal ? structuredClone(goal) : undefined,
+    cb: justification ? 'feud' : 'conquest',
+    started: s.year,
+    progress: 0,
+    coalition: [],
+  };
+  if (justification) refusedWarDemand(s, justification)!.used = true;
   s.aiWars.push(war);
   recordDeed(s, lord, 'warsStarted');
   breakPeace(s, defender.headId);
   if (kin?.has(defender.id)) betrayPact(s, attacker, defender, !oath);
   if (alive(theirs)) addFeeling(s, theirs.id, lord.id, { why: 'Made war on us', value: -20, decay: 1 });
-  log(s, `House ${attacker.name} (${PLANET_BY_ID[attacker.planetId].name}) declares war on House ${defender.name} over ${target.name}.`, 'news');
+  log(s, `House ${attacker.name} (${PLANET_BY_ID[attacker.planetId].name}) declares war on House ${defender.name} for ${goalLabel(s, goal)}.`, 'news');
   const friends = [...(pacts.get(defender.id) ?? [])].filter((id) => id !== attackerId && !pacts.get(id)?.has(attackerId)).map((id) => s.clans[id].name);
   if (friends.length) log(s, `House ${defender.name}'s kin by marriage (${friends.map((n) => `House ${n}`).join(', ')}) send ships to defend them.`, 'news');
   // The defender's realm answers first; its helpers are then not asked again by a league.
@@ -247,6 +281,7 @@ export function tickAiWars(s: GameState): void {
     const a = s.clans[w.attacker];
     const d = s.clans[w.defender];
     const target = s.regions[w.target];
+    const targetName = w.goal ? goalLabel(s, w.goal) : (target?.name ?? 'the campaign');
     const done = (peace = false) => {
       if (peace) {
         makeTruce(s, w.attacker, w.defender);
@@ -255,7 +290,7 @@ export function tickAiWars(s: GameState): void {
       releaseAid(s, warContributions(w));
       s.aiWars = s.aiWars.filter((x) => x.id !== w.id);
     };
-    if (!a || !d || !target || target.owner !== d.id || !clanRegions(s, a.id).length) {
+    if (!a || !d || (w.goal ? !goalCampaignValid(s, w) : !target || target.owner !== d.id) || !clanRegions(s, a.id).length) {
       done();
       continue;
     }
@@ -295,7 +330,7 @@ export function tickAiWars(s: GameState): void {
         battleWeariness(s, d.id, df, df - d.fleet);
         const helperLosses = aidLosses(s, warContributions(w), defRate);
         const yourAid = helperLosses.find((p) => p.clanId === s.playerClanId);
-        if (yourAid) log(s, `Your supporting fleet defending House ${d.name} at ${target.name} lost ${yourAid.losses} of ${yourAid.ships} ships.`, 'war');
+        if (yourAid) log(s, `Your supporting fleet defending House ${d.name} at ${targetName} lost ${yourAid.losses} of ${yourAid.ships} ships.`, 'war');
         const fates = commandedBattleFates(s, {
           id: `${w.id}@${s.year}`,
           attacker: a.id,
@@ -329,7 +364,23 @@ export function tickAiWars(s: GameState): void {
       }
     }
 
-    if (w.progress >= 100) {
+    if (w.goal) {
+      aiPeaceTurn(s, w);
+      if (!s.aiWars.some((x) => x.id === w.id)) continue;
+      const sides = warSides(s, w);
+      if (w.progress >= 100)
+        settlePeace(s, w, { kind: 'goal', winner: a.id, goal: structuredClone(w.goal) }, { attacker: attackerRuler, defender: defenderRuler });
+      else if (w.progress <= -100)
+        settlePeace(
+          s,
+          w,
+          { kind: 'reparations', winner: d.id, amount: Math.max(1, Math.min(1000000, Math.floor(houseFunds(s, sides.attacker) * 0.25))) },
+          { attacker: attackerRuler, defender: defenderRuler },
+        );
+      else if (s.year - w.started >= 5) settlePeace(s, w, { kind: 'white' });
+      continue;
+    }
+    if (w.progress >= 100 && target) {
       const wasCapital = target.capital;
       setOwner(s, target, a.id);
       recordExpansion(s, a.id, target);
@@ -360,7 +411,7 @@ export function tickAiWars(s: GameState): void {
         recordDeed(s, defenderRuler, 'peaceTreaties');
       }
       done(true);
-      log(s, `House ${d.name} beat off House ${a.name}'s attack on ${target.name}.`, 'news');
+      log(s, `House ${d.name} beat off House ${a.name}'s attack on ${targetName}.`, 'news');
     }
   }
 }

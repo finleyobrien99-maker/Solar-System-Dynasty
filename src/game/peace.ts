@@ -1,10 +1,29 @@
+import { effStats, newId, notice } from './core';
+import { chance } from './rng';
+import { regencyOf } from './regency';
+import { headOf } from './houseRelations';
+import { aidTruces, releaseAid } from './warAid';
+import {
+  findWar,
+  goalBlocker,
+  goalCampaignValid,
+  goalLabel,
+  houseFunds,
+  moveFunds,
+  rulerCanNegotiate,
+  sameGoal,
+  settleDemand,
+  warSides,
+  whole,
+  type PeaceTerms,
+} from './warGoals';
 // Peace belongs to houses, so neither a new ruler nor a different prize erases it.
 import { ageOf, alive, ch, clanRegions, log, ruler } from './core';
 import { recordDeed } from './epithets';
 import { capOpinion, remember } from './memory';
 import { addFeeling, opinionOf } from './relations';
 import { clamp } from './rng';
-import type { GameState, Truce } from './types';
+import type { AiWar, GameState, Truce, War } from './types';
 import { warContributions } from './warAid';
 
 export const TRUCE_CYCLES = 5;
@@ -144,4 +163,186 @@ export function peaceTick(s: GameState): void {
   for (const id of Object.keys(s.warWeariness)) if (!s.clans[id]) delete s.warWeariness[id];
 
   s.truces = s.truces.filter((t) => t.until > s.year && s.clans[t.a] && s.clans[t.b]);
+}
+
+// ── Negotiated, exact terms (slice 3) ─────────────────────────────────────
+export interface PeaceOption {
+  terms: PeaceTerms;
+  label: string;
+  chance: number;
+  reasons: string[];
+  blocker?: string;
+}
+const PEACE_OFFER_CYCLES = 2;
+export function peaceTermsBlocker(s: GameState, warOrId: string | War | AiWar, terms: PeaceTerms): string | null {
+  const w = findWar(s, warOrId);
+  if (!w || s.gameOver) return 'The war has passed.';
+  const { attacker, defender } = warSides(s, w);
+  if (!s.clans[attacker] || !s.clans[defender] || !clanRegions(s, attacker).length || !clanRegions(s, defender).length)
+    return 'One house no longer holds land.';
+  if (w.goal && !goalCampaignValid(s, w)) return 'The stated war goal is no longer available.';
+  if (!terms || !['white', 'goal', 'reparations'].includes(terms.kind)) return 'Unknown peace terms.';
+  if (terms.kind === 'white') return null;
+  if (terms.winner !== attacker && terms.winner !== defender) return 'Only a primary belligerent can receive these terms.';
+  if (terms.kind === 'reparations') return whole(terms.amount, 1000000) ? null : 'Reparations must be whole credits within the settlement limit.';
+  if (!w.goal || terms.winner !== attacker || !sameGoal(terms.goal, w.goal)) return 'Peace must match the saved attacking goal.';
+  return goalBlocker(s, attacker, defender, terms.goal);
+}
+export function peaceAcceptance(s: GameState, warOrId: string | War | AiWar, terms: PeaceTerms, recipient: string): { chance: number; reasons: string[] } {
+  const w = findWar(s, warOrId);
+  if (!w || peaceTermsBlocker(s, w, terms)) return { chance: 0, reasons: ['These terms are no longer available.'] };
+  const sides = warSides(s, w),
+    ownScore = sides.score * (recipient === sides.attacker ? 1 : -1);
+  if (recipient !== sides.attacker && recipient !== sides.defender) return { chance: 0, reasons: ['Not a belligerent.'] };
+  const theirs = recipient === sides.attacker ? sides.defender : sides.attacker;
+  const h = headOf(s, theirs),
+    dip = h ? effStats(s, h).dip : 0;
+  const weariness = warWeariness(s, recipient);
+  const receiving = terms.kind !== 'white' && terms.winner === recipient;
+  let probability = receiving ? 0.9 : terms.kind === 'white' ? 0.45 - ownScore / 180 : 0.08 - ownScore / 125;
+  probability += dip * 0.012 + weariness / 400;
+  if (!receiving && terms.kind === 'goal' && terms.goal.kind === 'tribute') probability -= Math.min(0.15, (terms.goal.years * terms.goal.amount) / 10000);
+  if (!receiving && terms.kind === 'reparations') probability -= Math.min(0.2, (terms.amount / Math.max(1, houseFunds(s, recipient))) * 0.15);
+  return {
+    chance: clamp(probability, 0.02, 0.98),
+    reasons: [
+      'Their war score: ' + (ownScore >= 0 ? '+' : '') + ownScore,
+      'Their war weariness: ' + weariness,
+      'Envoy Diplomacy: ' + dip,
+      terms.kind === 'white'
+        ? 'Neither side gives up its goal or pays reparations.'
+        : receiving
+          ? 'These terms favour their house.'
+          : 'They would concede the stated terms.',
+      ...(terms.kind === 'reparations' ? ['Payment is capped by the payer’s actual treasury at acceptance.'] : []),
+    ],
+  };
+}
+export function peaceTerms(s: GameState, warOrId: string | War | AiWar, proposerId?: string): PeaceOption[] {
+  const w = findWar(s, warOrId);
+  if (!w) return [];
+  const sides = warSides(s, w);
+  const proposer = proposerId ?? ('enemy' in w ? s.playerClanId : sides.attacker);
+  if (proposer !== sides.attacker && proposer !== sides.defender) return [];
+  const recipient = proposer === sides.attacker ? sides.defender : sides.attacker;
+  const opts: { terms: PeaceTerms; label: string }[] = [{ terms: { kind: 'white' }, label: 'White peace' }];
+  if (w.goal && proposer === sides.attacker)
+    opts.push({ terms: { kind: 'goal', winner: proposer, goal: structuredClone(w.goal) }, label: goalLabel(s, w.goal) });
+  const amount = Math.min(1000000, Math.max(1, Math.floor(houseFunds(s, recipient) * 0.25)));
+  opts.push({ terms: { kind: 'reparations', winner: proposer, amount }, label: 'Reparations: up to ' + amount + ' credits' });
+  const eligibility =
+    !rulerCanNegotiate(s, proposer) || regencyOf(s, proposer)
+      ? 'A free adult ruler must send peace terms.'
+      : !rulerCanNegotiate(s, recipient) || regencyOf(s, recipient)
+        ? 'A free adult ruler must receive peace terms.'
+        : undefined;
+  return opts.map((o) => ({ ...o, ...peaceAcceptance(s, w, o.terms, recipient), blocker: peaceTermsBlocker(s, w, o.terms) ?? eligibility }));
+}
+/** Once settled, the old war object can never transfer another ship, region or credit. */
+export function settlePeace(s: GameState, warOrId: string | War | AiWar, terms: PeaceTerms, actors?: { attacker?: string; defender?: string }): boolean {
+  const w = findWar(s, warOrId);
+  if (!w || peaceTermsBlocker(s, w, terms)) return false;
+  const sides = warSides(s, w);
+  const winner = terms.kind === 'white' ? undefined : terms.winner;
+  const loser = winner === sides.attacker ? sides.defender : sides.attacker;
+  const a = actors?.attacker ?? headOf(s, sides.attacker)?.id,
+    d = actors?.defender ?? headOf(s, sides.defender)?.id;
+  // Validate all effects before deleting the war or creating a truce.
+  if (terms.kind === 'goal' && !settleDemand(s, sides.attacker, sides.defender, terms.goal, w.id, 'enemy' in w ? w.cb : (w.cb ?? 'conquest'), a)) return false;
+  if (terms.kind === 'reparations') {
+    const paid = moveFunds(s, loser, terms.winner, terms.amount);
+    log(s, 'House ' + s.clans[loser].name + ' pays House ' + s.clans[terms.winner].name + ' ' + paid + ' actual credits in reparations.', 'war');
+  }
+  aidTruces(s, sides.attacker, warContributions(w));
+  releaseAid(s, warContributions(w));
+  s.wars = s.wars.filter((x) => x.id !== w.id);
+  s.aiWars = s.aiWars.filter((x) => x.id !== w.id);
+  makeTruce(s, sides.attacker, sides.defender);
+  if (!winner) {
+    recordDeed(s, a, 'peaceTreaties');
+    recordDeed(s, d, 'peaceTreaties');
+  } else {
+    recordDeed(s, winner === sides.attacker ? a : d, 'warsWon');
+    recordDeed(s, winner === sides.attacker ? d : a, 'warsLost');
+    if (winner === sides.defender) recordDeed(s, d, 'defensiveWins');
+    if (winner === s.playerClanId) s.prestige += 60;
+    else s.clans[winner].prestige += 60;
+  }
+  const label =
+    terms.kind === 'white'
+      ? 'White peace: neither side gains land or pays reparations.'
+      : terms.kind === 'goal'
+        ? goalLabel(s, terms.goal)
+        : 'Capped reparations';
+  log(s, 'Peace between House ' + s.clans[sides.attacker].name + ' and House ' + s.clans[sides.defender].name + ': ' + label + '.', 'war');
+  if ([sides.attacker, sides.defender].includes(s.playerClanId)) notice(s, 'Peace agreed', label, { icon: 'peace' });
+  return true;
+}
+export function offerPeace(s: GameState, warOrId: string | War | AiWar, terms?: PeaceTerms, proposerId?: string): boolean {
+  const w = findWar(s, warOrId);
+  if (!w) return false;
+  const sides = warSides(s, w),
+    from = proposerId ?? ('enemy' in w ? s.playerClanId : sides.attacker);
+  const to = from === sides.attacker ? sides.defender : sides.attacker;
+  if (![sides.attacker, sides.defender].includes(from) || !rulerCanNegotiate(s, from) || regencyOf(s, from)) return false;
+  const chosen = terms ?? { kind: 'white' as const };
+  const key = 'peace:' + w.id + ':' + from;
+  if (peaceTermsBlocker(s, w, chosen) || s.cooldowns[key] === s.year || w.peaceOffer) return false;
+  if (!rulerCanNegotiate(s, to) || regencyOf(s, to)) return false;
+  s.cooldowns[key] = s.year;
+  if (from === s.playerClanId) s.cooldowns['peace:' + w.id] = s.year;
+  if (to === s.playerClanId) {
+    w.peaceOffer = { id: newId(s, 'po'), warId: w.id, from, to, terms: structuredClone(chosen), year: s.year, expires: s.year + PEACE_OFFER_CYCLES };
+    log(s, 'House ' + s.clans[from].name + ' sends exact peace terms, waiting for your answer on Realm.', 'war');
+    return true;
+  }
+  const decision = peaceAcceptance(s, w, chosen, to);
+  if (chance(s, decision.chance)) return settlePeace(s, w, chosen);
+  if (from === s.playerClanId)
+    notice(s, 'Peace Refused', 'House ' + s.clans[to].name + ' refuses these terms. Another envoy can go next cycle.', { icon: 'war', tone: 'bad' });
+  return false;
+}
+export function peaceOfferBlocker(s: GameState, warOrId: string | War | AiWar, recipientId = s.playerClanId): string | null {
+  const w = findWar(s, warOrId),
+    p = w?.peaceOffer;
+  if (!w || !p || p.expires <= s.year) return 'This offer has passed.';
+  const sides = warSides(s, w);
+  if (p.to !== recipientId || p.from !== (recipientId === sides.attacker ? sides.defender : sides.attacker) || p.warId !== w.id)
+    return 'These terms were not addressed to this house.';
+  if (!rulerCanNegotiate(s, recipientId) || regencyOf(s, recipientId)) return 'A free adult ruler must answer peace terms.';
+  return peaceTermsBlocker(s, w, p.terms);
+}
+export function acceptPeace(s: GameState, warOrId: string | War | AiWar, accept: boolean, recipientId?: string): boolean {
+  const w = findWar(s, warOrId),
+    p = w?.peaceOffer;
+  const recipient = recipientId ?? s.playerClanId;
+  if (!w || !p || p.to !== recipient || p.expires <= s.year || !rulerCanNegotiate(s, recipient) || regencyOf(s, recipient) || peaceTermsBlocker(s, w, p.terms))
+    return false;
+  const sides = warSides(s, w);
+  if (p.from !== (recipient === sides.attacker ? sides.defender : sides.attacker) || p.warId !== w.id) return false;
+  if (accept) return settlePeace(s, w, p.terms);
+  delete w.peaceOffer;
+  log(s, 'House ' + s.clans[recipient].name + ' refuses the peace offer.', 'war');
+  return true;
+}
+export function peaceOffersTick(s: GameState): void {
+  for (const w of [...s.wars, ...s.aiWars])
+    if (w.peaceOffer && (w.peaceOffer.expires <= s.year || peaceTermsBlocker(s, w, w.peaceOffer.terms))) delete w.peaceOffer;
+}
+/** AI considers one explained set of terms; a player recipient is always asked. */
+export function aiPeaceTurn(s: GameState, war: War | AiWar): void {
+  if (!war.goal || war.peaceOffer || s.year - war.started < 2 || Math.abs(warSides(s, war).score) >= 100) return;
+  const sides = warSides(s, war);
+  const from = sides.score < 0 ? sides.attacker : sides.defender;
+  if (from === s.playerClanId) return;
+  // A losing house offers to concede the attacking goal; a stalemate offers white peace.
+  if (sides.score >= 60) offerPeace(s, war, { kind: 'goal', winner: sides.attacker, goal: structuredClone(war.goal) }, from);
+  else if (sides.score <= -60)
+    offerPeace(
+      s,
+      war,
+      { kind: 'reparations', winner: sides.defender, amount: Math.max(1, Math.min(1000000, Math.floor(houseFunds(s, sides.attacker) * 0.25))) },
+      from,
+    );
+  else if (s.year - war.started >= 4 && Math.abs(sides.score) <= 25) offerPeace(s, war, { kind: 'white' }, from);
 }

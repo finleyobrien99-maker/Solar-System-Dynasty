@@ -52,7 +52,7 @@ export function fleetCap(s: GameState): number {
   return 60 + regions.length * 35 + clanRank(s, s.playerClanId) * 40;
 }
 
-export function creditLines(s: GameState): Line[] {
+export function creditLines(s: GameState, includeTribute = true): Line[] {
   const r = ruler(s);
   const st = effStats(s, r);
   const lines: Line[] = [];
@@ -94,7 +94,7 @@ export function creditLines(s: GameState): Line[] {
   if (items) lines.push({ label: 'Relics', value: items });
   if (s.forge.project) lines.push({ label: 'Gene-Forge research', value: -RESEARCH_UPKEEP });
   if (s.routes.length) lines.push({ label: `Trade routes (${s.routes.length})`, value: routeIncome(s) });
-  lines.push(...diplomacyCreditLines(s));
+  lines.push(...diplomacyCreditLines(s, includeTribute));
   return lines;
 }
 

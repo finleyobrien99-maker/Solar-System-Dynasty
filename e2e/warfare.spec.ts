@@ -95,6 +95,7 @@ test('explicit player pledge lends real ships, survives reload and withdrawal re
   await expect(league).toContainText('You have pledged defence');
   const pledged = await stored(page);
   expect(pledged.coalitions.find((c) => c.target === a.id)!.members).toContain(s.playerClanId);
+  pledged.clans[a.id].prestige = 1000;
   expect(declareHouseWar(pledged, a.id, clanRegions(pledged, d.id)[0].id)).toBe(true);
   pledged.pending = [];
   await page.reload();

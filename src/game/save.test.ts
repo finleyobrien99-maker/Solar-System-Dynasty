@@ -10,6 +10,10 @@ import { setImmediate } from 'node:timers/promises';
 import { compressToUTF16, decompressFromBase64 } from 'lz-string';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { declareHouseWar } from './ai';
+import { goalWorld } from './warGoalScenarios';
+import { declareWithGoal } from './war';
+import { offerPeace, settlePeace } from './peace';
+import { recordRefusedDemand, type WarGoal } from './warGoals';
 import { pendingRealmCall } from './realmDefence';
 import { clanRegions } from './core';
 import { declareWar, conductSiege, endWar, fightBattle } from './war';
@@ -202,6 +206,7 @@ describe.runIf(WRITE)('freeze realm decisions and physical history', () => {
         expect(fightBattle(s, s.wars[0].id)?.realmLosses?.length).toBeGreaterThan(0);
       } else {
         const a = Object.values(s.clans).find((k) => k.planetId === 'venus')!;
+        a.prestige = 1000;
         expect(declareHouseWar(s, a.id, target)).toBe(true);
         expect(pendingRealmCall(s)).toBeTruthy();
       }
@@ -211,6 +216,42 @@ describe.runIf(WRITE)('freeze realm decisions and physical history', () => {
   });
 });
 
+describe.runIf(WRITE)('freeze exact goals, consent and obligations', () => {
+  it('freezes real declarations and exact pending terms without inventing old war goals', () => {
+    for (const name of ['goal-cede', 'goal-tribute', 'goal-humiliate', 'goal-liberate', 'peace-offer', 'peace-tribute', 'refused-demand']) {
+      const file = new URL('save-v' + SAVE_VERSION + '-' + name + '.json', DIR);
+      if (existsSync(file)) continue;
+      const s = goalWorld(),
+        houses = Object.values(s.clans).filter((k) => !k.isPlayer && clanRegions(s, k.id).length),
+        enemy = houses[0],
+        vassal = houses[1];
+      const goal: WarGoal =
+        name === 'goal-cede'
+          ? { kind: 'cede', regionId: clanRegions(s, enemy.id)[0].id }
+          : name === 'goal-humiliate'
+            ? { kind: 'humiliate', prestige: 100 }
+            : name === 'goal-liberate'
+              ? { kind: 'liberate', vassalId: vassal.id }
+              : { kind: 'tribute', amount: 25, years: 3 };
+      if (goal.kind === 'liberate') {
+        vassal.liege = enemy.id;
+        vassal.cadetOf = enemy.id;
+      }
+      if (name === 'refused-demand') expect(recordRefusedDemand(s, 'actual-refusal', s.playerClanId, enemy.id, goal, s.year + 10)).toBe(true);
+      else {
+        const from = name === 'peace-offer' ? enemy.id : s.playerClanId,
+          to = name === 'peace-offer' ? s.playerClanId : enemy.id;
+        expect(declareWithGoal(s, from, to, goal)).toBe(true);
+        const w = s.wars[0],
+          terms = { kind: 'goal' as const, winner: from, goal };
+        if (name === 'peace-offer') expect(offerPeace(s, w, terms, from)).toBe(true);
+        if (name === 'peace-tribute') expect(settlePeace(s, w, terms)).toBe(true);
+      }
+      checkInvariants(s);
+      writeFileSync(file, exportSave(s) + '\n');
+    }
+  });
+});
 describe('save migrations', () => {
   it('v9 invents no past and preserves existing calls, oaths and uncertain loan history', () => {
     const { s, war } = coalitionCampaign();

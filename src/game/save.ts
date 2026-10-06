@@ -229,6 +229,11 @@ export class NewerSaveError extends Error {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MIGRATIONS: Record<number, (s: any) => void> = {
+  // Missing goals retain legacy settlements. Foreign policy will add its own empty state at integration.
+  11: (s) => {
+    s.peaceTributes ??= [];
+    s.warJustifications ??= [];
+  },
   // Treaties, trust and house memories begin now: no invented pacts or history. Legacy alliances, truces and memories of you are untouched.
   10: (s) => migrateDiplomacy(s),
   // Existing wars keep their real loans; old wars receive no invented calls or casualties.

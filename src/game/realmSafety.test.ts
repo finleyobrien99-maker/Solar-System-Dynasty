@@ -20,6 +20,7 @@ function fixture() {
     h.prisonerOf = undefined;
     h.traits = h.traits.filter((t) => !['brave', 'craven', 'wrathful', 'honest', 'deceitful'].includes(t));
     k.fleet = 100;
+    k.prestige = 1000; // Both sides must fund the existing conquest price.
     k.allied = false;
   }
   return s;

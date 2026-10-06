@@ -8,6 +8,14 @@
 
 Live build: https://finleyobrien99-maker.github.io/Solar-System-Dynasty/ (deploys on every push to `main`).
 
+### 6 October 2026: exact war goals and peace (Wave 5, slice 3 — local integration candidate)
+
+Built locally from live `65e16f3`, not published. Houses may fight for a named region, tribute for N cycles, capped humiliation or liberation of a named direct vassal. Realm shows exact negotiated terms and explained acceptance odds; incoming offers wait for explicit consent and survive reload. Actual capped credits and prestige move between houses, land changes through setOwner, and surviving defenders return once. Wars from old saves retain their original settlement. Save v11 adds empty peace obligations and one-use refused-demand justifications; 24 frozen v11 fixtures include all goals, incoming terms and actual tribute.
+
+Houses exposes public AI–AI treaty links, protection direction, reciprocal marriages and recorded feuds at desktop and 390px, with planet/faith filters. Claude's policy/rival adapter and pending ultimatum migration are integration work described in WAR-GOALS-HANDOFF.md. The war lane reviews capped treaty payments, atomic declaration costs, current pact eligibility and the same existing conquest price for AI and player.
+
+Same20 seeds ×150/all4 against65e16f3: Builder Sovereign **25% →10%**, Warmonger **95% →95%** (50% target still missed), Passive endings by100 **0% →0%**, Breeder **5% →5%**. No base economy or fleet retuning. Measure the combined policy engine separately. Validation: full check (913 unit tests), all 124 desktop/390px browser checks and the embedded phone rebuild pass. No historical fixture was changed.
+
 ### 6 October 2026: houses deal with each other (Wave 5, slice 2)
 
 Every house now regards every other, with stated reasons:
@@ -644,7 +652,7 @@ Content is the cheapest depth there is. This phase builds the machine and then f
   - vassalisation
   - truce length
   - an enforced marriage
-- **Status: public threat and defensive coalitions shipped.** Real territorial gains raise fear by12 (20 naked conquest), plus20 for capitals, cap100; a cycle begun without an offensive war recovers3. Nearby houses join at30, wider houses at60; leagues dissolve below15. Up to8 eligible members detach half their available fleets, pay actual casualties/fatigue and get surviving ships back at peace. Explicit player pledges, recall, capacity/upkeep, helper peace oaths and public profiles are covered. Negotiated peace packages above remain future work; existing marriage assistance remains separate.
+- **Status: public threat and defensive coalitions shipped.** Real territorial gains raise fear by12 (20 naked conquest), plus20 for capitals, cap100; a cycle begun without an offensive war recovers3. Nearby houses join at30, wider houses at60; leagues dissolve below15. Up to8 eligible members detach half their available fleets, pay actual casualties/fatigue and get surviving ships back at peace. Explicit player pledges, recall, capacity/upkeep, helper peace oaths and public profiles are covered. The local slice-3 candidate adds exact cession, tribute, humiliation and liberation goals, explained peace offers and capped reparations. Hostage/gene/marriage packages remain future work; existing marriage assistance remains separate.
 
 ### 5.5 Ship design and legendary ships `P2` `M`
 - Simple designer: hull plus 3 to 5 module slots. Flagships have names and histories. They gain veterancy and legends ("The *Iron Widow*, flagship of three Kravos rulers"). Legendary ships can be relics in the Treasury.

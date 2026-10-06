@@ -65,7 +65,7 @@ function RegionPanel({ regionId }: { regionId: string }) {
           )}
           {pact && (
             <p className="gold">
-              {pact} Breaking your word costs {BREACH_PRESTIGE} prestige for each promise and some of every house's trust.
+              {pact} Breaking your word costs {BREACH_PRESTIGE} prestige for the declaration and some of every house's trust.
             </p>
           )}
           {block ? (

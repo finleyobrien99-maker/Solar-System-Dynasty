@@ -1,3 +1,4 @@
+import { WarPeaceSection } from '../sections/WarPeaceSection';
 import { committedShips } from '../../game/coalitions';
 import { CoalitionsSection } from '../sections/CoalitionsSection';
 import { EnvoysSection } from '../sections/EnvoysSection';
@@ -257,18 +258,21 @@ export function RealmTab() {
                   >
                     Launch battle
                   </Btn>
-                  <Btn
-                    icon="peace"
-                    reason={s.cooldowns[`peace:${w.id}`] === s.year ? 'Envoy already sent this cycle' : null}
-                    onClick={() => act((d) => offerPeace(d, w.id))}
-                  >
-                    Offer peace ({Math.round(pc * 100)}%)
-                  </Btn>
+                  {!w.goal && (
+                    <Btn
+                      icon="peace"
+                      reason={s.cooldowns[`peace:${w.id}`] === s.year ? 'Envoy already sent this cycle' : null}
+                      onClick={() => act((d) => offerPeace(d, w.id))}
+                    >
+                      Offer peace ({Math.round(pc * 100)}%)
+                    </Btn>
+                  )}
                   <Btn kind="danger" small confirm="Tap again to surrender" onClick={() => act((d) => surrender(d, w.id))}>
                     Surrender
                   </Btn>
                 </div>
-                <SiegeSection war={w} />
+                <WarPeaceSection war={w} />
+                {(!w.goal || w.goal.kind === 'cede') && <SiegeSection war={w} />}
               </div>
             );
           })}
@@ -278,6 +282,22 @@ export function RealmTab() {
       <EnvoysSection />
       <CoalitionsSection />
       <RealmDutiesSection />
+      {(s.peaceTributes ?? []).some((t) => t.until > s.year && (t.from === s.playerClanId || t.to === s.playerClanId)) && (
+        <Section
+          title="Peace tribute"
+          icon="peace"
+          info="Recorded war settlements transfer only real available credits each cycle. No payment is made twice in one year."
+        >
+          {(s.peaceTributes ?? [])
+            .filter((t) => t.until > s.year && (t.from === s.playerClanId || t.to === s.playerClanId))
+            .map((t) => (
+              <div key={t.id} className="card">
+                House {s.clans[t.from]?.name} owes House {s.clans[t.to]?.name} {t.amount} credits per cycle; {Math.max(0, t.until - s.year - 1)} cycles
+                remaining.
+              </div>
+            ))}
+        </Section>
+      )}
       <WarWearinessSection />
       <TrucesSection />
 

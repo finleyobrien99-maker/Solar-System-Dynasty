@@ -1,6 +1,22 @@
+import { declareHouseWar } from './ai';
+import {
+  NAKED_WAR_PRESTIGE,
+  findWar,
+  goalJustified,
+  refusedWarDemand,
+  goalBlocker,
+  civilWarBlocker,
+  goalCampaignValid,
+  goalLabel,
+  houseFunds,
+  warSides,
+  type WarGoal,
+  type PeaceTerms,
+} from './warGoals';
+import { offerPeace as offerExactPeace, settlePeace, aiPeaceTurn } from './peace';
 import { coalitionCall, recordExpansion } from './coalitions';
 import { answerRealmCall, realmCall, recordPlanetConquest, realmPeaceBlocker } from './realmDefence';
-import { aiResolvePromises, breakTreatiesForWar, treatyWarBlocker } from './treaties';
+import { aiResolvePromises, breakTreatiesForWar, treatyWarBlocker, treatyWarCost } from './treaties';
 import { regencyOf } from './regency';
 import type { RealmCallAnswer } from './diplomacyTypes';
 import {
@@ -84,13 +100,15 @@ export function cbOptions(s: GameState, region: Region): CBOption[] {
     const cost = { faith: 150 };
     opts.push({ cb: 'holy', cost, ok: canAfford(s, cost), reason: canAfford(s, cost) ? undefined : `Need ${costText(cost)}` });
   }
-  const cost = { prestige: 120 };
+  const cost = { prestige: NAKED_WAR_PRESTIGE };
   opts.push({ cb: 'conquest', cost, ok: canAfford(s, cost), reason: canAfford(s, cost) ? undefined : `Need ${costText(cost)}` });
   return opts;
 }
 
 export function warBlocker(s: GameState, region: Region, breakOath = false): string | null {
   if (s.gameOver) return 'The dynasty has ended.';
+  const civil = civilWarBlocker(s, s.playerClanId, region.owner);
+  if (civil) return civil;
   if (region.owner === s.playerClanId) return 'You already hold this region.';
   if (committedShips(s, s.playerClanId)) return 'Recall your committed ships before starting another war.';
   if (s.wars.length >= 3) return 'You are already fighting three wars.';
@@ -109,38 +127,58 @@ export function warBlocker(s: GameState, region: Region, breakOath = false): str
   return null;
 }
 
-export function declareWar(s: GameState, regionId: string, cb: CasusBelli, breakOath = false): boolean {
+export function declareWar(s: GameState, regionId: string, cb: CasusBelli, breakOath = false, goal?: WarGoal, justification?: string): boolean {
+  goal ??= { kind: 'cede', regionId };
+  if (goal.kind === 'cede' && goal.regionId !== regionId) return false;
+  if (cb === 'claim' && !justification && goal.kind !== 'cede') return false;
+  if (justification && !goalJustified(s, justification, s.playerClanId, s.regions[regionId]?.owner, goal)) return false;
+  if (goal && goalBlocker(s, s.playerClanId, s.regions[regionId]?.owner, goal)) return false;
+  if (justification) cb = 'feud';
   const region = s.regions[regionId];
   if (!region || warBlocker(s, region, breakOath)) return false;
-  const opt = cbOptions(s, region).find((o) => o.cb === cb);
+  const opt = justification ? { cb: 'feud' as const, cost: {} as Cost, ok: true } : cbOptions(s, region).find((o) => o.cb === cb);
   if (!opt || !opt.ok) return false;
   const violates = !!truceOf(s, s.playerClanId, region.owner);
+  const promiseCost = treatyWarCost(s, s.playerClanId, region.owner);
+  const legacyCost = s.clans[region.owner].allied && !violates && !promiseCost ? 50 : 0;
+  if (!canAfford(s, { ...opt.cost, prestige: (opt.cost.prestige ?? 0) + (violates ? OATH_BREAK_COST : 0) + promiseCost + legacyCost })) return false;
   if (violates && (!canAfford(s, { ...opt.cost, prestige: (opt.cost.prestige ?? 0) + OATH_BREAK_COST }) || !breakTruce(s, s.playerClanId, region.owner)))
     return false;
   pay(s, opt.cost);
   const enemy = s.clans[region.owner];
   // Declaring anyway breaks every promise between the two houses (treaties.ts).
-  if (breakOath) breakTreatiesForWar(s, s.playerClanId, enemy.id);
+  breakTreatiesForWar(s, s.playerClanId, enemy.id);
   if (cb === 'conquest') {
     for (const c of Object.values(s.clans)) if (!c.isPlayer) c.opinion -= 8;
   }
   if (enemy.allied) {
     enemy.allied = false;
-    if (!violates) {
+    if (!violates && !promiseCost) {
       recordDeed(s, ruler(s), 'oathsBroken');
       s.prestige -= 50;
     }
     log(s, `You broke your alliance with House ${enemy.name}. Oath-breaker!`, 'bad');
   }
   enemy.opinion = Math.min(enemy.opinion, -40) - 20;
-  remember(s, enemy.id, cb === 'conquest' ? 'Attacked us without any cause' : `Made war on us over ${region.name}`, cb === 'conquest' ? -30 : -15);
+  remember(s, enemy.id, cb === 'conquest' ? 'Attacked us without any cause' : `Made war on us: ${goalLabel(s, goal)}`, cb === 'conquest' ? -30 : -15);
   s.feuds = s.feuds.filter((f) => f !== enemy.id || cb !== 'feud');
   recallAid(s, enemy.id);
-  const war: War = { id: newId(s, 'w'), enemy: enemy.id, playerAttacker: true, target: regionId, cb, score: 0, started: s.year, coalition: [] };
+  const war: War = {
+    id: newId(s, 'w'),
+    enemy: enemy.id,
+    playerAttacker: true,
+    target: goal && goal.kind !== 'cede' ? '' : regionId,
+    goal: goal ? structuredClone(goal) : undefined,
+    cb,
+    score: 0,
+    started: s.year,
+    coalition: [],
+  };
+  if (justification) refusedWarDemand(s, justification)!.used = true;
   s.wars.push(war);
   recordDeed(s, ruler(s), 'warsStarted');
   breakPeace(s, enemy.headId);
-  log(s, `War! You declared a ${CB_INFO[cb].name} on House ${enemy.name} for ${region.name}.`, 'war');
+  log(s, `War! You declared a ${CB_INFO[cb].name} on House ${enemy.name} for ${goalLabel(s, goal)}.`, 'war');
   // The defender's realm answers first; its helpers are then not asked again by a league.
   Object.assign(war, callRealm(s, war.id, s.playerClanId, enemy.id, regionId, cb));
   war.coalition = coalitionCall(s, s.playerClanId, enemy.id, realmHelpers(war));
@@ -173,7 +211,21 @@ export function declareIndependence(s: GameState, breakOath = false): boolean {
 }
 
 /** AI declares war on the player. */
-export function aiDeclareWar(s: GameState, enemyId: string, cb: CasusBelli, targetRegionId: string, breakOath = false): boolean {
+export function aiDeclareWar(
+  s: GameState,
+  enemyId: string,
+  cb: CasusBelli,
+  targetRegionId: string,
+  breakOath = false,
+  goal?: WarGoal,
+  justification?: string,
+): boolean {
+  if (!goal && cb !== 'revolt' && cb !== 'independence') goal = { kind: 'cede', regionId: targetRegionId };
+  if (goal?.kind === 'cede' && goal.regionId !== targetRegionId) return false;
+  if (justification && (!goal || !goalJustified(s, justification, enemyId, s.playerClanId, goal))) return false;
+  if (goal && goalBlocker(s, enemyId, s.playerClanId, goal)) return false;
+  if (justification) cb = 'feud';
+  if (civilWarBlocker(s, enemyId, s.playerClanId)) return false;
   if (s.gameOver || atWarWith(s, enemyId) || s.wars.length >= 3 || committedShips(s, enemyId)) return false;
   const enemy = s.clans[enemyId],
     head = ch(s, enemy?.headId);
@@ -182,15 +234,35 @@ export function aiDeclareWar(s: GameState, enemyId: string, cb: CasusBelli, targ
   const target = s.regions[targetRegionId];
   if (!target || target.owner !== s.playerClanId || (cb === 'revolt' && liegeOf(s, enemyId) !== s.playerClanId)) return false;
   if (realmPeaceBlocker(s, enemyId, s.playerClanId, targetRegionId, cb)) return false;
-  if (truceOf(s, enemyId, s.playerClanId) && (!breakOath || !breakTruce(s, enemyId, s.playerClanId))) return false;
+  const warCost = cb === 'conquest' && !justification ? NAKED_WAR_PRESTIGE : 0;
+  const oath = !!truceOf(s, enemyId, s.playerClanId);
+  if (oath && (!breakOath || truceBreakBlocker(s, enemyId, s.playerClanId))) return false;
+  if (houseFunds(s, enemyId, 'prestige') < warCost + (oath ? OATH_BREAK_COST : 0) + treatyWarCost(s, enemyId, s.playerClanId)) return false;
   if (!aiResolvePromises(s, enemyId, s.playerClanId)) return false;
+  if (oath) breakTruce(s, enemyId, s.playerClanId);
+  breakTreatiesForWar(s, enemyId, s.playerClanId);
+  enemy.prestige -= warCost;
   recallAid(s, s.playerClanId);
-  const war: War = { id: newId(s, 'w'), enemy: enemyId, playerAttacker: false, target: targetRegionId, cb, score: 0, started: s.year, coalition: [] };
+  const war: War = {
+    id: newId(s, 'w'),
+    enemy: enemyId,
+    playerAttacker: false,
+    target: goal && goal.kind !== 'cede' ? '' : targetRegionId,
+    goal: goal ? structuredClone(goal) : undefined,
+    cb,
+    score: 0,
+    started: s.year,
+    coalition: [],
+  };
+  if (justification) refusedWarDemand(s, justification)!.used = true;
   s.wars.push(war);
   recordDeed(s, enemy.headId, 'warsStarted');
   if (cb === 'revolt') recordDeed(s, enemy.headId, 'rebellions');
   breakPeace(s, s.rulerId);
-  const what = cb === 'revolt' ? 'rises in revolt against you' : `declares war on you over ${s.regions[targetRegionId]?.name ?? 'your lands'}`;
+  const what =
+    cb === 'revolt'
+      ? 'rises in revolt against you'
+      : `declares war on you for ${goal ? goalLabel(s, goal) : (s.regions[targetRegionId]?.name ?? 'your lands')}`;
   log(s, `House ${enemy.name} ${what}!`, 'war');
   notice(s, 'War Declared!', `House ${enemy.name} ${what}. Fight battles from the Realm tab, or sue for peace.`, {
     icon: 'war',
@@ -463,6 +535,23 @@ export function fightBattle(s: GameState, warId: string, aiInitiated = false): B
 }
 
 export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white', actorId = s.rulerId, enemyActorId = s.clans[war.enemy]?.headId): void {
+  if (war.goal && findWar(s, war)) {
+    if (!goalCampaignValid(s, war)) {
+      releaseAid(s, warContributions(war));
+      s.wars = s.wars.filter((w) => w.id !== war.id);
+      return;
+    }
+    const sides = warSides(s, war),
+      winner = outcome === 'win' ? s.playerClanId : war.enemy;
+    const terms: PeaceTerms =
+      outcome === 'white'
+        ? { kind: 'white' }
+        : winner === sides.attacker
+          ? { kind: 'goal', winner, goal: structuredClone(war.goal) }
+          : { kind: 'reparations', winner, amount: Math.max(1, Math.min(1000000, Math.floor(houseFunds(s, sides.attacker) * 0.25))) };
+    settlePeace(s, war, terms, { attacker: war.playerAttacker ? actorId : enemyActorId, defender: war.playerAttacker ? enemyActorId : actorId });
+    return;
+  }
   if (!s.wars.some((w) => w.id === war.id)) return;
   if (!liveCampaign(s, war)) {
     releaseAid(s, warContributions(war));
@@ -538,7 +627,7 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
       return;
     }
     // Defensive win (including crushed revolts).
-    const loot = Math.round(Math.max(60, enemy.credits * 0.4));
+    const loot = Math.min(Math.max(0, Math.floor(enemy.credits)), Math.round(Math.max(60, enemy.credits * 0.4)));
     enemy.credits -= loot;
     s.credits += loot;
     if (war.cb === 'revolt') {
@@ -554,6 +643,7 @@ export function endWar(s: GameState, war: War, outcome: 'win' | 'lose' | 'white'
   if (war.playerAttacker) {
     const fine = Math.round(Math.max(0, s.credits) * 0.25);
     s.credits -= fine;
+    enemy.credits += fine;
     notice(s, 'Defeat', `Your war against House ${enemy.name} has failed. You pay ${fine} credits in reparations.`, { icon: 'lose', tone: 'bad' });
     log(s, `Defeated by House ${enemy.name}.`, 'bad');
     return;
@@ -582,16 +672,25 @@ export function peaceChance(s: GameState, war: War): number {
   return 0.05;
 }
 
-export function offerPeace(s: GameState, warId: string): boolean {
-  const war = s.wars.find((w) => w.id === warId);
-  if (!war || s.gameOver || !liveCampaign(s, war) || s.cooldowns[`peace:${warId}`] === s.year) return false;
-  s.cooldowns[`peace:${warId}`] = s.year;
+export function offerPeace(s: GameState, warOrId: string | War, terms?: PeaceTerms, proposerId?: string): boolean {
+  const war = findWar(s, warOrId);
+  if (!war || !('enemy' in war)) return false;
+  if (war.goal || terms || proposerId)
+    return offerExactPeace(
+      s,
+      war,
+      terms ??
+        (war.goal && war.playerAttacker && war.score >= 50 ? { kind: 'goal', winner: s.playerClanId, goal: structuredClone(war.goal) } : { kind: 'white' }),
+      proposerId,
+    );
+  if (s.gameOver || !liveCampaign(s, war) || s.cooldowns['peace:' + war.id] === s.year) return false;
+  s.cooldowns['peace:' + war.id] = s.year;
   if (chance(s, peaceChance(s, war))) {
     if (war.score >= 50 && war.playerAttacker) endWar(s, war, 'win');
     else endWar(s, war, 'white');
     return true;
   }
-  notice(s, 'Peace Refused', `House ${s.clans[war.enemy].name} laughs off your envoy.`, { icon: 'war', tone: 'bad' });
+  notice(s, 'Peace Refused', 'House ' + s.clans[war.enemy].name + ' laughs off your envoy.', { icon: 'war', tone: 'bad' });
   return false;
 }
 
@@ -606,7 +705,7 @@ export function tickPlayerWars(s: GameState): void {
     const enemy = s.clans[war.enemy];
     const target = s.regions[war.target];
     const enemyGone = !enemy || clanRegions(s, enemy.id).length === 0;
-    const targetMoved = target && ((war.playerAttacker && target.owner !== war.enemy) || (!war.playerAttacker && target.owner !== s.playerClanId));
+    const targetMoved = !war.goal && target && ((war.playerAttacker && target.owner !== war.enemy) || (!war.playerAttacker && target.owner !== s.playerClanId));
     const indepMoot = war.cb === 'independence' && liegeOf(s, s.playerClanId) !== war.enemy;
     if (enemyGone || targetMoved || indepMoot || !liveCampaign(s, war)) {
       releaseAid(s, warContributions(war));
@@ -614,6 +713,8 @@ export function tickPlayerWars(s: GameState): void {
       log(s, `The war with House ${enemy?.name ?? 'unknown'} fizzles out; the prize has changed hands.`, 'war');
       continue;
     }
+    aiPeaceTurn(s, war);
+    if (!findWar(s, war)) continue;
     if (s.year - war.started >= 7) {
       endWar(s, war, 'white');
       continue;
@@ -634,7 +735,7 @@ export function clanPower(s: GameState, clanId: string): string {
 export function warLabel(s: GameState, war: War): string {
   const enemy = s.clans[war.enemy];
   const target = s.regions[war.target];
-  const what = target ? ` for ${target.name}` : '';
+  const what = war.goal ? ' for ' + goalLabel(s, war.goal) : target ? ' for ' + target.name : '';
   return `${CB_INFO[war.cb].name}${what} vs House ${enemy?.name ?? '?'}`;
 }
 
@@ -646,6 +747,7 @@ export function enemyHeadName(s: GameState, war: War): string {
 /** A vanished or externally transferred prize cannot be won by an old report. */
 function liveCampaign(s: GameState, war: War): boolean {
   if (!s.clans[war.enemy] || !clanRegions(s, war.enemy).length || !clanRegions(s, s.playerClanId).length) return false;
+  if (war.goal) return goalCampaignValid(s, war);
   if (war.cb === 'independence') return liegeOf(s, s.playerClanId) === war.enemy;
   const target = s.regions[war.target];
   return !!target && target.owner === (war.playerAttacker ? war.enemy : s.playerClanId);
@@ -697,4 +799,33 @@ export function conductSiege(s: GameState, warId: string, kind: SiegeKind, aiIni
   if (result && war.score >= 100) endWar(s, war, 'win', actor, enemyActor);
   else if (result && war.score <= -100) endWar(s, war, 'lose', actor, enemyActor);
   return result;
+}
+
+export function declareWithGoal(
+  s: GameState,
+  attacker: string,
+  defender: string,
+  goal: WarGoal,
+  options: { breakOath?: boolean; justification?: string } = {},
+): boolean {
+  if (goalBlocker(s, attacker, defender, goal)) return false;
+  if (options.justification && !goalJustified(s, options.justification, attacker, defender, goal)) return false;
+  if (
+    s.successionCrises.some(
+      (c) =>
+        c.stage === 'civil-war' &&
+        ([attacker, defender].includes(c.clanId) || c.contributions.some((p) => p.ships > 0 && [attacker, defender].includes(p.clanId))),
+    )
+  )
+    return false;
+  const target = goal.kind === 'cede' ? s.regions[goal.regionId] : clanRegions(s, defender)[0];
+  if (!target) return false;
+  const cb = options.justification ? 'feud' : 'conquest';
+  const ok =
+    attacker === s.playerClanId
+      ? declareWar(s, target.id, cb, options.breakOath, goal, options.justification)
+      : defender === s.playerClanId
+        ? aiDeclareWar(s, attacker, cb, target.id, options.breakOath, goal, options.justification)
+        : declareHouseWar(s, attacker, target.id, options.breakOath, goal, options.justification);
+  return ok;
 }

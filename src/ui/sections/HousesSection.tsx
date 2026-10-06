@@ -1,4 +1,7 @@
-import { useId, useState } from 'react';
+import { HouseConnections } from './HouseConnections';
+import { houseRelation } from '../../game/houseRelations';
+import { pactMap } from '../../game/aiCourt';
+import { useId, useState, useMemo } from 'react';
 import { alive, ch, clanRegions, fullName, liegeOf, ruler } from '../../game/core';
 import { committedShips } from '../../game/coalitions';
 import { truceOf } from '../../game/peace';
@@ -13,6 +16,7 @@ export function HousesSection() {
   const [planet, setPlanet] = useState('all');
   const [faith, setFaith] = useState('all');
   const labelId = useId();
+  const marriagePacts = useMemo(() => pactMap(s, true), [s]);
   const houses = Object.values(s.clans).sort((a, b) => a.name.localeCompare(b.name));
   const headOf = (id: string) => {
     const c = id === s.playerClanId ? ruler(s) : ch(s, s.clans[id]?.headId);
@@ -33,7 +37,7 @@ export function HousesSection() {
     <Section
       title="Houses of Sol"
       icon="crown"
-      info="Browse every recorded house. Home world is the house's recorded home; faith is its current ruler's own faith. Relations, alliances and peace shown here concern your house."
+      info="Browse every recorded house. Home world is the house's recorded home; faith is its current ruler's own faith. Open each house’s recorded web of treaties, protectors, marriage pacts and blood feuds. Opinion and the peace badge concern your house; treaty links also show AI–AI bonds."
     >
       <div className="card flat stack" style={{ gap: 'var(--space-10px)' }}>
         <div className="grid tight">
@@ -126,12 +130,13 @@ export function HousesSection() {
                 ) : (
                   <>
                     <span className="muted">Opinion of you:</span>
-                    <Opinion v={house.opinion} />
+                    <Opinion v={houseRelation(s, house.id, s.playerClanId).value} />
                   </>
                 )}
                 {!own && house.allied && <span className="pill green">Allied to you</span>}
                 {peace && <span className="pill gold">Truce with you until {peace.until}</span>}
               </div>
+              <HouseConnections houseId={house.id} marriagePacts={marriagePacts} />
               <div className="muted" style={{ overflowWrap: 'anywhere' }}>
                 {regions.length} region{regions.length === 1 ? '' : 's'} · {own ? s.fleet : house.fleet} ships at home
                 {committed > 0 && <div>{committed} ships committed to defence</div>}

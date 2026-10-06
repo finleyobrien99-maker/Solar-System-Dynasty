@@ -1,3 +1,4 @@
+import { WarAimsSection } from '../sections/WarAimsSection';
 import { regencyOf, regentTie } from '../../game/regency';
 import { committedShips } from '../../game/coalitions';
 import { CoalitionsSection } from '../sections/CoalitionsSection';
@@ -129,6 +130,7 @@ export function ClanModal({ id }: { id: string }) {
       <WarWearinessSection clanId={id} />
       <TrucesSection clanId={id} />
       <HouseDiplomacySection clanId={id} />
+      <WarAimsSection clanId={id} />
       <CoalitionsSection clanId={id} />
       {!!kin.length && (
         <Section

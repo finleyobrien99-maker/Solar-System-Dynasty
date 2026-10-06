@@ -1,3 +1,5 @@
+import { peaceTributeTick } from './warGoals';
+import { peaceOffersTick } from './peace';
 import { coalitionsTick } from './coalitions';
 import { peaceTick } from './peace';
 import { successionTick } from './succession';
@@ -30,13 +32,15 @@ export function canAgeUp(s: GameState): boolean {
 export function ageUp(s: GameState): void {
   if (!canAgeUp(s)) return;
   s.year += 1;
+  peaceOffersTick(s);
+  peaceTributeTick(s);
   peaceTick(s); // Expire treaties before this cycle's declarations.
   realmDefenceTick(s); // A world's unity and outrage fade.
   diplomacyTick(s); // Treaties lapse or pay before this cycle's wars are chosen; AI houses seek new ones.
   coalitionsTick(s); // Fear cools only if the cycle began without an offensive war.
 
   // Money first, so this cycle's events see this cycle's treasury.
-  const dc = sum(creditLines(s));
+  const dc = sum(creditLines(s, false)); // Tribute was already transferred, capped, by diplomacyTick.
   const dp = sum(prestigeLines(s));
   const df = sum(faithLines(s));
   s.credits += dc;

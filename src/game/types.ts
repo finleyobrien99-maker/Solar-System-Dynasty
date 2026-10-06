@@ -1,3 +1,4 @@
+import type { PeaceProposal, PeaceTribute, RefusedWarDemand, WarGoal } from './warGoals';
 import type { Reputation } from './epithetDefs';
 import type { DiplomacyState, RealmCallAnswer } from './diplomacyTypes';
 
@@ -230,6 +231,8 @@ export interface SiegeResult {
 }
 
 export interface War {
+  goal?: WarGoal;
+  peaceOffer?: PeaceProposal;
   id: string;
   enemy: string; // clan id
   playerAttacker: boolean;
@@ -248,6 +251,9 @@ export interface War {
 }
 
 export interface AiWar {
+  goal?: WarGoal;
+  cb?: CasusBelli;
+  peaceOffer?: PeaceProposal;
   id: string;
   attacker: string;
   defender: string;
@@ -447,6 +453,8 @@ export interface GameState {
   hooks: Hook[];
   successionCrises: SuccessionCrisis[];
   truces: Truce[];
+  peaceTributes?: PeaceTribute[];
+  warJustifications?: RefusedWarDemand[];
   /** House relations, treaties, trust and AI house memories of each other (houseRelations.ts, treaties.ts). Added in v10. */
   diplomacy?: DiplomacyState;
   /** House campaign fatigue, 0..100. Zero entries need not be stored. */

@@ -1,3 +1,4 @@
+import { goalCampaignValid } from './warGoals';
 // Realms close ranks (WAVE-5-DIPLOMACY.md slice 1; WAVE-5-CONTRACT.md). Attack
 // a house from outside its realm and the realm is called: the sovereign at the
 // top of the liege chain must answer unless it truly cannot, and every other
@@ -24,7 +25,7 @@ import type { RealmCallAnswer, RealmCallOffer, RealmRole, Reason } from './diplo
 import { clearFlag, getFlag, setFlag } from './eventKit';
 import { truceOf } from './peace';
 import { regencyOf } from './regency';
-import { pactDefenders, pactRefused, treatiesOf } from './treaties';
+import { pactDefenders, pactRefused } from './treaties';
 import { committedShips } from './warAid';
 import { PLANET_BY_ID } from './planets';
 import { addFeeling, opinionOf } from './relations';
@@ -374,9 +375,11 @@ type RealmAiWar = AiWar & { realmCalls?: RealmCallAnswer[] };
 
 /** The saved war whose realm is waiting on your answer, and the waiting answer. Pure. */
 function validCall(s: GameState, war: RealmAiWar, answer?: RealmCallAnswer): boolean {
-  if (s.gameOver || s.regions[war.target]?.owner !== war.defender || !clanRegions(s, war.attacker).length) return false;
+  if (s.gameOver || (war.goal ? !goalCampaignValid(s, war) : s.regions[war.target]?.owner !== war.defender) || !clanRegions(s, war.attacker).length)
+    return false;
   // A treaty call stands while the treaty does.
-  if (answer?.role === 'pact') return !!answer.treatyId && treatiesOf(s, s.playerClanId).some((t) => t.id === answer.treatyId);
+  if (answer?.role === 'pact')
+    return !!answer.treatyId && pactDefenders(s, war.defender, war.attacker).some((d) => d.clanId === s.playerClanId && d.treatyId === answer.treatyId);
   const c = context(s, war.attacker, war.defender, war.target, 'conquest');
   return !!c && called(s, c).includes(s.playerClanId);
 }
@@ -394,7 +397,8 @@ export function pendingRealmCall(s: GameState, warId?: string): { war: RealmAiWa
 export function answerBlocker(s: GameState, warId: string): string | null {
   const p = pendingRealmCall(s, warId);
   if (!p) return 'The call has passed.';
-  if (p.answer.role === 'pact') return pactDefenders(s, p.war.defender, p.war.attacker).find((d) => d.clanId === s.playerClanId)?.blocker ?? null;
+  if (p.answer.role === 'pact')
+    return pactDefenders(s, p.war.defender, p.war.attacker).find((d) => d.clanId === s.playerClanId && d.treatyId === p.answer.treatyId)?.blocker ?? null;
   const c = context(s, p.war.attacker, p.war.defender, p.war.target, 'conquest')!;
   return blocker(s, c, s.playerClanId) ?? null;
 }

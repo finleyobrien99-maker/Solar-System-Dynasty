@@ -36,6 +36,7 @@ function fixture() {
   const houses = Object.values(s.clans).filter(
     (k) => !k.isPlayer && clanRegions(s, k.id).length && alive(ch(s, k.headId)) && s.year - ch(s, k.headId)!.born >= 16,
   );
+  for (const k of houses) k.prestige = 1000;
   const pacts = pactMap(s);
   const enemy = houses.find((k) => !pacts.get(s.playerClanId)?.has(k.id))!;
   const other = houses.find((k) => k.id !== enemy.id && !pacts.get(enemy.id)?.has(k.id))!;
@@ -155,7 +156,7 @@ describe('house peace oaths', () => {
       memories = target.owner === enemy.id ? s.clans[enemy.id].memories : undefined;
     expect(aiDeclareWar(s, enemy.id, 'conquest', mine.id)).toBe(false);
     expect(aiDeclareWar(s, enemy.id, 'conquest', mine.id, true)).toBe(true);
-    expect(enemy.prestige).toBe(150);
+    expect(enemy.prestige).toBe(350 - OATH_BREAK_COST - 120);
     expect(s.prestige).toBe(prestige);
     expect(s.credits).toBe(credits);
     expect(ruler(s).reputation?.deeds.oathsBroken).toBeUndefined();
@@ -169,7 +170,7 @@ describe('house peace oaths', () => {
     enemy.prestige = 500;
     expect(declareHouseWar(s, enemy.id, target.id)).toBe(false);
     expect(declareHouseWar(s, enemy.id, target.id, true)).toBe(true);
-    expect(enemy.prestige).toBe(300);
+    expect(enemy.prestige).toBe(500 - OATH_BREAK_COST - 120);
     expect(s.prestige).toBe(1000);
     expect(s.aiWars[0].attacker).toBe(enemy.id);
     expect(s.characters[enemy.headId].reputation!.deeds.oathsBroken).toBe(1);
