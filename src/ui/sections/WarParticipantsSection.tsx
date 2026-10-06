@@ -12,7 +12,7 @@ export interface WarParticipantRow {
   /** Actual casualties, if recorded. A recalled survivor is not a loss. */
   lost?: number;
   returned?: number;
-  role?: 'sovereign' | 'vassal' | 'planet';
+  role?: 'sovereign' | 'vassal' | 'planet' | 'pact';
   chance?: number;
   leaderId?: string;
 }
@@ -67,7 +67,11 @@ export function WarParticipantsSection({ rows, title = 'Coalition defence', defe
                 <span className={`pill ${row.answer === 'accepted' ? 'green' : row.answer === 'refused' ? 'red' : ''}`}>{ANSWERS[row.answer]}</span>
               </div>
               <div className="muted">{row.source === 'realm' ? 'Realm defence call' : 'Coalition defence pledge'}</div>
-              {row.role && <div className="muted">{row.role === 'sovereign' ? 'Sovereign' : row.role === 'vassal' ? 'Sworn house' : 'United world'}</div>}
+              {row.role && (
+                <div className="muted">
+                  {row.role === 'sovereign' ? 'Sovereign' : row.role === 'vassal' ? 'Sworn house' : row.role === 'pact' ? 'Treaty partner' : 'United world'}
+                </div>
+              )}
               {row.answer === 'accepted' ? (
                 <>
                   <div>

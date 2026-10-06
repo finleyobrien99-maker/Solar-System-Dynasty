@@ -45,6 +45,8 @@ export interface RunResult {
   events: Record<string, number>; // event id -> times answered
   /** Realm calls in every war of the run, AI wars included (realmDefence.ts): answers by kind, counted once per war. */
   realm: { accepted: number; refused: number; blocked: number; pending: number; unities: number };
+  /** Treaties signed anywhere in the run (AI with AI and with you), each counted once. */
+  treaties: number;
 }
 
 const GRADES = ['-', 'F', 'D', 'C', 'B', 'A', 'S'];
@@ -100,6 +102,7 @@ export function playRun(bot: BotId, seed: number, cycles: number, every = 10): R
       }
     }
   };
+  const signed = new Set<string>();
   let cycle = 0;
   while (cycle < cycles && !s.gameOver) {
     answerPending(s, rng, onEvent);
@@ -110,6 +113,7 @@ export function playRun(bot: BotId, seed: number, cycles: number, every = 10): R
     countRealm();
     ageUp(s);
     countRealm();
+    for (const t of s.diplomacy?.treaties ?? []) signed.add(t.id);
     cycle++;
     const rank = clanRank(s, s.playerClanId);
     for (const k of [2, 3, 4] as const) if (rank >= k) reached[k] ??= cycle;
@@ -148,6 +152,7 @@ export function playRun(bot: BotId, seed: number, cycles: number, every = 10): R
     deaths,
     events,
     realm,
+    treaties: signed.size,
   };
 }
 
@@ -211,6 +216,8 @@ export interface BotSummary {
   /** Mean realm answers per run: accepted / refused / blocked. */
   realmCalls: string;
   unitedWorlds: number;
+  /** Mean treaties signed per run. */
+  treaties: number;
 }
 
 export function summariseBot(bot: BotId, runs: RunResult[]): BotSummary {
@@ -233,6 +240,7 @@ export function summariseBot(bot: BotId, runs: RunResult[]): BotSummary {
     battlesWon: median(runs.map((r) => r.battlesWon)),
     unitedWorlds: mean(runs.map((r) => r.realm?.unities ?? 0)),
     realmCalls: (['accepted', 'refused', 'blocked'] as const).map((k) => mean(runs.map((r) => r.realm?.[k] ?? 0))).join(' / '),
+    treaties: mean(runs.map((r) => r.treaties ?? 0)),
     battlesLost: median(runs.map((r) => r.battlesLost)),
     gradeAt50: medianGrade(runs.flatMap((r) => at(r, 50)?.grade ?? [])),
     bestGradeBy150: GRADES[Math.max(0, ...runs.flatMap((r) => r.samples.filter((x) => x.cycle <= 150).map((x) => gradeRank(x.grade))))],
@@ -476,6 +484,7 @@ export function markdown(runs: RunResult[], cycles: number): string {
   row('Events per cycle', (x) => x.eventsPerCycle);
   row('Most common event', (x) => `${x.topEvent} (${n(x.topEventShare)}%)`);
   row('Realm calls answered / refused / blocked (mean)', (x) => x.realmCalls);
+  row('Treaties signed per run (mean)', (x) => x.treaties);
   row('Worlds united after actual foreign conquest (mean)', (x) => x.unitedWorlds);
 
   const deaths: Record<string, number> = {};

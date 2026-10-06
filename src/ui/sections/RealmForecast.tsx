@@ -6,7 +6,7 @@ import type { CasusBelli } from '../../game/types';
 import { ClanBadge } from '../components';
 import { useGame } from '../store';
 
-const ROLE = { sovereign: 'Sovereign', vassal: 'Sworn house', planet: 'Same world' } as const;
+const ROLE = { sovereign: 'Sovereign', vassal: 'Sworn house', planet: 'Same world', pact: 'Treaty partner' } as const;
 
 export function RealmForecast({ regionId, defenderId, cb = 'conquest' }: { regionId: string; defenderId: string; cb?: CasusBelli }) {
   const { s } = useGame();

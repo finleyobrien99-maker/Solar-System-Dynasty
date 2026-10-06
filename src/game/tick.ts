@@ -3,6 +3,7 @@ import { peaceTick } from './peace';
 import { successionTick } from './succession';
 import { regencyTick } from './regency';
 import { realmDefenceTick } from './realmDefence';
+import { diplomacyTick } from './treaties';
 import { ambitionsTick } from './ambitions';
 import { secretsTick } from './secrets';
 import { epithetsTick, recordDeed } from './epithets';
@@ -31,6 +32,7 @@ export function ageUp(s: GameState): void {
   s.year += 1;
   peaceTick(s); // Expire treaties before this cycle's declarations.
   realmDefenceTick(s); // A world's unity and outrage fade.
+  diplomacyTick(s); // Treaties lapse or pay before this cycle's wars are chosen; AI houses seek new ones.
   coalitionsTick(s); // Fear cools only if the cycle began without an offensive war.
 
   // Money first, so this cycle's events see this cycle's treasury.

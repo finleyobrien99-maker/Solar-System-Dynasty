@@ -8,6 +8,38 @@
 
 Live build: https://finleyobrien99-maker.github.io/Solar-System-Dynasty/ (deploys on every push to `main`).
 
+### 6 October 2026: houses deal with each other (Wave 5, slice 2)
+
+Every house now regards every other, with stated reasons:
+- the rulers' regard for each other;
+- a shared world and faith;
+- marriage ties;
+- what the houses remember of each other;
+- trust;
+- treaties;
+- war.
+
+An AI house's opinion of you stays the one authority for that direction, and AI houses now remember what other AI houses did to them, by the same grave-grudge rules.
+
+There are five treaties, each with terms and an end: non-aggression, defensive pact, trade, guarantee and tribute. Your offers to AI houses are answered at once at explained odds.
+- **Their offers to you.** Defensive pacts, guarantees and tribute arrive as *Envoys at Court*. Trade and non-aggression offers wait in Realm's *Envoys waiting* list.
+- **Trust.** It grows while promises hold. A broken promise costs the victim's trust (−60), a little of every house's (−15) and 50 prestige, and earns the Oathbreaker name.
+- **Declaring war.** A non-aggression pact, a guarantee you give or tribute you receive stops your declaration until you break your word. AI lords mostly keep theirs; deceitful and ambitious ones may betray.
+- **Defending a partner.** A treaty partner is called with the realm (role `pact`, real ships), even against an attacker from the same world. Staying home breaks the treaty. You are asked, never rolled for.
+- **Money.** Trade and tribute show in your credit lines.
+- **House profiles** show regard and its reasons, trust both ways, your treaties (with Break) and offers with odds.
+
+Save v10 adds an empty diplomacy record to older saves, with no invented pacts. Legacy alliances, truces and AI memories of you are untouched. Seventeen new v10 fixtures include signed treaties, a broken promise and a waiting offer.
+
+| Measured: same 20 seeds × 150, against the live `b21584e` | Before | After |
+|---|---|---|
+| Builder Sovereign | 35% | 25% |
+| Warmonger Sovereign | 90% | 95% (80% in the first run: noise) |
+| Passive endings by 100 | 10% | 0% (one game in twenty either way; the band is 5–15%) |
+| Breeder endings by 100 | 10% | 5% |
+
+AI houses sign about 75–105 treaties per 150-cycle game. Envoys at Court is 1.8% of events; 141 distinct events fire, none over 3%. With fewer wars, AI houses murder each other about half as often. Checks: 842 unit tests and 116 browser tests at 1280px and 390px pass, and frozen v1–v10 saves play and round-trip. Age Up on the same 10k state is not slower (166–172 ms against 198–201 ms).
+
 ### 6 October 2026: AI houses build real fleets
 
 Fin chose this after a measured comparison (AI-GROWTH-OPTIONS.md). Conquest was too easy mainly because AI fleets were tiny: an AI house aimed for well under half the ships you may hold with the same land, so realm defence could not matter. `fleetTarget` (world.ts) now closes **AI_FLEET_PARITY = 0.4** of the gap between the old peacetime levy and your own cap for the same lands (economy.ts `fleetCap`). That applies to AI rebuilding, starting fleets and new cadet branches; AI ships are still free to build. Same 20 seeds x150 (80 games) against the realm-defence release `96836ff`:

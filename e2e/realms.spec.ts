@@ -2,7 +2,7 @@ import { expect, test, type Page, type TestInfo } from '@playwright/test';
 import { inflateString } from '../src/game/codec';
 import { declareWar } from '../src/game/war';
 import { declareHouseWar } from '../src/game/ai';
-import { ch, clanRegions } from '../src/game/core';
+import { ch, clanRegions, SAVE_VERSION } from '../src/game/core';
 import { EVENT_BY_ID, queueEvent } from '../src/game/events';
 import { hashString } from '../src/game/rng';
 import type { Clan, GameState } from '../src/game/types';
@@ -197,7 +197,7 @@ test('a stale realm letter can be cleared without ships, grudges or a new answer
   await call.getByRole('button', { name: /^Continue/ }).click();
   await expect.poll(async () => (await stored(page)).pending.length).toBe(0);
   const saved = await stored(page);
-  expect(saved.version).toBe(9);
+  expect(saved.version).toBe(SAVE_VERSION);
   expect(saved.fleet).toBe(120);
   expect(saved.seed).toBe(seed);
   expect(saved.relations).toEqual(relations);

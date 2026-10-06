@@ -2,6 +2,7 @@ import { coalitionCall, recordExpansion } from './coalitions';
 import { aidBattleNotes, aidStrength, aidLosses, aidTruces, committedShips, recallAid, releaseAid, snapshotAid, warContributions } from './warAid';
 import { regencyOf } from './regency';
 import { realmPeaceBlocker } from './realmDefence';
+import { aiResolvePromises, mightBreakPromises, treatyWarBlocker } from './treaties';
 import { chooseAiSiege, performSiege } from './siege';
 import { recordMurder } from './secrets';
 import { breakPeace, isCloseKin, recordDeed } from './epithets';
@@ -169,7 +170,14 @@ function startAiWar(s: GameState): void {
     // Feuds inside a planet: never against your own liege's throne.
     targets = targets.filter((r) => r.planetId === attacker.planetId && !r.capital && liegeOf(s, attacker.id) !== r.owner);
   }
-  targets = targets.filter((r) => !s.clans[r.owner]?.isPlayer && mayAttack(s, attacker.id, r.owner) && !s.aiWars.some((w) => w.defender === r.owner));
+  targets = targets.filter(
+    (r) =>
+      !s.clans[r.owner]?.isPlayer &&
+      mayAttack(s, attacker.id, r.owner) &&
+      !s.aiWars.some((w) => w.defender === r.owner) &&
+      // Houses protected by this lord's own promises are spared, unless the lord might break them.
+      (!treatyWarBlocker(s, attacker.id, r.owner) || mightBreakPromises(s, attacker.id)),
+  );
   // Houses bound by marriage leave each other alone, unless the lord is treacherous and hates them.
   const lord = ch(s, attacker.headId);
   const pacts = pactMap(s);
@@ -216,6 +224,7 @@ export function declareHouseWar(s: GameState, attackerId: string, regionId: stri
   if (realmPeaceBlocker(s, attackerId, defender.id, regionId)) return false;
   const oath = !!truceOf(s, attackerId, defender.id);
   if (oath && (!breakOath || !breakTruce(s, attackerId, defender.id))) return false;
+  if (!aiResolvePromises(s, attackerId, defender.id)) return false;
   recallAid(s, defender.id);
   const war: AiWar = { id: newId(s, 'aw'), attacker: attackerId, defender: defender.id, target: regionId, started: s.year, progress: 0, coalition: [] };
   s.aiWars.push(war);
@@ -367,6 +376,7 @@ function aggressionOnPlayer(s: GameState): void {
   const pool = landed(s).filter((c) => {
     if (c.allied || committedShips(s, c.id) || !mayAttack(s, c.id, s.playerClanId) || atWarWith(s, c.id) || s.aiWars.some((w) => w.attacker === c.id))
       return false;
+    if (treatyWarBlocker(s, c.id, s.playerClanId) && !mightBreakPromises(s, c.id)) return false;
     if (liegeOf(s, c.id) === s.playerClanId) return false;
     const near = myPlanets.has(c.planetId) || neighbourPlanets(c.planetId).some((p) => myPlanets.has(p));
     // Sworn rivals and lords sworn to revenge on you come from anywhere, and with less of an edge.

@@ -92,7 +92,8 @@ describe('AI houses scheme like the player', () => {
 
   it('over a long game, AI houses murder, sabotage, seduce and blackmail each other', { timeout: 120000 }, () => {
     const news: string[] = [];
-    for (const seed of [1, 2, 3]) {
+    // Over six worlds, not three: treaties keep some houses at peace, so a murder is rarer than it was.
+    for (const seed of [1, 2, 3, 4, 5, 6]) {
       const s = balanceGame(seed);
       const rng = { seed };
       for (let i = 0; i < 150 && !s.gameOver; i++) {

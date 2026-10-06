@@ -26,6 +26,7 @@ import { isCloseFamily } from './life';
 import { councilStat } from './council';
 import { RESEARCH_UPKEEP } from './forge';
 import { routeIncome } from './trade';
+import { diplomacyCreditLines } from './treaties';
 import { TRAITS } from './traits';
 import type { GameState } from './types';
 
@@ -93,6 +94,7 @@ export function creditLines(s: GameState): Line[] {
   if (items) lines.push({ label: 'Relics', value: items });
   if (s.forge.project) lines.push({ label: 'Gene-Forge research', value: -RESEARCH_UPKEEP });
   if (s.routes.length) lines.push({ label: `Trade routes (${s.routes.length})`, value: routeIncome(s) });
+  lines.push(...diplomacyCreditLines(s));
   return lines;
 }
 

@@ -24,6 +24,7 @@ import { killCharacter } from './life';
 import type { GameState, ScenarioId } from './types';
 import { createWorld, rollRuler, scenarioHouses, startGame } from './world';
 import { coalitionCampaign, peaceCampaign, disputedInheritance } from './testScenarios';
+import { breakTreaty, proposeTreaty, termsFor } from './treaties';
 import { successionTick } from './succession';
 import { ambitionChoices, chooseAmbition } from './ambitions';
 
@@ -124,6 +125,26 @@ describe.runIf(WRITE)('freeze peace and campaign weariness', () => {
   });
 });
 
+describe.runIf(WRITE)('freeze treaties and trust', () => {
+  it('freezes signed treaties, a broken promise and an offer waiting for you', () => {
+    const file = new URL(`save-v${SAVE_VERSION}-treaties.json`, DIR);
+    if (existsSync(file)) return;
+    const { s } = peaceCampaign();
+    const houses = Object.values(s.clans).filter((k) => !k.isPlayer && clanRegions(s, k.id).length && !s.wars.some((w) => w.enemy === k.id));
+    const [a, b, c, d] = houses;
+    const d0 = s.diplomacy!;
+    d0.treaties.push(
+      { id: 'tz1', kind: 'trade', a: s.playerClanId, b: a.id, years: 10, signed: s.year, until: s.year + 10 },
+      { id: 'tz2', kind: 'defensive', a: b.id, b: c.id, years: 10, signed: s.year, until: s.year + 10 },
+      { id: 'tz3', kind: 'nonAggression', a: s.playerClanId, b: d.id, years: 10, signed: s.year, until: s.year + 10 },
+    );
+    expect(breakTreaty(s, s.playerClanId, 'tz3')).toBe(true);
+    s.cooldowns.treaty_offers = 0;
+    expect(proposeTreaty(s, b.id, s.playerClanId, termsFor(s, 'trade', b.id, s.playerClanId))).toBe('pending');
+    writeFileSync(file, exportSave(s) + '\n');
+  });
+});
+
 describe.runIf(WRITE)('freeze a commanded battle', () => {
   it('freezes real appointments and the leaders snapshotted in a pending report', () => {
     const file = new URL(`save-v${SAVE_VERSION}-commanded-battle.json`, DIR);
@@ -200,7 +221,7 @@ describe('save migrations', () => {
       truces = structuredClone(s.truces),
       seed = s.seed;
     const first = migrate(s);
-    expect(first.version).toBe(9);
+    expect(first.version).toBe(SAVE_VERSION);
     expect(war.realmCalls).toEqual(calls);
     expect(war.realmAid).toEqual(aid);
     expect(war.coalition).toEqual(loans);

@@ -1,5 +1,5 @@
 import type { Reputation } from './epithetDefs';
-import type { RealmCallAnswer } from './diplomacyTypes';
+import type { DiplomacyState, RealmCallAnswer } from './diplomacyTypes';
 
 // Core data shapes for the whole game. Everything in GameState must be plain
 // JSON (no classes, no functions) so saves round-trip cleanly.
@@ -447,6 +447,8 @@ export interface GameState {
   hooks: Hook[];
   successionCrises: SuccessionCrisis[];
   truces: Truce[];
+  /** House relations, treaties, trust and AI house memories of each other (houseRelations.ts, treaties.ts). Added in v10. */
+  diplomacy?: DiplomacyState;
   /** House campaign fatigue, 0..100. Zero entries need not be stored. */
   warWeariness: Record<string, number>;
   houseThreat: Record<string, number>;

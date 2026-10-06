@@ -1,5 +1,6 @@
 import { committedShips } from '../../game/coalitions';
 import { CoalitionsSection } from '../sections/CoalitionsSection';
+import { EnvoysSection } from '../sections/EnvoysSection';
 import { WarParticipantsSection, type WarParticipantRow } from '../sections/WarParticipantsSection';
 import { RealmDutiesSection } from '../sections/RealmDutiesSection';
 import { SiegeSection } from '../sections/SiegeSection';
@@ -274,6 +275,7 @@ export function RealmTab() {
         </div>
       </Section>
 
+      <EnvoysSection />
       <CoalitionsSection />
       <RealmDutiesSection />
       <WarWearinessSection />

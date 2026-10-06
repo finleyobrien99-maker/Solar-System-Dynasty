@@ -1,4 +1,5 @@
 import { initialiseSecrets } from './secrets';
+import { migrateDiplomacy } from './houseRelations';
 import { initialiseReputations } from './epithets';
 import { initialiseHouseGenetics } from './houseGenetics';
 // Bulletproof saves.
@@ -228,6 +229,8 @@ export class NewerSaveError extends Error {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MIGRATIONS: Record<number, (s: any) => void> = {
+  // Treaties, trust and house memories begin now: no invented pacts or history. Legacy alliances, truces and memories of you are untouched.
+  10: (s) => migrateDiplomacy(s),
   // Existing wars keep their real loans; old wars receive no invented calls or casualties.
   9: (s) => {
     for (const w of [...(s.wars ?? []), ...(s.aiWars ?? [])]) {

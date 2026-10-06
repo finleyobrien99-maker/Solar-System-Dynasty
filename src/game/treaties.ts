@@ -70,7 +70,12 @@ export const STRONGER = 1.5;
 export const AI_DIPLOMACY_RATE = 0.12;
 /** Offers to you that may wait at once, and how long each waits. */
 export const MAX_OFFERS = 2;
-export const OFFER_YEARS = 2;
+export const OFFER_YEARS = 4;
+/** Offers weighty enough to interrupt you with envoys at court; the rest wait in Realm's list of envoys. */
+export const URGENT_OFFERS: TreatyKind[] = ['defensive', 'guarantee', 'tribute'];
+export function urgentOffers(s: GameState): TreatyProposal[] {
+  return offersToYou(s).filter((p) => URGENT_OFFERS.includes(p.kind));
+}
 /** After an envoy reaches you, the next waits this many cycles, so offers never crowd out your other news. */
 export const OFFER_GAP = 3;
 
@@ -353,6 +358,33 @@ export function treatyWarBlocker(s: GameState, attacker: string, defender: strin
     if (t.kind === 'tribute' && t.a === attacker) return `${houseName(s, defender)} pays you tribute: you swore not to attack them.`;
   }
   return null;
+}
+
+/** Whether an AI lord would even consider breaking promises to attack: deceit, or ambition with a temper. Pure. */
+export function mightBreakPromises(s: GameState, attacker: string): boolean {
+  const h = headOf(s, attacker);
+  return !!h && attacker !== s.playerClanId && (hasTrait(h, 'deceitful') || (hasTrait(h, 'ambitious') && hasTrait(h, 'wrathful')));
+}
+
+/**
+ * An AI house about to declare on `defender` weighs its promises: with none
+ * in the way it may go ahead; otherwise one roll (deceit, ambition, temper
+ * and hatred make it likelier, honesty all but rules it out), and on a yes
+ * every treaty between them is broken first. Returns whether it may declare.
+ */
+export function aiResolvePromises(s: GameState, attacker: string, defender: string): boolean {
+  if (!treatyWarBlocker(s, attacker, defender)) return true;
+  const h = headOf(s, attacker);
+  if (!h || attacker === s.playerClanId) return false;
+  let p = 0.03;
+  if (hasTrait(h, 'deceitful')) p += 0.3;
+  if (hasTrait(h, 'ambitious')) p += 0.1;
+  if (hasTrait(h, 'wrathful')) p += 0.05;
+  if (houseRelation(s, attacker, defender).value <= -40) p += 0.1;
+  if (hasTrait(h, 'honest')) p = 0.01;
+  if (!chance(s, clamp(p, 0, 0.5))) return false;
+  breakTreatiesForWar(s, attacker, defender);
+  return true;
 }
 
 /** Declaring war anyway: every treaty between the two ends, each promise broken by the attacker. Returns how many. */

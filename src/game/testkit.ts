@@ -19,6 +19,8 @@ import { cbOptions, declareWar, fightBattle, warBlocker } from './war';
 import { warContributions } from './warAid';
 import { appointCommander, eligibleCommanders } from './commanders';
 import { guardianWard, nameGuardian, regentCandidates } from './regency';
+import { breakTreaty, proposeTreaty, termsFor, treatiesOf } from './treaties';
+import type { TreatyKind } from './diplomacyTypes';
 
 /** Answer every pending pop-up with a random allowed choice. */
 export function drain(s: GameState, bot: Seeded): void {
@@ -149,6 +151,15 @@ export function botTurn(s: GameState, bot: Seeded): void {
     const pool = regentCandidates(s, s.playerClanId, young);
     if (pool.length) nameGuardian(s, pick(bot, pool).id);
   }
+  // Offer treaties now and then, and once in a while break one, so long games carry pacts, trade and broken trust.
+  const houses = Object.values(s.clans).filter((c) => !c.isPlayer && clanRegions(s, c.id).length);
+  if (houses.length && chance(bot, 0.1)) {
+    const kind = pick(bot, ['nonAggression', 'defensive', 'trade', 'guarantee', 'tribute'] as TreatyKind[]);
+    const other = pick(bot, houses).id;
+    proposeTreaty(s, s.playerClanId, other, termsFor(s, kind, s.playerClanId, other));
+  }
+  const mine = treatiesOf(s, s.playerClanId);
+  if (mine.length && chance(bot, 0.02)) breakTreaty(s, s.playerClanId, pick(bot, mine).id);
   for (const w of s.wars.slice()) fightBattle(s, w.id);
   const cands = vaultCandidates(s);
   if (cands.length && chance(bot, 0.2)) lockTrait(s, cands[0]);

@@ -1,5 +1,6 @@
 import { coalitionCall, recordExpansion } from './coalitions';
 import { answerRealmCall, realmCall, recordPlanetConquest, realmPeaceBlocker } from './realmDefence';
+import { aiResolvePromises, breakTreatiesForWar, treatyWarBlocker } from './treaties';
 import { regencyOf } from './regency';
 import type { RealmCallAnswer } from './diplomacyTypes';
 import {
@@ -101,6 +102,8 @@ export function warBlocker(s: GameState, region: Region, breakOath = false): str
   if (!enemy) return 'Nobody holds this region.';
   const protection = realmPeaceBlocker(s, s.playerClanId, enemy.id, region.id);
   if (protection) return protection;
+  const pact = treatyWarBlocker(s, s.playerClanId, enemy.id);
+  if (pact && !breakOath) return `${pact} Break your word to attack.`;
   const truce = truceOf(s, s.playerClanId, enemy.id);
   if (truce) return breakOath ? truceBreakBlocker(s, s.playerClanId, enemy.id) : `You swore a truce with House ${enemy.name} until ${truce.until}.`;
   return null;
@@ -116,6 +119,8 @@ export function declareWar(s: GameState, regionId: string, cb: CasusBelli, break
     return false;
   pay(s, opt.cost);
   const enemy = s.clans[region.owner];
+  // Declaring anyway breaks every promise between the two houses (treaties.ts).
+  if (breakOath) breakTreatiesForWar(s, s.playerClanId, enemy.id);
   if (cb === 'conquest') {
     for (const c of Object.values(s.clans)) if (!c.isPlayer) c.opinion -= 8;
   }
@@ -178,6 +183,7 @@ export function aiDeclareWar(s: GameState, enemyId: string, cb: CasusBelli, targ
   if (!target || target.owner !== s.playerClanId || (cb === 'revolt' && liegeOf(s, enemyId) !== s.playerClanId)) return false;
   if (realmPeaceBlocker(s, enemyId, s.playerClanId, targetRegionId, cb)) return false;
   if (truceOf(s, enemyId, s.playerClanId) && (!breakOath || !breakTruce(s, enemyId, s.playerClanId))) return false;
+  if (!aiResolvePromises(s, enemyId, s.playerClanId)) return false;
   recallAid(s, s.playerClanId);
   const war: War = { id: newId(s, 'w'), enemy: enemyId, playerAttacker: false, target: targetRegionId, cb, score: 0, started: s.year, coalition: [] };
   s.wars.push(war);

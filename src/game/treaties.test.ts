@@ -18,6 +18,7 @@ import {
   diplomacyCreditLines,
   diplomacyTick,
   offerBlocker,
+  OFFER_YEARS,
   offersToYou,
   pactDefenders,
   proposeTreaty,
@@ -187,7 +188,7 @@ describe('making treaties', () => {
     const c = on(s, 'earth');
     proposeTreaty(s, c.id, s.playerClanId, termsFor(s, 'trade', c.id, s.playerClanId));
     const first = offersToYou(s)[0].id;
-    s.year += 2;
+    s.year += OFFER_YEARS;
     diplomacyTick(s);
     expect(offersToYou(s).some((p) => p.id === first)).toBe(false);
   });
@@ -333,12 +334,21 @@ describe('AI houses make their own deals', () => {
 });
 
 describe('the offer event', () => {
-  it('fires while an offer waits, every option resolves, and describing it changes nothing', () => {
+  it('only weighty offers interrupt you; trade and non-aggression offers wait quietly', () => {
+    const def = DIPLOMACY_EVENTS[0];
+    const s = world();
+    const c = on(s, 'earth');
+    proposeTreaty(s, c.id, s.playerClanId, termsFor(s, 'trade', c.id, s.playerClanId));
+    expect(offersToYou(s)).toHaveLength(1);
+    expect(def.when!(s)).toBe(false);
+  });
+
+  it('fires while a weighty offer waits, every option resolves, and describing it changes nothing', () => {
     const def = DIPLOMACY_EVENTS[0];
     for (const i of def.choices.keys()) {
       const s = world();
       const c = on(s, 'earth');
-      proposeTreaty(s, c.id, s.playerClanId, termsFor(s, 'trade', c.id, s.playerClanId));
+      proposeTreaty(s, c.id, s.playerClanId, termsFor(s, 'defensive', c.id, s.playerClanId));
       expect(def.when!(s)).toBe(true);
       expect(queueEvent(s, def)).toBe(true);
       const ctx = buildCtx(s, s.pending.at(-1) as Pend);
@@ -352,7 +362,7 @@ describe('the offer event', () => {
       expect(JSON.stringify(s)).toBe(before);
       expect(def.choices[i].run(ctx)).not.toMatch(/undefined|NaN/);
       expect(offersToYou(s)).toHaveLength(0);
-      expect(treatyBetween(s, c.id, s.playerClanId)?.kind).toBe(i === 0 ? 'trade' : undefined);
+      expect(treatyBetween(s, c.id, s.playerClanId)?.kind).toBe(i === 0 ? 'defensive' : undefined);
     }
   });
 });

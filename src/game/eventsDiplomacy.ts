@@ -7,7 +7,7 @@ import { defineEvent, type Ctx } from './dsl';
 import type { EventDef } from './eventKit';
 import { treatyName } from './houseRelations';
 import { PLANET_BY_ID } from './planets';
-import { answerTreaty, offerBlocker, offersToYou, tradeIncomeOf } from './treaties';
+import { answerTreaty, offerBlocker, offersToYou, tradeIncomeOf, urgentOffers } from './treaties';
 import type { TreatyProposal } from './diplomacyTypes';
 import type { GameState } from './types';
 
@@ -15,7 +15,8 @@ function offer(s: GameState, id: string): TreatyProposal | undefined {
   return offersToYou(s).find((p) => p.id === id);
 }
 
-function terms(s: GameState, p: TreatyProposal): string {
+/** The terms of an offer to you, in plain words. */
+export function offerTerms(s: GameState, p: TreatyProposal): string {
   const until = s.year + p.years;
   const name = `House ${s.clans[p.from]?.name ?? 'unknown'}`;
   switch (p.kind) {
@@ -45,13 +46,14 @@ export const DIPLOMACY_EVENTS: EventDef[] = [
     icon: 'peace',
     weight: 1,
     urgent: true,
-    when: (s) => canAct(s) && offersToYou(s).length > 0,
+    // Only weighty offers interrupt you; trade and non-aggression offers wait in Realm (EnvoysSection).
+    when: (s) => canAct(s) && urgentOffers(s).length > 0,
     subject: (s) => {
-      const p = offersToYou(s)[0];
+      const p = urgentOffers(s)[0];
       return p ? s.characters[s.clans[p.from]?.headId ?? ''] : undefined;
     },
     setup: ({ s, data }) => {
-      const p = offersToYou(s)[0];
+      const p = urgentOffers(s)[0];
       data.offer = p.id;
       data.from = p.from;
       data.kind = p.kind;
@@ -60,7 +62,7 @@ export const DIPLOMACY_EVENTS: EventDef[] = [
       const p = offer(s, String(data.offer));
       if (!p) return 'The envoys have gone home.';
       const world = PLANET_BY_ID[s.clans[p.from]?.planetId ?? '']?.name;
-      return `Envoys of House ${s.clans[p.from]?.name}${world ? ` of ${world}` : ''} bring an offer. ${terms(s, p)}`;
+      return `Envoys of House ${s.clans[p.from]?.name}${world ? ` of ${world}` : ''} bring an offer. ${offerTerms(s, p)}`;
     },
     options: [
       {

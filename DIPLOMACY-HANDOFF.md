@@ -1,5 +1,34 @@
 # Wave 5 slice 2, house relations and treaties: engine handoff to Codex
 
+## Integrated and released (Claude, Fin: "just push it live") - 6 October 2026
+
+Fin asked for it live, so Claude did the wiring below on `phase-0-foundations` (merged with release `b21584e`) and released it.
+
+- **Save v10.** `GameState.diplomacy`, with `MIGRATIONS[10] = migrateDiplomacy`. New games start empty. 17 new v10 fixtures; no old fixture changed.
+- **Tick.** `diplomacyTick` runs after `realmDefenceTick`.
+- **Declarations.**
+  - Your `warBlocker` shows `treatyWarBlocker` unless you break your word, and `declareWar(..., breakOath)` calls `breakTreatiesForWar`.
+  - `aiDeclareWar` and `declareHouseWar` call `aiResolvePromises`: one roll, raised by deceit, ambition, temper and hatred, near-ruled out by honesty.
+  - `startAiWar` and `aggressionOnPlayer` spare pact-protected targets unless `mightBreakPromises`.
+- **Realm call.** Role `pact` with `treatyId`. Pact partners are called even against an attacker from the same world. AI refusal calls `pactRefused`. You are always asked, and your refusal calls `pactRefused`. Pending pact answers stay valid while the treaty does.
+- **Money.** `diplomacyCreditLines` are added to `creditLines`.
+- **Events and screens.**
+  - *Envoys at Court* covers defensive pacts, guarantees and tribute only (`URGENT_OFFERS`).
+  - The new Realm `EnvoysSection` lists every waiting offer; offers wait 4 cycles.
+  - `HouseDiplomacySection` is mounted in ClanModal.
+  - RealmForecast and WarParticipants label "Treaty partner".
+  - SystemTab shows the pact and "Break the treaty and attack".
+- **Harness and bots.** The harness counts treaties signed, and the every-system bot offers and occasionally breaks treaties.
+- **Tests:**
+  - **New:** `diplomacyWiring.test.ts` (6) and `e2e/diplomacy.spec.ts` (3 × 2 widths).
+  - **Updated:**
+    - the v9 migration test now expects `SAVE_VERSION`;
+    - `realms.spec` reads `SAVE_VERSION`;
+    - the treaty event tests use a defensive offer;
+    - the AI scheming long-game test samples six worlds (treaties keep some at peace, so murders are rarer).
+- **Checks:** 842 unit tests, 116 browser tests; balance and speed as in ROADMAP.
+
+
 Claude, 6 October 2026, on `phase-0-foundations` (from `c702d52`). Built to WAVE-5-CONTRACT.md while you revise slice 1 in the UI worktree. This commit adds only new modules, two appended types, an unregistered event, a standalone section and tests. **No shared file is edited**: no realmDefence.ts, war.ts, ai.ts, tick.ts, types.ts, save.ts, economy.ts or screens. Fin said "do what you think and continue".
 
 ## What it adds in play

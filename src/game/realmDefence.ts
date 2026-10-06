@@ -24,6 +24,7 @@ import type { RealmCallAnswer, RealmCallOffer, RealmRole, Reason } from './diplo
 import { clearFlag, getFlag, setFlag } from './eventKit';
 import { truceOf } from './peace';
 import { regencyOf } from './regency';
+import { pactDefenders, pactRefused, treatiesOf } from './treaties';
 import { committedShips } from './warAid';
 import { PLANET_BY_ID } from './planets';
 import { addFeeling, opinionOf } from './relations';
@@ -266,15 +267,33 @@ function called(s: GameState, c: Ctx): string[] {
   return [...ids].filter((id) => id !== c.attacker && realmOf(s, id) !== theirs);
 }
 
-const ROLE_ORDER: Record<RealmRole, number> = { sovereign: 0, vassal: 1, planet: 2 };
+const ROLE_ORDER: Record<RealmRole, number> = { sovereign: 0, vassal: 1, planet: 2, pact: 3 };
 
 /** Who would come to the defender's aid if this war were declared now, and why. Pure: no dice, no changes. */
 export function realmCallPreview(s: GameState, attackerId: string, defenderId: string, regionId: string, cb: CasusBelli = 'conquest'): RealmCallOffer[] {
   const c = context(s, attackerId, defenderId, regionId, cb);
-  if (!c) return [];
-  return called(s, c)
-    .map((id) => offer(s, c, id))
-    .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || b.chance - a.chance || b.proposedShips - a.proposedShips || (a.clanId < b.clanId ? -1 : 1));
+  const realm = c ? called(s, c).map((id) => offer(s, c, id)) : [];
+  const seen = new Set(realm.map((o) => o.clanId));
+  // Treaty partners are bound wherever the attacker comes from (treaties.ts); a realm house already called is not asked twice.
+  const pacts = TERRITORIAL.includes(cb) && attackerId !== defenderId && s.clans[defenderId] ? pactOffers(s, attackerId, defenderId, seen) : [];
+  return [...realm, ...pacts].sort(
+    (a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role] || b.chance - a.chance || b.proposedShips - a.proposedShips || (a.clanId < b.clanId ? -1 : 1),
+  );
+}
+
+function pactOffers(s: GameState, attacker: string, defender: string, seen: Set<string>): RealmCallOffer[] {
+  return pactDefenders(s, defender, attacker)
+    .filter((d) => !seen.has(d.clanId))
+    .map((d) => ({
+      clanId: d.clanId,
+      liegeId: liegeOf(s, d.clanId) ?? undefined,
+      role: 'pact' as const,
+      chance: d.chance,
+      reasons: d.reasons,
+      blocker: d.blocker,
+      proposedShips: d.proposedShips,
+      treatyId: d.treatyId,
+    }));
 }
 
 // ── Calling the realm ─────────────────────────────────────────────────────
@@ -306,30 +325,34 @@ function sides(s: GameState, attackerId: string, defenderId: string, id: string)
  */
 export function realmCall(s: GameState, o: { warId: string; attackerId: string; defenderId: string; regionId: string; cb?: CasusBelli }): RealmCallAnswer[] {
   const cb = o.cb ?? 'conquest';
-  const c = context(s, o.attackerId, o.defenderId, o.regionId, cb);
-  if (!c || s.gameOver) return [];
+  if (s.gameOver) return [];
+  const offers = realmCallPreview(s, o.attackerId, o.defenderId, o.regionId, cb);
+  if (!offers.length) return [];
   const answers: RealmCallAnswer[] = [];
-  for (const off of realmCallPreview(s, o.attackerId, o.defenderId, o.regionId, cb)) {
+  for (const off of offers) {
     const rulerId = headOf(s, off.clanId)?.id;
     const base = { ...off, rulerId, year: s.year };
     if (off.blocker) {
       answers.push({ ...base, answer: 'blocked' });
       continue;
     }
-    if (off.clanId === s.playerClanId && off.chance < 1) {
+    // You are asked, never rolled for: as a sworn house, and whenever a treaty binds you.
+    if (off.clanId === s.playerClanId && (off.chance < 1 || off.role === 'pact')) {
       answers.push({ ...base, answer: 'pending' });
       continue;
     }
     const yes = off.chance >= 1 || chance(s, off.chance);
     answers.push({ ...base, answer: yes ? 'accepted' : 'refused' });
     if (yes) sides(s, o.attackerId, o.defenderId, off.clanId);
+    else if (off.role === 'pact' && off.treatyId) pactRefused(s, off.clanId, off.treatyId);
     else grieve(s, off.liegeId, off.clanId, REFUSAL_GRIEVANCE, 'Stayed home when the realm called');
   }
-  announce(s, c, answers);
+  announce(s, o.attackerId, o.defenderId, answers);
   return answers;
 }
 
-function announce(s: GameState, c: Ctx, answers: RealmCallAnswer[]): void {
+function announce(s: GameState, attacker: string, defender: string, answers: RealmCallAnswer[]): void {
+  const c = { attacker, defender };
   const came = answers.filter((a) => a.answer === 'accepted');
   const home = answers.filter((a) => a.answer === 'refused');
   if (!came.length && !home.length) return;
@@ -350,8 +373,10 @@ function announce(s: GameState, c: Ctx, answers: RealmCallAnswer[]): void {
 type RealmAiWar = AiWar & { realmCalls?: RealmCallAnswer[] };
 
 /** The saved war whose realm is waiting on your answer, and the waiting answer. Pure. */
-function validCall(s: GameState, war: RealmAiWar): boolean {
+function validCall(s: GameState, war: RealmAiWar, answer?: RealmCallAnswer): boolean {
   if (s.gameOver || s.regions[war.target]?.owner !== war.defender || !clanRegions(s, war.attacker).length) return false;
+  // A treaty call stands while the treaty does.
+  if (answer?.role === 'pact') return !!answer.treatyId && treatiesOf(s, s.playerClanId).some((t) => t.id === answer.treatyId);
   const c = context(s, war.attacker, war.defender, war.target, 'conquest');
   return !!c && called(s, c).includes(s.playerClanId);
 }
@@ -360,7 +385,7 @@ export function pendingRealmCall(s: GameState, warId?: string): { war: RealmAiWa
   for (const war of s.aiWars) {
     if (warId !== undefined && war.id !== warId) continue;
     const answer = war.realmCalls?.find((a) => a.clanId === s.playerClanId && a.answer === 'pending');
-    if (answer && validCall(s, war)) return { war, answer };
+    if (answer && validCall(s, war, answer)) return { war, answer };
   }
   return undefined;
 }
@@ -369,6 +394,7 @@ export function pendingRealmCall(s: GameState, warId?: string): { war: RealmAiWa
 export function answerBlocker(s: GameState, warId: string): string | null {
   const p = pendingRealmCall(s, warId);
   if (!p) return 'The call has passed.';
+  if (p.answer.role === 'pact') return pactDefenders(s, p.war.defender, p.war.attacker).find((d) => d.clanId === s.playerClanId)?.blocker ?? null;
   const c = context(s, p.war.attacker, p.war.defender, p.war.target, 'conquest')!;
   return blocker(s, c, s.playerClanId) ?? null;
 }
@@ -394,11 +420,13 @@ export function answerRealmCall(s: GameState, warId: string, accept: boolean, sh
       year: s.year,
     });
     sides(s, attacker, defender, s.playerClanId);
-    if (share < REALM_SHARE) grieve(s, p.answer.liegeId, s.playerClanId, TOKEN_GRIEVANCE, 'Sent a token squadron when the realm called');
+    if (share < REALM_SHARE && p.answer.role !== 'pact')
+      grieve(s, p.answer.liegeId, s.playerClanId, TOKEN_GRIEVANCE, 'Sent a token squadron when the realm called');
     log(s, `You send ${p.answer.proposedShips} ships to defend ${house(s, defender)} against ${house(s, attacker)}.`, 'war');
   } else {
     Object.assign(p.answer, { answer: 'refused', proposedShips: 0, rulerId: s.rulerId, year: s.year });
-    grieve(s, p.answer.liegeId, s.playerClanId, REFUSAL_GRIEVANCE, 'Stayed home when the realm called');
+    if (p.answer.role === 'pact' && p.answer.treatyId) pactRefused(s, s.playerClanId, p.answer.treatyId);
+    else grieve(s, p.answer.liegeId, s.playerClanId, REFUSAL_GRIEVANCE, 'Stayed home when the realm called');
     log(s, `You keep your fleet at home while ${house(s, attacker)} attacks ${house(s, defender)}.`, 'war');
   }
   return p.answer;
@@ -407,9 +435,8 @@ export function answerRealmCall(s: GameState, warId: string, accept: boolean, sh
 /** Expire finished unity and faded outrage. */
 export function realmDefenceTick(s: GameState): void {
   for (const war of s.aiWars) {
-    if (validCall(s, war)) continue;
     for (const a of war.realmCalls ?? [])
-      if (a.answer === 'pending') {
+      if (a.answer === 'pending' && !validCall(s, war, a)) {
         a.answer = 'blocked';
         a.blocker = 'The call has passed.';
         a.reasons = [...a.reasons, { label: a.blocker }];

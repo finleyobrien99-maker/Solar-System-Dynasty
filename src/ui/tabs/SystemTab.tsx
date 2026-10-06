@@ -8,6 +8,7 @@ import { ch, clanRank, clanRegions, liegeOf, planetRegions, planetSovereign } fr
 import { runScheme, schemeBlocker, schemeChance } from '../../game/intrigue';
 import { FAITHS, PLANET_BY_ID } from '../../game/planets';
 import { CB_INFO, cbOptions, declareWar, warBlocker } from '../../game/war';
+import { BREACH_PRESTIGE, treatyWarBlocker } from '../../game/treaties';
 import { clanPower } from '../../game/war';
 import { Icon } from '../../svg/Icons';
 import { PlanetArt } from '../../svg/PlanetArt';
@@ -25,7 +26,8 @@ function RegionPanel({ regionId }: { regionId: string }) {
   const owner = s.clans[reg.owner];
   const mine = reg.owner === s.playerClanId;
   const truce = truceOf(s, s.playerClanId, reg.owner);
-  const block = warBlocker(s, reg, !!truce);
+  const pact = reg.owner === s.playerClanId ? null : treatyWarBlocker(s, s.playerClanId, reg.owner);
+  const block = warBlocker(s, reg, !!truce || !!pact);
   const opts = cbOptions(s, reg);
   const fab = schemeBlocker(s, 'fabricate', reg.id);
   return (
@@ -61,6 +63,11 @@ function RegionPanel({ regionId }: { regionId: string }) {
               Peace with House {owner.name} until {truce.until}. Breaking it costs {OATH_BREAK_COST} prestige and your good name.
             </p>
           )}
+          {pact && (
+            <p className="gold">
+              {pact} Breaking your word costs {BREACH_PRESTIGE} prestige for each promise and some of every house's trust.
+            </p>
+          )}
           {block ? (
             <div className="muted">{block}</div>
           ) : (
@@ -80,7 +87,7 @@ function RegionPanel({ regionId }: { regionId: string }) {
                       small
                       kind="danger"
                       icon="war"
-                      reason={truce ? `Truce until ${truce.until}` : o.ok ? null : o.reason}
+                      reason={truce ? `Truce until ${truce.until}` : pact ? 'Bound by treaty' : o.ok ? null : o.reason}
                       confirm="Tap again: war!"
                       onClick={() => {
                         if (act((d) => declareWar(d, reg.id, o.cb))) toast(`War declared on House ${owner.name}! Fight from the Realm tab.`);
@@ -88,7 +95,7 @@ function RegionPanel({ regionId }: { regionId: string }) {
                     >
                       War
                     </Btn>
-                    {truce && (
+                    {(truce || pact) && (
                       <Btn
                         small
                         kind="danger"
@@ -102,10 +109,10 @@ function RegionPanel({ regionId }: { regionId: string }) {
                         }
                         confirm={`Tap again: betray House ${owner.name}`}
                         onClick={() => {
-                          if (act((d) => declareWar(d, reg.id, o.cb, true))) toast('You broke the truce and declared war. Other rulers will remember.');
+                          if (act((d) => declareWar(d, reg.id, o.cb, true))) toast('You broke your word and declared war. Other rulers will remember.');
                         }}
                       >
-                        Break truce and attack
+                        {truce ? 'Break truce and attack' : 'Break the treaty and attack'}
                       </Btn>
                     )}
                   </span>

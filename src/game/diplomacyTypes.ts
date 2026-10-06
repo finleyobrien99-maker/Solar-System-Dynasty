@@ -1,8 +1,12 @@
 // Shared shapes for the Web of Houses (WAVE-5-CONTRACT.md). The engine lane
 // fills these in; the war, save and UI lane stores and shows them.
 
-/** Why a house is called: the sovereign at the top of the realm, a sworn house of it, or any house of a world standing united. */
-export type RealmRole = 'sovereign' | 'vassal' | 'planet';
+/**
+ * Why a house is called: the sovereign at the top of the realm, a sworn house
+ * of it, any house of a world standing united, or a treaty partner (a
+ * defensive pact, a guarantee, or tribute it is paid) bound to defend.
+ */
+export type RealmRole = 'sovereign' | 'vassal' | 'planet' | 'pact';
 
 /** A public-safe explanation: what counted, and by how much if it is a number worth showing. */
 export interface Reason {
@@ -23,6 +27,8 @@ export interface RealmCallOffer {
   blocker?: string;
   /** Ships it would send: half its available home fleet. */
   proposedShips: number;
+  /** For a treaty partner: the treaty that binds it. Staying home breaks it. */
+  treatyId?: string;
 }
 
 /** What a house actually did, saved with the war. */

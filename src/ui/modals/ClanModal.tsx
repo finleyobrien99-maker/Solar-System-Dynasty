@@ -4,6 +4,7 @@ import { CoalitionsSection } from '../sections/CoalitionsSection';
 import { ForeignCommanderSection } from '../sections/CommanderSection';
 import { WarWearinessSection } from '../sections/WarWearinessSection';
 import { TrucesSection } from '../sections/TrucesSection';
+import { HouseDiplomacySection } from '../sections/HouseDiplomacySection';
 import { ageOf, alive, ch, clanRank, clanRegions, clanTitle, liegeOf, ruler } from '../../game/core';
 import {
   allianceChance,
@@ -127,6 +128,7 @@ export function ClanModal({ id }: { id: string }) {
       {!mine && <ForeignCommanderSection clanId={id} />}
       <WarWearinessSection clanId={id} />
       <TrucesSection clanId={id} />
+      <HouseDiplomacySection clanId={id} />
       <CoalitionsSection clanId={id} />
       {!!kin.length && (
         <Section
