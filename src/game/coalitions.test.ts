@@ -117,7 +117,7 @@ describe('threat and defensive leagues', () => {
     setOwner(s, mercury, attacker.id);
     s.houseThreat[attacker.id] = 45;
     coalitionsTick(s);
-    for (const id of coalitionOf(s, attacker.id)!.members) expect(clanRegions(s, id).some((r) => ['mercury', 'venus'].includes(r.planetId))).toBe(true);
+    for (const id of coalitionOf(s, attacker.id)!.members) expect(clanRegions(s, id).some((r) => ['sun', 'mercury', 'venus'].includes(r.planetId))).toBe(true);
     s.houseThreat[attacker.id] = 14;
     coalitionsTick(s);
     expect(coalitionOf(s, attacker.id)).toBeUndefined();

@@ -53,8 +53,8 @@ const GRADES = ['-', 'F', 'D', 'C', 'B', 'A', 'S'];
 const gradeRank = (g: string) => GRADES.indexOf(g);
 
 /** A Governor start (the §17 baseline) on a world that rotates with the seed. */
-export function balanceGame(seed: number): GameState {
-  const planet = PLANETS[seed % PLANETS.length].id;
+export function balanceGame(seed: number, planet = PLANETS[seed % PLANETS.length].id): GameState {
+  if (!PLANETS.some((p) => p.id === planet)) throw new Error(`Unknown starting realm: ${planet}`);
   const w = createWorld(seed);
   const clan = scenarioHouses(w, planet, 'governor')[0];
   return startGame(w, { clanId: clan.id, ruler: rollRuler(seed, planet, seed % 2 ? 'M' : 'F'), focus: 'dip', scenario: 'governor' });
@@ -74,8 +74,8 @@ function sample(s: GameState, cycle: number): Sample {
 }
 
 /** Play one game with one bot. `every` sets how often (in cycles) to sample. */
-export function playRun(bot: BotId, seed: number, cycles: number, every = 10): RunResult {
-  const s = balanceGame(seed);
+export function playRun(bot: BotId, seed: number, cycles: number, every = 10, planetId?: string): RunResult {
+  const s = balanceGame(seed, planetId);
   const rng: Seeded = { seed: seed * 7919 + 17 };
   const events: Record<string, number> = {};
   const onEvent = (id: string) => (events[id] = (events[id] ?? 0) + 1);

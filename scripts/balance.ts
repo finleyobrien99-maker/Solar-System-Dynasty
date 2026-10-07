@@ -21,6 +21,8 @@ const runs = Number(arg('runs', '10'));
 const cycles = Number(arg('cycles', '200'));
 const out = arg('out', 'balance-report');
 const bots = arg('bots', Object.keys(BOTS).join(',')).split(',') as BotId[];
+// Pin starting realms when comparing maps with different realm counts.
+const worlds = arg('worlds', '').split(',').filter(Boolean);
 for (const b of bots) if (!BOTS[b]) throw new Error(`Unknown bot "${b}". Try: ${Object.keys(BOTS).join(', ')}`);
 
 const results: RunResult[] = [];
@@ -28,7 +30,7 @@ const started = Date.now();
 for (const bot of bots) {
   for (let seed = 1; seed <= runs; seed++) {
     const t = Date.now();
-    const r = playRun(bot, seed, cycles);
+    const r = playRun(bot, seed, cycles, 10, worlds.length ? worlds[seed % worlds.length] : undefined);
     results.push(r);
     const fate = r.gameOver ? `ended at cycle ${r.gameOverCycle}` : `rank ${r.end.rank}, dynasty ${r.end.dynasty}, grade ${r.end.grade}`;
     console.log(`${BOTS[bot].name.padEnd(9)} seed ${String(seed).padStart(3)} (${r.planet}): ${fate} [${Date.now() - t}ms]`);

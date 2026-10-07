@@ -8,6 +8,18 @@
 
 Live build: https://finleyobrien99-maker.github.io/Solar-System-Dynasty/ (deploys on every push to `main`).
 
+### 7 October 2026: a larger solar system (local, save v13)
+
+Earth's Moon and the Sun are independent playable realms, with their own crowns, cultures, families and trade goods. The Moon appears beside Earth; the Sun's Coronal crown rules shielded habitats and collector stations around the star. Owning the Sun alone does not confer the Solar Throne: the existing three-capital rule still applies. Every realm now has twelve regions and six starting houses: **12 realms, 144 regions and 72 houses**, up from ten realms, 68 regions and 42 houses. All four starting ranks work on both new realms. Native prices, fleet rules and succession use the existing shared mechanics.
+
+Save v13 adds missing regions and ordinary new households without replacing old territory, sites, families, resources, wars, pending decisions or treaties. New regions on existing worlds belong to new houses, under their existing crown; neither the player nor existing AI houses receive free land or ships. The migration uses separate seeded generators, preserves the simulation seed and is repeatable without further changes. Old region IDs and names remain fixed, including Earth's Luna Docks. Numbered map markers and a matching region directory keep twelve regions readable at 390px; a labelled realm selector supplements the clickable system map. House filters include both new realms.
+
+Paired balance against released bd9396b: the same 20 seeds × 150 cycles / all four bots, explicitly retaining the original ten starting realms. Builder Sovereign **20% → 60%**, Warmonger **90% → 90%** (50% target still missed), Passive/Breeder endings by cycle 100 **5% → 0%**. Median battles won/lost: Builder 5.5/0 → 30/7, Warmonger 37/15 → 42/19.5; final credits: Builder 77,881 → 120,987.5, Warmonger 171,583 → 267,348. Events 1.39 → 1.41/cycle; 147 distinct, none over 3%. Another 40 games starting only on the Moon/Sun give Builder 30%, Warmonger 90%, Passive/Breeder endings 0%; 140 distinct events. These small samples expose the effect of the larger world and changed generation, without proving a single cause. No economy, fleet or combat tuning was bundled into the expansion. Reports: %TEMP%/solar-expanded-realms-before, solar-expanded-realms-after and solar-expanded-realms-new-starts. Conquest and credit growth still need separate work.
+
+Serial paired desktop benchmark on the same saved dynasty, after resolving its waiting decisions: 2,483 living members, 4,486 → 4,591 total characters. Median Age Up 32.2 → 44.7ms (nine fresh copies after three warm-ups), state copy 15.4 → 14.8ms, autosave 61.6 → 60.4ms, compressed save 339 → 350KB. This measures extra geography and new households, not long-term growth or the 10k mid-phone 100ms target. Phone game rebuilt: 1283.12KB single HTML / gzip 489.06KB; native wrapper APIs unchanged.
+
+Validation: full check passes 1,098 unit tests (ten normal fixture-writer skips); all 148 desktop/390px browser checks pass, including founding and playing both new realms, public house filters, every existing editor, and importing a real v12 war campaign. Five new map screenshots inspected. All 179 frozen saves load, play twenty cycles, round-trip and migrate repeatedly; the 151 historical fixtures remain untouched and 28 v13 fixtures cover the new realms and existing campaigns. The larger world changes new-game rolls, so older tests now construct the exact personalities, families and diplomatic circumstances they intend to exercise. A first concurrent run passed all assertions but hit three worker-reporting timeouts; the isolated full rerun exited cleanly. Built on local codex/expanded-realms; not published as part of this update.
+
 ### 6 October 2026: edit every house and recognise cadet arms
 
 Every house profile now offers House identity & flag, including rivals and cadets, without VIP. Saving changes only the chosen house's name, sigil and matching map/ship/clothing colour; IDs, resources, territory and diplomacy remain unchanged. New cadet branches copy their parent's exact shape, division and symbol, choosing three distinct colours from the existing house palette and excluding the parent's colours. The art generator is seeded from the current game seed and the new branch ID, without advancing the simulation seed. Existing cadets retain their saved arms; no schema change or save-version bump.
@@ -632,6 +644,7 @@ Content is the cheapest depth there is. This phase builds the machine and then f
 - Each planet has a market with supply and demand prices. Trade routes (already in) carry real goods with capacity. Shortages cause events (famine, fuel crisis). Blockades starve worlds.
 
 ### 4.4 Real planets `P1` `M`
+- **Geography expanded (save v13):** independent Moon and Coronal Sun realms; every realm has twelve regions and six starting houses. Old saves gain new land and households while preserving all existing holdings and campaigns. Surface hazards, buildings and colonisation remain future work.
 - Planet properties: gravity, atmosphere, temperature, radiation, day length, hazards.
 - These feed into health (adaptation genes, 2.4), building options, war (landing difficulty) and events.
 - **Moons and minor bodies as regions or holdings:** the Galilean moons (Io, Europa, Ganymede, Callisto), Titan, Enceladus, Triton, Charon, Phobos/Deimos, plus Belt and Kuiper outposts and space stations at Lagrange points.
@@ -1114,6 +1127,7 @@ export interface Story { id: string; def: string; stage: number; actors: Record<
 
 ## 18. Known bugs, rough edges and debt
 
+- [ ] **The larger map changes progression:** matched original-world starts on bd9396b versus v13 put Builder Sovereign 20% → 60%, Warmonger 90% → 90% after 150 cycles. Extra land and income do not fix the conquest snowball; do not claim the expansion meets balance targets. Preserve the `--worlds` starting-realm list when comparing versions with different geography.
 - [x] **VIP off with an overfull vault:** existing traits stay active; the Bloodline tab now explains how many to release, links to the vault filter, and caps the displayed bar at 100%.
 - [x] **Immortal VIP rulers block succession forever.** Abdicate on Life hands over to a free adult heir while the old ruler stays alive (3.3).
 - [ ] **Suitors live outside `s.characters`** (in `s.suitors`). The editor handles it via `findChar`, but anything new that looks up characters must remember this.

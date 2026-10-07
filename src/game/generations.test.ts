@@ -108,6 +108,7 @@ describe('ruler legacies', () => {
   it('uses personal deeds, keeps death age and reign length fixed, and never mutates state or dice', () => {
     const s = game(),
       old = ruler(s);
+    const children = old.childrenIds.length;
     s.year += 12;
     s.stats.battlesWon = 1000;
     recordDeed(s, old, 'justice', 5);
@@ -119,7 +120,7 @@ describe('ruler legacies', () => {
     expect(legacy.name).toContain('the Just');
     expect(legacy.age).toBe(57);
     expect(legacy.rulingYears).toBe(12);
-    expect(legacy.children).toBe(2);
+    expect(legacy.children).toBe(children);
     expect(legacy.highlights).toContainEqual({ deed: 'justice', label: 'Fair judgements', value: 5 });
     expect(legacy.highlights.some((h) => h.deed === 'battlesWon')).toBe(false);
     expect(JSON.stringify(s)).toBe(before);

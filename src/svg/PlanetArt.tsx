@@ -79,6 +79,19 @@ function buildArt(planetId: string, r: number): Art {
   const acc = p.accent;
   const out: ReactElement[] = [];
   switch (p.type) {
+    case 'star':
+      for (let i = 0; i < 18; i++) {
+        const [x, y] = inDisk(s, r * 0.85);
+        out.push(<path key={`flare${i}`} d={blob(s, x, y, r * (0.08 + rand(s) * 0.2))} fill={i % 3 ? acc : '#e86924'} opacity={0.6} />);
+      }
+      break;
+    case 'moon':
+      for (let i = 0; i < 5; i++) {
+        const [x, y] = inDisk(s, r * 0.65);
+        out.push(<path key={`mare${i}`} d={blob(s, x, y, r * 0.3)} fill={shade(base, -0.3)} opacity={0.65} />);
+      }
+      out.push(...craters(s, r, base, 22));
+      break;
     case 'rocky':
       out.push(...craters(s, r, base, 18));
       out.push(<path key="d" d={blob(s, -r * 0.3, r * 0.2, r * 0.35)} fill={acc} opacity={0.25} />);
@@ -268,7 +281,7 @@ function PlanetArtImpl({ planetId, size = 80, className, ring, dim }: PlanetArtP
       <g clipPath={`url(#pc${uid})`}>
         <rect x={-r - 5} y={-r - 5} width={2 * r + 10} height={2 * r + 10} fill={p.base} />
         {art.surface}
-        <rect x={-r - 5} y={-r - 5} width={2 * r + 10} height={2 * r + 10} fill={`url(#lit${uid})`} />
+        {p.type !== 'star' && <rect x={-r - 5} y={-r - 5} width={2 * r + 10} height={2 * r + 10} fill={`url(#lit${uid})`} />}
       </g>
       {ringEls('front')}
       {ring && <path d={clip} fill="none" stroke={ring} strokeWidth={3} transform="scale(1.12)" opacity={0.9} />}

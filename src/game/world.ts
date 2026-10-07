@@ -1,6 +1,6 @@
 import { initialiseReputations } from './epithets';
-import { initialiseHouseGenetics } from './houseGenetics';
-// World generation: ten planets, their regions, the clans fighting over them,
+import { initialiseHouseGenetics, newHouseGenetics } from './houseGenetics';
+// World generation: the solar realms, their regions, the clans fighting over them,
 // and the player's starting house.
 
 import { createCharacter, eduTrait, inheritLooks, randomGenetic, randomLooks, randomPersonality } from './character';
@@ -23,8 +23,8 @@ import { inheritGenetics, inheritPersonality } from './genetics';
 import { makeItem } from './items';
 import { remember } from './memory';
 import { refreshShop } from './realm';
-import { makeName, PLANETS, PLANET_BY_ID } from './planets';
-import { chance, clamp, int, pick, rand, range, seeded, shuffle, type Seeded } from './rng';
+import { makeName, PLANETS, PLANET_BY_ID, LEGACY_REGION_COUNTS } from './planets';
+import { chance, clamp, hashString, int, pick, rand, range, seeded, shuffle, type Seeded } from './rng';
 import { addTrait } from './traits';
 import { STAT_KEYS, type Appearance, type Character, type Clan, type GameState, type Gender, type ScenarioId, type SigilSpec, type StatKey } from './types';
 
@@ -184,29 +184,42 @@ function seedFamily(s: GameState, clan: Clan): void {
   }
 }
 
+/** Maximise space around the next marker, without moving existing regions. */
+function spacedSite(s: Seeded, sites: readonly [number, number][]): [number, number] {
+  let best: [number, number] = [0.5, 0.5];
+  let gap = -1;
+  for (let i = 0; i < 64; i++) {
+    const angle = range(s, 0, Math.PI * 2);
+    const radius = Math.sqrt(rand(s)) * 0.4;
+    const candidate: [number, number] = [0.5 + Math.cos(angle) * radius, 0.5 + Math.sin(angle) * radius];
+    const distance = Math.min(...sites.map(([x, y]) => (x - candidate[0]) ** 2 + (y - candidate[1]) ** 2));
+    if (distance > gap) {
+      best = candidate;
+      gap = distance;
+    }
+  }
+  return best;
+}
+
 export function createWorld(seed: number): GameState {
   const s = emptyState(seed);
   for (const p of PLANETS) {
-    // Regions laid out round the planet with the capital in the middle.
+    // Spread twelve regions across the disc, with the capital near the middle.
     const names = [p.capital, ...p.regions];
     const regionIds: string[] = [];
-    const n = names.length - 1;
-    const spin = range(s, 0, Math.PI * 2);
+    const sites: [number, number][] = [];
     names.forEach((name, i) => {
       const id = `${p.id}-${i}`;
       let site: [number, number];
-      if (i === 0) site = [0.5 + range(s, -0.05, 0.05), 0.5 + range(s, -0.05, 0.05)];
-      else {
-        const a = spin + ((i - 1) / n) * Math.PI * 2 + range(s, -0.25, 0.25);
-        const rad = range(s, 0.27, 0.37);
-        site = [0.5 + Math.cos(a) * rad, 0.5 + Math.sin(a) * rad];
-      }
+      if (i === 0) site = [0.5 + range(s, -0.03, 0.03), 0.5 + range(s, -0.03, 0.03)];
+      else site = spacedSite(s, sites);
+      sites.push(site);
       s.regions[id] = { id, name, planetId: p.id, owner: '', dev: i === 0 ? int(s, 6, 8) : int(s, 2, 5), capital: i === 0, site };
       regionIds.push(id);
     });
 
     // Clans: one sovereign holding the capital, the rest share what's left.
-    const clanCount = Math.min(5, Math.max(3, Math.floor(names.length * 0.7)));
+    const clanCount = Math.min(p.clans.length, Math.floor(names.length / 2));
     const clanNames = shuffle(s, p.clans).slice(0, clanCount);
     const colors = shuffle(s, SIGIL_COLORS);
     const clans: Clan[] = clanNames.map((name, i) => {
@@ -244,6 +257,78 @@ export function createWorld(seed: number): GameState {
   for (const clan of Object.values(s.clans)) seedFamily(s, clan);
   for (const clan of Object.values(s.clans)) clan.fleet = Math.round(fleetTarget(s, clan.id) * range(s, 0.8, 1.1));
   return s;
+}
+
+/** v13 adds territory and households once, preserving every existing record and the game RNG. */
+export function expandSolarRealms(s: GameState): void {
+  const missing = PLANETS.filter((p) => [p.capital, ...p.regions].some((_, i) => !s.regions[`${p.id}-${i}`]));
+  if (!missing.length) return;
+  // A separate world supplies ordinary priced, non-VIP households. Its IDs are remapped below.
+  const draft = createWorld(hashString(`realm-expansion-v13:${s.seed}:${s.year}`));
+  const added: Clan[] = [];
+  for (const p of missing) {
+    const legacyCount = LEGACY_REGION_COUNTS[p.id];
+    const firstHouse = legacyCount ? Math.min(5, Math.max(3, Math.floor(legacyCount * 0.7))) : 0;
+    const houses = Object.values(draft.clans)
+      .filter((c) => c.planetId === p.id)
+      .slice(firstHouse);
+    const usedNames = new Set(
+      Object.values(s.clans)
+        .filter((c) => c.planetId === p.id)
+        .map((c) => c.name),
+    );
+    for (const template of houses) {
+      if (s.clans[template.id]) continue;
+      const name = usedNames.has(template.name) ? (p.clans.find((n) => !usedNames.has(n)) ?? `${template.name} Reach`) : template.name;
+      usedNames.add(name);
+      const clan = { ...template, name, founded: s.year, genetics: newHouseGenetics() };
+      s.clans[clan.id] = clan;
+      added.push(clan);
+    }
+    const sites = Object.values(s.regions)
+      .filter((r) => r.planetId === p.id)
+      .map((r) => r.site);
+    const rng = seeded(`realm-sites-v13:${s.seed}:${p.id}`);
+    let assigned = 0;
+    [p.capital, ...p.regions].forEach((_, i) => {
+      const id = `${p.id}-${i}`;
+      if (s.regions[id]) return;
+      const template = draft.regions[id];
+      const site = sites.length ? spacedSite(rng, sites) : template.site;
+      s.regions[id] = { ...template, owner: '', site };
+      sites.push(site);
+      setOwner(s, s.regions[id], houses[assigned++ % houses.length].id);
+    });
+  }
+  // Copy whole new households, including their spouses and real parent links; never replace an old person.
+  const people = new Set<string>();
+  for (const clan of added) {
+    const head = draft.characters[clan.headId];
+    people.add(head.id);
+    if (head.spouseId) people.add(head.spouseId);
+    for (const id of head.childrenIds) people.add(id);
+  }
+  const ids = new Map([...people].map((id) => [id, newId(s, 'c')]));
+  for (const id of people) {
+    const c = draft.characters[id];
+    const copy = {
+      ...c,
+      id: ids.get(id)!,
+      born: c.born + s.year - draft.year,
+      clanId: s.clans[c.clanId] ? c.clanId : added.find((k) => draft.characters[k.headId].spouseId === id)!.id,
+      spouseId: c.spouseId ? ids.get(c.spouseId) : undefined,
+      fatherId: c.fatherId ? ids.get(c.fatherId) : undefined,
+      motherId: c.motherId ? ids.get(c.motherId) : undefined,
+      childrenIds: c.childrenIds.map((child) => ids.get(child)!).filter(Boolean),
+    };
+    s.characters[copy.id] = copy;
+  }
+  for (const clan of added) {
+    clan.headId = ids.get(clan.headId)!;
+    clan.fleet = Math.round(fleetTarget(s, clan.id));
+  }
+  // Repeating an earlier reputation migration must not add records to these new rulers later.
+  initialiseReputations({ ...s, clans: Object.fromEntries(added.map((c) => [c.id, c])) });
 }
 
 // ── Starting scenarios ────────────────────────────────────────────────────
@@ -302,8 +387,8 @@ export const SCENARIO_BY_ID = Object.fromEntries(SCENARIOS.map((x) => [x.id, x])
 
 /** The two worlds an emperor rules besides home: the nearest neighbours in orbit. */
 export function emperorWorlds(planetId: string): string[] {
-  const idx = PLANETS.findIndex((p) => p.id === planetId);
-  return PLANETS.map((p, i) => ({ id: p.id, d: Math.abs(i - idx), i }))
+  const orbit = PLANET_BY_ID[planetId].orbit;
+  return PLANETS.map((p, i) => ({ id: p.id, d: Math.abs(p.orbit - orbit), i }))
     .filter((x) => x.id !== planetId)
     .sort((a, b) => a.d - b.d || a.i - b.i)
     .slice(0, 2)

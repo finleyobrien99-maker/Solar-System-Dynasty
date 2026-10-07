@@ -4,7 +4,7 @@ import { hashString } from '../src/game/rng';
 import type { GameState } from '../src/game/types';
 import { goalWorld } from '../src/game/warGoalScenarios';
 import { createCharacter } from '../src/game/character';
-import { ruler, setOwner } from '../src/game/core';
+import { ruler, setOwner, SAVE_VERSION } from '../src/game/core';
 import { cadetBlocker } from '../src/game/cadets';
 
 async function saved(page: Page): Promise<GameState | null> {
@@ -19,7 +19,7 @@ async function load(page: Page, s = goalWorld()) {
   await page
     .getByLabel('Import save file')
     .setInputFiles({ name: 'old-save.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify({ data, checksum: hashString(data) })) });
-  await expect.poll(async () => (await saved(page))?.version).toBe(12);
+  await expect.poll(async () => (await saved(page))?.version).toBe(SAVE_VERSION);
   return s;
 }
 async function openEditor(page: Page, kind: 'character' | 'house') {
@@ -60,7 +60,7 @@ test('character drafts, invalid colours, save/reload and inherited reset preserv
   await expect.poll(async () => (await saved(page))?.characters[c.id].portrait).toEqual(style);
   const after = (await saved(page))!;
   const expected = structuredClone(s);
-  expected.version = 12;
+  expected.version = SAVE_VERSION;
   expected.characters[c.id].portrait = style;
   expect(after).toEqual(expected);
   await dialog.getByLabel('Skin colour hex', { exact: true }).fill('#ffffff');
@@ -101,7 +101,7 @@ test('house flag, symbol and full colours save atomically without changing power
   await dialog.getByRole('button', { name: 'Save house design', exact: true }).click();
   await expect.poll(async () => (await saved(page))?.clans[clan.id].name).toBe('Starlight');
   const expected = structuredClone(s);
-  expected.version = 12;
+  expected.version = SAVE_VERSION;
   Object.assign(expected.clans[clan.id], {
     name: 'Starlight',
     color: '#17385b',
@@ -133,7 +133,7 @@ test('new dynasty uses the shared appearance and house designers without VIP', a
   await page.getByLabel('Skin colour hex', { exact: true }).fill('#88aaff');
   await page.getByLabel('Eye colour hex', { exact: true }).fill('#ff0066');
   await page.getByRole('button', { name: /^Begin the dynasty/ }).click();
-  await expect.poll(async () => (await saved(page))?.version).toBe(12);
+  await expect.poll(async () => (await saved(page))?.version).toBe(SAVE_VERSION);
   const after = (await saved(page))!;
   expect(after.vip?.on).toBeFalsy();
   expect(after.characters[after.rulerId].portrait).toEqual({ hairColor: '#33bb88', skinColor: '#88aaff', eyeColor: '#ff0066' });
@@ -164,7 +164,7 @@ test('other houses can be renamed and redesigned without VIP through their publi
   await dialog.getByRole('button', { name: 'Save house design', exact: true }).click();
   await expect.poll(async () => (await saved(page))?.clans[foreign.id].name).toBe('Aurora');
   const expected = structuredClone(s);
-  expected.version = 12;
+  expected.version = SAVE_VERSION;
   Object.assign(expected.clans[foreign.id], {
     name: 'Aurora',
     color: '#112233',

@@ -1,9 +1,9 @@
-// Static world data: the ten great powers of the solar system, their faiths,
+// Static world data: the realms of the solar system, their faiths,
 // cultures and naming styles.
 
 import type { Gender } from './types';
 
-export type PlanetType = 'rocky' | 'cloud' | 'ocean' | 'red' | 'asteroid' | 'gas' | 'ringed' | 'ice' | 'deep' | 'dwarf';
+export type PlanetType = 'rocky' | 'cloud' | 'ocean' | 'red' | 'asteroid' | 'gas' | 'ringed' | 'ice' | 'deep' | 'dwarf' | 'moon' | 'star';
 
 export interface PlanetDef {
   id: string;
@@ -14,6 +14,7 @@ export interface PlanetDef {
   base: string;
   accent: string;
   orbit: number; // order from the sun
+  parentId?: string; // a separately ruled moon still orbits its parent world
   faithId: string;
   monarch: Record<Gender, string>;
   blurb: string;
@@ -39,7 +40,19 @@ export const PLANETS: PlanetDef[] = [
     blurb: 'Sun-scorched forge-cities crawl along the terminator line, smelting the metal the whole system runs on.',
     bonus: '+15% credit income from the sun-forges.',
     capital: 'Caloris Forge',
-    regions: ['Tolstoj Rim', 'Beethoven Flats', 'Rembrandt Deep', 'Borealis Shade', 'Terminator Rail', 'Kuiper Crater'],
+    regions: [
+      'Tolstoj Rim',
+      'Beethoven Flats',
+      'Rembrandt Deep',
+      'Borealis Shade',
+      'Terminator Rail',
+      'Kuiper Crater',
+      'Rachmaninoff Basin',
+      'Discovery Scarp',
+      'Raditladi Works',
+      'Matisse Haven',
+      'Apollodorus Foundry',
+    ],
     clans: ['Vantor', 'Ashcroft', 'Embersmith', 'Calderon', 'Helix', 'Brightforge'],
     names: {
       start: ['Hel', 'Sol', 'Pyr', 'Aur', 'Cal', 'Ign', 'Lum', 'Vul', 'Ther', 'Ash', 'Bra', 'Cor'],
@@ -61,7 +74,19 @@ export const PLANETS: PlanetDef[] = [
     blurb: 'Floating palaces drift above acid storms. Everyone smiles, everyone lies, and the parties never end.',
     bonus: '+2 Intrigue and +10% scheme success.',
     capital: 'Ishtar Cloud-Spire',
-    regions: ['Aphrodite Terra', 'Maxwell Heights', 'Lakshmi Planum', 'Beta Regio', 'Alpha Regio', 'Lada Terra'],
+    regions: [
+      'Aphrodite Terra',
+      'Maxwell Heights',
+      'Lakshmi Planum',
+      'Beta Regio',
+      'Alpha Regio',
+      'Lada Terra',
+      'Themis Court',
+      'Atla Skyport',
+      'Phoebe Aerostat',
+      'Diana Galleries',
+      'Guinevere Cloudway',
+    ],
     clans: ['Velluto', 'Amarante', 'Delacroix', 'Sereno', 'Moriell', 'Luminelle'],
     names: {
       start: ['Ves', 'Lu', 'Ser', 'Ama', 'Cel', 'Vio', 'Isa', 'Ro', 'Fio', 'Mir', 'Dela', 'Ori'],
@@ -83,7 +108,19 @@ export const PLANETS: PlanetDef[] = [
     blurb: 'The old homeworld. Crowded, proud and tangled in paperwork, but nobody out-talks a Terran.',
     bonus: '+2 Diplomacy and warmer opinions from every clan.',
     capital: 'New Geneva',
-    regions: ['Sahara Solar Fields', 'Pacific Seasteads', 'Himalaya Spire', 'Amazon Biome', 'Siberian Reach', 'Luna Docks', 'Antarctic Vaults'],
+    regions: [
+      'Sahara Solar Fields',
+      'Pacific Seasteads',
+      'Himalaya Spire',
+      'Amazon Biome',
+      'Siberian Reach',
+      'Luna Docks',
+      'Antarctic Vaults',
+      'Atlantic Arcology',
+      'Ganges Gardens',
+      'Andean Observatory',
+      'Australasian Reef',
+    ],
     clans: ['Hartwell', 'Castellan', 'Okafor', 'Lindqvist', 'Takeda', 'Moreau'],
     names: {
       start: ['Al', 'Jon', 'Mar', 'El', 'Kai', 'Na', 'Ro', 'Sa', 'Ti', 'Ade', 'Ha', 'Le'],
@@ -105,7 +142,19 @@ export const PLANETS: PlanetDef[] = [
     blurb: 'Red dust, iron discipline and shipyards that never sleep. Martians settle arguments with broadsides.',
     bonus: '+15% fleet strength in battle.',
     capital: 'Olympus Citadel',
-    regions: ['Valles Marineris', 'Tharsis Ridge', 'Hellas Basin', 'Elysium Plains', 'Utopia Planitia', 'Phobos Yard', 'Deimos Watch'],
+    regions: [
+      'Valles Marineris',
+      'Tharsis Ridge',
+      'Hellas Basin',
+      'Elysium Plains',
+      'Utopia Planitia',
+      'Phobos Yard',
+      'Deimos Watch',
+      'Noctis Labyrinth',
+      'Argyre Bastion',
+      'Chryse Shipworks',
+      'Arcadia March',
+    ],
     clans: ['Kravos', 'Redmane', 'Dragunov', 'Ironvale', 'Tharsk', 'Volkar'],
     names: {
       start: ['Kor', 'Dra', 'Vul', 'Tor', 'Mag', 'Gar', 'Zar', 'Bran', 'Krav', 'Rad', 'Vog', 'Hest'],
@@ -127,7 +176,19 @@ export const PLANETS: PlanetDef[] = [
     blurb: 'Smugglers, miners and chancers hollowing out the asteroid belt. Everything is for sale on Ceres.',
     bonus: 'Bazaar prices 20% cheaper and +10% credit income.',
     capital: 'Occator Bazaar',
-    regions: ['Vesta Rock', 'Pallas Drift', 'Hygiea Deep', 'Juno Hollow', 'Psyche Mine'],
+    regions: [
+      'Vesta Rock',
+      'Pallas Drift',
+      'Hygiea Deep',
+      'Juno Hollow',
+      'Psyche Mine',
+      'Dawn Anchorage',
+      'Haulani Quarter',
+      'Ernutet Depot',
+      'Dantu Warrens',
+      'Yalode Market',
+      'Urvara Iceworks',
+    ],
     clans: ['Rockjaw', 'Driftwell', 'Nyx-Kane', 'Saltbones', 'Quickfuse', 'Marrow'],
     names: {
       start: ['Jax', 'Ri', 'Ko', 'Zee', 'Ty', 'Mo', 'Ba', 'Ne', 'Pip', 'Su', 'Dex', 'Lo'],
@@ -149,7 +210,19 @@ export const PLANETS: PlanetDef[] = [
     blurb: 'An empire of moons ruled from Ganymede, all marble, ceremony and enormous egos.',
     bonus: '+3 prestige every cycle.',
     capital: 'Ganymede Throne',
-    regions: ['Europa', 'Io', 'Callisto', 'Amalthea', 'Himalia', 'Red Spot Barge'],
+    regions: [
+      'Europa',
+      'Io',
+      'Callisto',
+      'Amalthea',
+      'Himalia',
+      'Red Spot Barge',
+      'Thebe Watch',
+      'Elara Harbour',
+      'Pasiphae Reach',
+      'Metis Foundry',
+      'Adrastea Station',
+    ],
     clans: ['Jovanni', 'Stormcrown', 'Valerian', 'Augustine', 'Galilei', 'Maximar'],
     names: {
       start: ['Jov', 'Aug', 'Max', 'Tib', 'Hadr', 'Val', 'Cass', 'Luc', 'Sev', 'Aur', 'Oct', 'Cyr'],
@@ -171,7 +244,19 @@ export const PLANETS: PlanetDef[] = [
     blurb: 'Scholars, engineers and machine-priests running the ring-stations like one giant university.',
     bonus: '+2 Science and faster heir education.',
     capital: 'Titan Synod',
-    regions: ['Enceladus', 'Rhea', 'Iapetus', 'Dione', 'Mimas', 'Ring-Halo'],
+    regions: [
+      'Enceladus',
+      'Rhea',
+      'Iapetus',
+      'Dione',
+      'Mimas',
+      'Ring-Halo',
+      'Tethys Archive',
+      'Hyperion Relay',
+      'Phoebe Outpost',
+      'Janus Gate',
+      'Epimetheus Yard',
+    ],
     clans: ['Kronos', 'Enceladi', 'Ringwright', 'Tycho', 'Halcyon', 'Iapetan'],
     names: {
       start: ['Ty', 'Kro', 'Eno', 'Rhe', 'Dio', 'Iap', 'Mi', 'Hyp', 'Pan', 'Ath', 'Ze', 'The'],
@@ -193,7 +278,19 @@ export const PLANETS: PlanetDef[] = [
     blurb: 'A sideways world of mystics who read the future in methane storms. Unsettlingly calm.',
     bonus: '+3 faith every cycle.',
     capital: 'Titania Spire',
-    regions: ['Oberon', 'Miranda', 'Ariel', 'Umbriel', 'Cordelia Station'],
+    regions: [
+      'Oberon',
+      'Miranda',
+      'Ariel',
+      'Umbriel',
+      'Cordelia Station',
+      'Puck Beacon',
+      'Portia Haven',
+      'Rosalind Cloister',
+      'Belinda Reach',
+      'Desdemona Shrine',
+      'Cressida Drift',
+    ],
     clans: ['Ophelian', 'Skyveil', 'Mirandel', 'Titanis', 'Aelion', 'Umbrian'],
     names: {
       start: ['Oph', 'Ar', 'Mir', 'Tit', 'Umb', 'Cres', 'Ael', 'Syl', 'Ori', 'Ise', 'Ven', 'Lyr'],
@@ -215,7 +312,19 @@ export const PLANETS: PlanetDef[] = [
     blurb: 'Hard folk from the frozen oceans of Triton. They live long, hold grudges longer.',
     bonus: '+10 max health for your rulers.',
     capital: 'Triton Deep',
-    regions: ['Proteus', 'Nereid', 'Larissa', 'Galatea', 'Halimede'],
+    regions: [
+      'Proteus',
+      'Nereid',
+      'Larissa',
+      'Galatea',
+      'Halimede',
+      'Despina Harbour',
+      'Naiad Vault',
+      'Thalassa Shelf',
+      'Sao Anchorage',
+      'Laomedeia Reach',
+      'Neso Watch',
+    ],
     clans: ['Tidemark', 'Halvard', 'Deepwater', 'Thalassa', 'Nereon', 'Skoll'],
     names: {
       start: ['Tri', 'Nar', 'Hal', 'Thal', 'Ner', 'Sko', 'Mar', 'Vel', 'Gal', 'Fjor', 'Bry', 'Sel'],
@@ -237,7 +346,19 @@ export const PLANETS: PlanetDef[] = [
     blurb: 'Exiles and frontier wardens at the edge of the dark. Paranoid, tough, and very hard to kill.',
     bonus: '+20% defence against schemes and +5 max health.',
     capital: 'Tombaugh Hold',
-    regions: ['Charon', 'Nix', 'Hydra', 'Kerberos', 'Styx'],
+    regions: [
+      'Charon',
+      'Nix',
+      'Hydra',
+      'Kerberos',
+      'Styx',
+      'Sputnik Ward',
+      'Cthulhu March',
+      'Virgil Frontier',
+      'Wright Observatory',
+      'Piccard Outpost',
+      'Lowell Reach',
+    ],
     clans: ['Charonne', 'Frostholm', 'Kerberus', 'Tombaugh', 'Duskvale', 'Grimm'],
     names: {
       start: ['Cha', 'Nyx', 'Hy', 'Ker', 'Sty', 'Tom', 'Bau', 'Dusk', 'Gri', 'Vor', 'Shae', 'Eld'],
@@ -245,7 +366,91 @@ export const PLANETS: PlanetDef[] = [
       f: ['ra', 'a', 'ys', 'iel', 'yx', 'en', 'ira'],
     },
   },
+  {
+    id: 'moon',
+    name: 'Moon',
+    faction: 'Lunar Crown',
+    adjective: 'Lunar',
+    type: 'moon',
+    base: '#b9bdc6',
+    accent: '#e2e5ec',
+    orbit: 3,
+    parentId: 'earth',
+    faithId: 'machine',
+    monarch: { M: 'Moon-King', F: 'Moon-Queen' },
+    blurb: "Earth's Moon rules its own crater cities, far-side observatories and polar ice ports. Close to home, fiercely independent.",
+    bonus: 'Independent realm with the same prices, fleet rules and succession as every world.',
+    capital: 'Selene Crown',
+    regions: [
+      'Tranquillity Port',
+      'Copernicus Citadel',
+      'Tycho Yard',
+      'Shackleton Iceworks',
+      'Aristarchus Forge',
+      'Clavius Gardens',
+      'Far-Side Array',
+      'Imbrium Basin',
+      'Serenitatis Haven',
+      'Oceanus Procellarum',
+      'South Pole Vault',
+    ],
+    clans: ['Selwyn', 'Mooncrest', 'Armstrong', 'Silvermere', 'Farwatch', 'Lunaris'],
+    names: {
+      start: ['Sel', 'Lun', 'Ar', 'Ty', 'Sil', 'Mae', 'Cop', 'Niel', 'Ora', 'Apo', 'Cyn', 'Dia'],
+      m: ['en', 'or', 'ian', 'us', 'ric', 'an', 'el'],
+      f: ['ene', 'a', 'ia', 'elle', 'ara', 'is', 'ine'],
+    },
+  },
+  {
+    id: 'sun',
+    name: 'Sun',
+    faction: 'Crown of the Corona',
+    adjective: 'Coronal',
+    type: 'star',
+    base: '#ffbe45',
+    accent: '#fff0aa',
+    orbit: 0,
+    faithId: 'solar',
+    monarch: { M: 'Corona-King', F: 'Corona-Queen' },
+    blurb:
+      'Shielded habitats and collector stations encircle the star. The Coronal crown rules these outposts; the Solar Throne still requires three realm capitals.',
+    bonus: 'Independent realm with the same prices, fleet rules and succession as every world.',
+    capital: 'Corona Throne',
+    regions: [
+      'Dawn Collector',
+      'Helios Anchorage',
+      'Prominence Watch',
+      'Zenith Habitat',
+      'Sunward Foundry',
+      'Flare Shield',
+      'Aphelion Cloister',
+      'Radiant Gardens',
+      'Photon Exchange',
+      'Solstice Array',
+      'Ember Gate',
+    ],
+    clans: ['Suncrown', 'Dawnwarden', 'Radiant', 'Flareborn', 'Aurelis', 'Heliarch'],
+    names: {
+      start: ['Sol', 'Hel', 'Aur', 'Luc', 'Ign', 'Pho', 'Eos', 'Rad', 'Ser', 'Cor', 'Lum', 'Aeth'],
+      m: ['ion', 'ius', 'or', 'an', 'ex', 'el', 'ar'],
+      f: ['ia', 'a', 'ora', 'ine', 'essa', 'elle', 'is'],
+    },
+  },
 ];
+
+// Frozen v1–v12 geography. Existing IDs and names must never be moved or reused.
+export const LEGACY_REGION_COUNTS: Record<string, number> = {
+  mercury: 7,
+  venus: 7,
+  earth: 8,
+  mars: 8,
+  ceres: 6,
+  jupiter: 7,
+  saturn: 7,
+  uranus: 6,
+  neptune: 6,
+  pluto: 6,
+};
 
 export const PLANET_BY_ID: Record<string, PlanetDef> = Object.fromEntries(PLANETS.map((p) => [p.id, p]));
 
@@ -315,7 +520,7 @@ export function theFaith(id: string): string {
 }
 
 export function makeName(planetId: string, gender: Gender, r: () => number): string {
-  const p = PLANET_BY_ID[planetId] ?? PLANETS[2];
+  const p = PLANET_BY_ID[planetId] ?? PLANET_BY_ID.earth;
   const s = p.names.start[Math.floor(r() * p.names.start.length)];
   const endings = gender === 'M' ? p.names.m : p.names.f;
   const e = endings[Math.floor(r() * endings.length)];
@@ -324,8 +529,8 @@ export function makeName(planetId: string, gender: Gender, r: () => number): str
   return s + e;
 }
 
-/** Planets one orbit in or out: close enough to marry into, or to fight. */
+/** Neighbouring orbits, including independently ruled moons of a world. */
 export function neighbourPlanets(planetId: string): string[] {
   const orbit = PLANET_BY_ID[planetId].orbit;
-  return PLANETS.filter((p) => Math.abs(p.orbit - orbit) === 1).map((p) => p.id);
+  return PLANETS.filter((p) => p.id !== planetId && Math.abs(p.orbit - orbit) <= 1).map((p) => p.id);
 }

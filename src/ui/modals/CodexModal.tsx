@@ -47,9 +47,11 @@ export function CodexModal({ onClose }: { onClose: () => void }) {
           <>
             <h3>The idea</h3>
             <p>
-              You are the head of a minor house on one of the ten worlds of the Sol system. Every press of <b>Age Up</b> is one cycle (a year). Events pop up,
-              children are born, rivals scheme, wars rage. When your ruler dies you carry on as their heir. Your goal is whatever you want: rule a planet, unite
-              the system on the Solar Throne, or breed the most perfect bloodline the stars have ever seen.
+              You are the head of a house in one of the twelve realms of the Sol system, including Earth's Moon and the Sun's shielded habitats. New worlds have
+              twelve regions and six starting houses each. The Sun's local crown is separate from the Solar Throne, which requires three realm capitals. Every
+              press of <b>Age Up</b> is one cycle (a year). Events pop up, children are born, rivals scheme, wars rage. When your ruler dies you carry on as
+              their heir. Your goal is whatever you want: rule a planet, unite the system on the Solar Throne, or breed the most perfect bloodline the stars
+              have ever seen.
             </p>
             <h3>Make it your dynasty</h3>
             <p>

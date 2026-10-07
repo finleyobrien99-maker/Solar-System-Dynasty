@@ -44,7 +44,7 @@ export function TitleScreen({ onNew, onLoad }: { onNew: () => void; onLoad: (s: 
     <div className="title-screen">
       <TitleArt />
       <h1>SOLAR DYNASTY</h1>
-      <div className="tag">Rule a house among the ten worlds of Sol. Marry, scheme, wage war and forge a bloodline so perfect it outlives the stars.</div>
+      <div className="tag">Rule a house among the twelve realms of Sol. Marry, scheme, wage war and forge a bloodline so perfect it outlives the stars.</div>
       <div className="title-menu">
         {auto && !auto.summary.gameOver && (
           <button

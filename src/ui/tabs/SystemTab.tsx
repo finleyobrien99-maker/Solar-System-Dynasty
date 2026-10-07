@@ -6,7 +6,7 @@ import { canAfford, costText } from '../../game/genetics';
 import { OATH_BREAK_COST, truceOf } from '../../game/peace';
 import { ch, clanRank, clanRegions, liegeOf, planetRegions, planetSovereign } from '../../game/core';
 import { runScheme, schemeBlocker, schemeChance } from '../../game/intrigue';
-import { FAITHS, PLANET_BY_ID } from '../../game/planets';
+import { FAITHS, PLANETS, PLANET_BY_ID } from '../../game/planets';
 import { CB_INFO, cbOptions, declareWar, warBlocker } from '../../game/war';
 import { BREACH_PRESTIGE, treatyWarBlocker } from '../../game/treaties';
 import { clanPower } from '../../game/war';
@@ -215,6 +215,7 @@ export function SystemTab() {
     .filter((c) => clanRegions(s, c.id).length > 0 || c.planetId === planetId)
     .sort((a, b) => clanRank(s, b.id) - clanRank(s, a.id) || clanRegions(s, b.id).length - clanRegions(s, a.id).length);
   const regionId = ui.regionId && s.regions[ui.regionId]?.planetId === planetId ? ui.regionId : undefined;
+  const regions = planetRegions(s, planetId);
 
   return (
     <div>
@@ -239,9 +240,19 @@ export function SystemTab() {
             <Section
               title="The Sol System"
               icon="map"
-              info="Tap a world to inspect it. The coloured ring around each planet is its ruling house. Gold stars mark worlds where you hold land, gold dots are your trade lanes and red dashes are your wars. Planets move along their orbits each cycle."
+              info="Tap a realm or choose it below the map. The Sun's crown rules shielded stations around the star; the Moon is an independent realm beside Earth. Coloured rings show ruling houses, gold stars your land, gold dots trade lanes and red dashes wars. The Solar Throne still requires three realm capitals."
             >
               <SolarMap s={s} selected={planetId} onSelect={(id) => setUi({ planetId: id, regionId: undefined })} />
+              <div className="stack" style={{ marginTop: 'var(--space-10px)' }}>
+                <label htmlFor={panelId + '-realm'}>Choose realm</label>
+                <select id={panelId + '-realm'} value={planetId} onChange={(e) => setUi({ planetId: e.target.value, regionId: undefined })}>
+                  {PLANETS.map((realm) => (
+                    <option key={realm.id} value={realm.id}>
+                      {realm.name} · {planetRegions(s, realm.id).length} regions
+                    </option>
+                  ))}
+                </select>
+              </div>
             </Section>
             <div className="cols section">
               <div className="card">
@@ -268,7 +279,25 @@ export function SystemTab() {
                 </div>
                 <PlanetMap s={s} planetId={planetId} selected={regionId} onSelect={(id) => setUi({ regionId: id })} />
                 <div className="muted" style={{ fontSize: 'var(--font-size-0_78rem)', textAlign: 'center' }}>
-                  Tap a region. Gold dashes: yours. Hatched: your claims. Red: war targets. Crown: the throne-region.
+                  Tap a region or choose its numbered entry below. Gold dashes: yours. Hatched: your claims. Red: war targets. Crown: the throne-region.
+                </div>
+                <div className="region-directory" role="group" aria-label={`Regions of ${p.name}`}>
+                  {regions.map((region, i) => (
+                    <button
+                      key={region.id}
+                      className={`region-entry ${regionId === region.id ? 'sel' : ''}`}
+                      aria-pressed={regionId === region.id}
+                      onClick={() => setUi({ regionId: region.id })}
+                    >
+                      <b>
+                        {i + 1}. {region.name}
+                        {region.capital ? ' · Crown' : ''}
+                      </b>
+                      <span className="muted">
+                        House {s.clans[region.owner]?.name} · dev {region.dev}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
               <div className="stack">

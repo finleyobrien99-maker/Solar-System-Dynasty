@@ -1,9 +1,9 @@
-// The whole solar system: the sun, ten worlds on their orbits, who rules
+// The whole solar system: a ruled Sun, worlds and independent moons, who rules
 // each one, and where you hold land.
 
 import { memo, useMemo } from 'react';
 import { clanRegions, planetSovereign } from '../game/core';
-import { PLANETS, type PlanetDef } from '../game/planets';
+import { PLANETS, PLANET_BY_ID, type PlanetDef } from '../game/planets';
 import { hashString, rand, seeded } from '../game/rng';
 import type { GameState } from '../game/types';
 import { PlanetArt } from './PlanetArt';
@@ -13,6 +13,10 @@ const FLAT = 0.52;
 
 function planetSize(p: PlanetDef): number {
   switch (p.type) {
+    case 'star':
+      return 76;
+    case 'moon':
+      return 26;
     case 'gas':
       return 58;
     case 'ringed':
@@ -30,6 +34,11 @@ function planetSize(p: PlanetDef): number {
 }
 
 export function planetPos(p: PlanetDef, year: number): [number, number] {
+  if (p.type === 'star') return [0, 0];
+  if (p.parentId) {
+    const [x, y] = planetPos(PLANET_BY_ID[p.parentId], year);
+    return [x + 44, y - 54];
+  }
   // Golden-angle spacing keeps worlds spread out; inner worlds move faster.
   const base = (p.orbit * 137.5 + (hashString(p.id) % 20)) * (Math.PI / 180);
   const a = base + (year * (9 / p.orbit) * Math.PI) / 180;
@@ -84,7 +93,7 @@ function SolarMapImpl({ s, selected, onSelect }: Props) {
       {stars.map(([x, y, r], i) => (
         <circle key={i} cx={x} cy={y} r={r} fill="#fff" opacity={0.5} />
       ))}
-      {PLANETS.map((p) => (
+      {PLANETS.filter((p) => p.orbit > 0 && !p.parentId).map((p) => (
         <ellipse
           key={p.id}
           cx={0}
@@ -103,7 +112,11 @@ function SolarMapImpl({ s, selected, onSelect }: Props) {
         <circle key={`k${i}`} cx={x} cy={y} r={r} fill="#9db3c9" opacity={0.35} />
       ))}
       <circle r={70} fill="url(#sunGlow)" />
-      <circle r={26} fill="#ffe38a" />
+      {PLANETS.filter((p) => p.parentId).map((p) => {
+        const a = planetPos(PLANET_BY_ID[p.parentId!], s.year);
+        const b = planetPos(p, s.year);
+        return <line key={p.id} x1={a[0]} y1={a[1]} x2={b[0]} y2={b[1]} stroke="#ffffff44" strokeDasharray="2 4" />;
+      })}
       {s.routes.map((r) => {
         const from = PLANETS.find((p) => p.id === s.regions[r.from]?.planetId);
         const to = PLANETS.find((p) => p.id === r.planetId);
@@ -161,6 +174,7 @@ function SolarMapImpl({ s, selected, onSelect }: Props) {
               }
             }}
             aria-label={`${p.name}, ruled by House ${sovClan?.name ?? 'nobody'}`}
+            aria-pressed={isSel}
           >
             {isSel && <circle r={size * 0.72} fill="none" stroke="#ffd166" strokeWidth={2.5} strokeDasharray="5 4" />}
             <circle r={size * 0.62} fill="transparent" />

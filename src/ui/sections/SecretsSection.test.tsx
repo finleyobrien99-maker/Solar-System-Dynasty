@@ -39,7 +39,7 @@ function setup(known = false) {
   const secret = recordMurder(s, target, victim);
   if (known) learnSecret(s, secret.id, r.id);
   s.credits = 1000;
-  s.seed = 1;
+  s.seed = 7; // First roll below the minimum investigation odds: this case tests successful discovery.
   s.pending = [];
   return { s, target, own, partner, secret };
 }

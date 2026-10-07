@@ -81,7 +81,7 @@ test('Houses combines actual home-world and ruler-faith filters, counts matches 
   await expect(houses.getByRole('status')).toHaveText('Showing ' + total + ' of ' + total + ' houses');
   await expect(houses.getByRole('article')).toHaveCount(total);
   await houses.getByLabel('House home world', { exact: true }).selectOption('neptune');
-  await expect(houses.getByRole('article')).toHaveCount(4);
+  await expect(houses.getByRole('article')).toHaveCount(Object.values(s.clans).filter((k) => k.planetId === 'neptune').length);
   await houses.getByLabel('Ruler faith', { exact: true }).selectOption('solar');
   await expect(houses.getByRole('status')).toHaveText('Showing 1 of ' + total + ' houses');
   const card = houses.getByRole('article', { name: 'House ' + foreign.name, exact: true });

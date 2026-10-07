@@ -13,6 +13,8 @@ import type { GameState, TradeRoute } from './types';
 import { atWarWith } from './war';
 
 export const GOODS: Record<string, string> = {
+  sun: 'collector cells and shieldglass',
+  moon: 'polar ice and observatory optics',
   mercury: 'forged alloys',
   venus: 'aerogel silks',
   earth: 'biotech and art',

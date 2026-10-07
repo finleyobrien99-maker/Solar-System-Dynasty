@@ -60,9 +60,8 @@ function sternHouse(s: GameState): Clan {
   const lord = s.characters[k.headId];
   lord.born = Math.min(lord.born, s.year - 45);
   lord.prisonerOf = undefined;
-  lord.base.cmd = 11;
-  lord.traits = lord.traits.filter((t) => !['kind', 'cruel', 'wrathful', 'brave', 'craven'].includes(t));
-  lord.traits.push('brave');
+  lord.base = { dip: 0, cmd: 11, eco: 0, int: 0, sci: 0 };
+  lord.traits = ['brave'];
   return k;
 }
 
@@ -121,6 +120,7 @@ describe('sending a child to be raised at another court', () => {
     const s = world();
     const k = sternHouse(s);
     const lord = s.characters[k.headId];
+    lord.childrenIds = []; // This case has one deliberately chosen foster sibling.
     const fosterSibling = child(s, 9, k.id, lord.id);
     const kid = child(s, 8);
     kid.base.cmd = 3;

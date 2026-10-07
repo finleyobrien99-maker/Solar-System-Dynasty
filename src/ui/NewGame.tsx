@@ -189,7 +189,10 @@ export function NewGame({ onStart, onBack }: { onStart: (s: GameState) => void; 
 
       {step === 0 && (
         <>
-          <p className="muted">Each world is its own power with its own culture, faith and perks. Next you'll choose how high up its ladder you start.</p>
+          <p className="muted">
+            Twelve realms, each with twelve regions and six houses. Earth's Moon has its own crown; the Sun's realm consists of shielded habitats. Next you'll
+            choose how high up its ladder you start.
+          </p>
           <div className="planet-pick">
             {PLANETS.map((pl) => (
               <button

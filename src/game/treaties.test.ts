@@ -301,6 +301,11 @@ describe('AI houses make their own deals', () => {
     const signed = new Set<string>();
     const run = () => {
       const s = world(7);
+      // Give two ordinary houses a real reason to trade, independent of randomly rolled personalities.
+      const a = on(s, 'venus'),
+        b = on(s, 'earth');
+      rememberHouse(s, a.id, b.id, { text: 'Welcomed our envoys', value: 30, decay: 0 });
+      rememberHouse(s, b.id, a.id, { text: 'Welcomed our envoys', value: 30, decay: 0 });
       for (let i = 0; i < 40; i++) {
         s.year += 1;
         diplomacyTick(s);

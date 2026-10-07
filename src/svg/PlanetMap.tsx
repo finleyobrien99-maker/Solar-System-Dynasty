@@ -19,6 +19,7 @@ const R = 176;
 
 function PlanetMapImpl({ s, planetId, selected, onSelect }: Props) {
   const regions = planetRegions(s, planetId);
+  const numbered = regions.length > 8;
   const cells = useMemo(() => {
     const sites: Pt[] = regions.map((r) => [r.site[0] * SIZE, r.site[1] * SIZE]);
     return voronoiInDisc(sites, SIZE / 2, SIZE / 2, R);
@@ -92,11 +93,13 @@ function PlanetMapImpl({ s, planetId, selected, onSelect }: Props) {
               />
             )}
             <text x={x} y={y + 2} textAnchor="middle" className="region-label">
-              {r.name}
+              {numbered ? i + 1 : r.name}
             </text>
-            <text x={x} y={y + 15} textAnchor="middle" className="region-sublabel">
-              {s.clans[r.owner]?.name} · dev {r.dev}
-            </text>
+            {!numbered && (
+              <text x={x} y={y + 15} textAnchor="middle" className="region-sublabel">
+                {s.clans[r.owner]?.name} · dev {r.dev}
+              </text>
+            )}
           </g>
         );
       })}

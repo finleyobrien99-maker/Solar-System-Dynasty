@@ -617,6 +617,9 @@ select {
 .region { cursor: pointer; }
 .region:hover path:first-child { fill-opacity: 0.68; }
 .region-label { fill: var(--white); font-family: var(--head); font-size: var(--font-size-11_5px); font-weight: var(--weight-700); paint-order: stroke; stroke: var(--shadow-ink); stroke-width: 3.5px; }
+.region-directory { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-6px); margin-top: var(--space-10px); }
+.region-entry { display: flex; flex-direction: column; gap: var(--space-4px); min-width: 0; min-height: 48px; padding: var(--space-8px); text-align: left; overflow-wrap: anywhere; background: var(--bg2); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; font-size: var(--font-size-0_78rem); }
+.region-entry:hover, .region-entry.sel { border-color: var(--gold); }
 .region-sublabel { fill: var(--colour-dfe6ff); font-size: var(--font-size-9_5px); paint-order: stroke; stroke: var(--shadow-ink); stroke-width: 3px; }
 
 /* ── Battle */

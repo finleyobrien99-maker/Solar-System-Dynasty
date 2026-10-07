@@ -18,6 +18,7 @@ import { aiSucceed } from './life';
 import { clanTitle, ruler, SAVE_VERSION } from './core';
 import { hashString } from './rng';
 import type { GameState } from './types';
+import { expandSolarRealms } from './world';
 
 const PREFIX = 'solar-dynasty';
 export type SlotId = 'auto' | 'slot1' | 'slot2' | 'slot3';
@@ -231,6 +232,8 @@ export class NewerSaveError extends Error {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const MIGRATIONS: Record<number, (s: any) => void> = {
+  // Append new realms and regions; existing land, families, wars and resources are preserved.
+  13: (s) => expandSolarRealms(s),
   // Existing people keep their inherited appearance. No cosmetic overrides are invented.
   12: (s) => {
     for (const c of [...Object.values(s.characters ?? {}), ...(s.suitors?.list ?? []).map((x: { char: unknown }) => x.char)] as { portrait?: unknown }[]) {

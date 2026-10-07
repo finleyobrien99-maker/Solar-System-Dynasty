@@ -79,6 +79,8 @@ const RECIPES: { name: string; scenario: ScenarioId; planet: string; seed: numbe
   { name: 'vip', scenario: 'monarch', planet: 'mars', seed: 505, vip: true },
   { name: 'ended', scenario: 'monarch', planet: 'jupiter', seed: 303 },
   { name: 'finished', scenario: 'governor', planet: 'mars', seed: 303, finished: true },
+  { name: 'moon-governor', scenario: 'governor', planet: 'moon', seed: 611 },
+  { name: 'sun-monarch', scenario: 'monarch', planet: 'sun', seed: 712 },
 ];
 
 describe.runIf(WRITE)('freeze fixture saves', () => {
@@ -93,6 +95,9 @@ describe.runIf(WRITE)('freeze fixture saves', () => {
       if (r.finished) {
         // Let the normal first annual update settle the replaced AI household.
         ageUp(s);
+        // Starting siblings vary with world generation; extinction must be explicit, not a lucky seed.
+        for (const c of Object.values(s.characters))
+          if (c.clanId === s.playerClanId && c.id !== s.rulerId && c.died === undefined) killCharacter(s, c.id, 'old age');
         killCharacter(s, s.rulerId, 'old age');
         expect(s.gameOver).toBeTruthy();
       } else play(s, 40, { seed: r.seed });

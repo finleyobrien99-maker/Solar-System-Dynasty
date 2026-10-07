@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ch, clanRegions, liegeOf, setOwner, SAVE_VERSION } from './core';
+import { ch, clanRank, clanRegions, liegeOf, setOwner, SAVE_VERSION } from './core';
 import { declareWithGoal, declareWar, aiDeclareWar, endWar, fightBattle, answerRealm } from './war';
 import { declareHouseWar, tickAiWars } from './ai';
 import { acceptPeace, makeTruce, offerPeace, peaceAcceptance, peaceTerms, settlePeace, truceOf } from './peace';
@@ -15,8 +15,8 @@ function pair(s: GameState) {
   const ai = Object.values(s.clans).filter((k) => !k.isPlayer && clanRegions(s, k.id).length);
   const pacts = pactMap(s);
   const a = ai[0],
-    b = ai.find((k) => k.id !== a.id && !pacts.get(a.id)?.has(k.id))!;
-  return { a, b, other: ai.find((k) => k.id !== a.id && k.id !== b.id)! };
+    b = ai.find((k) => k.id !== a.id && clanRank(s, k.id) >= 2 && !pacts.get(a.id)?.has(k.id))!;
+  return { a, b, other: ai.find((k) => k.id !== a.id && k.id !== b.id && !clanRegions(s, k.id).some((r) => r.capital))! };
 }
 const snapshot = (s: GameState) => JSON.stringify(s);
 

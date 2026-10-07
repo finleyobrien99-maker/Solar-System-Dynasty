@@ -469,7 +469,9 @@ describe('a new lord reviews the treaties', () => {
 
   it('an honourable heir keeps the word of the house, and so does a regency', () => {
     const { s, a, b } = pact();
-    newLord(s, a, 'honest', 'just', 'ambitious');
+    // A definite honourable stance; ambition plus a conquest goal ties it with expansionism.
+    newLord(s, a, 'honest', 'just', 'content');
+    expect(stanceOf(s, a.id)?.kind).toBe('honourable');
     foreignPolicyTick(s);
     expect(treatyBetween(s, a.id, b.id, 'nonAggression')).toBeTruthy();
     const child = newLord(s, a, 'ambitious', 'wrathful');

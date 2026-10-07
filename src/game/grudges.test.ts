@@ -20,7 +20,8 @@ function charmingRuler(): GameState {
   const r = ruler(s);
   r.base.dip = 10;
   r.base.int = 10;
-  r.traits.push('kind', 'just', 'generous');
+  // Ordinary intrigue: random genius genes can make being caught mathematically impossible.
+  r.traits = ['kind', 'just', 'generous', 'edu_dip_2'];
   Object.assign(s, { credits: 100000, prestige: 3000 });
   return s;
 }
@@ -29,7 +30,10 @@ function charmingRuler(): GameState {
 function marriedHouse(s: GameState): Clan {
   const k = Object.values(s.clans).find((x) => !x.isPlayer && alive(ch(s, x.headId)))!;
   const head = s.characters[k.headId];
-  if (!alive(ch(s, head.spouseId))) {
+  const previous = ch(s, head.spouseId);
+  // This fixture tests the victim's own house as well as the widower's feelings.
+  if (!alive(previous) || previous.clanId !== k.id) {
+    if (alive(previous)) previous.spouseId = undefined;
     const wife = createCharacter(s, {
       gender: head.gender === 'M' ? 'F' : 'M',
       born: s.year - 35,
@@ -130,7 +134,8 @@ describe('grudges that stick', () => {
       if (!runScheme(s, 'blackmail', k.id)) continue;
       found = true;
       const head = s.characters[k.headId];
-      expect(feelingsSum(s, head, ruler(s))).toBe(-50);
+      expect(s.relations[head.id]?.[s.rulerId]?.feelings.find((f) => f.why === 'Blackmailed me')?.value).toBe(-50);
+      expect(feelingsSum(s, head, ruler(s))).toBeLessThanOrEqual(-50);
       expect(k.memories!.find((m) => m.text === 'Blackmailed us')?.grave).toBe(true);
       charmFor(s, k, 10);
       expect(k.opinion).toBeLessThan(0);
