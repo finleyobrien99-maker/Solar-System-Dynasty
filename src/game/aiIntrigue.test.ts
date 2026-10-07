@@ -1,3 +1,4 @@
+import { setImmediate } from 'node:timers/promises';
 import { describe, expect, it } from 'vitest';
 import { learnSecret, recordMurder } from './secrets';
 import { aiPlans, runAiScheme, type AiPlan } from './aiIntrigue';
@@ -90,13 +91,15 @@ describe('AI houses scheme like the player', () => {
     expect(done).toBe(true);
   });
 
-  it('over a long game, AI houses murder, sabotage, seduce and blackmail each other', { timeout: 120000 }, () => {
+  it('over a long game, AI houses murder, sabotage, seduce and blackmail each other', { timeout: 120000 }, async () => {
     const news: string[] = [];
     // Over six worlds, not three: treaties keep some houses at peace, so a murder is rarer than it was.
     for (const seed of [1, 2, 3, 4, 5, 6]) {
       const s = balanceGame(seed);
       const rng = { seed };
       for (let i = 0; i < 150 && !s.gameOver; i++) {
+        // Process test-runner messages without changing the seeded decisions or cycle count.
+        if (i % 10 === 0) await setImmediate();
         answerPending(s, rng);
         BOTS.passive.turn(s, rng);
         answerPending(s, rng);

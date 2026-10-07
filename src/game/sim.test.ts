@@ -28,11 +28,12 @@ describe('long simulation', () => {
     [9001, 'capped'],
   ];
   for (const [seed, growth] of runs) {
-    it(`survives 200 cycles (seed ${seed}, ${growth})`, { timeout: 120000 }, () => {
+    it(`survives 200 cycles (seed ${seed}, ${growth})`, { timeout: 120000 }, async () => {
       const s = newGame(seed, growth);
       const bot: Seeded = { seed: seed * 7 };
       let years = 0;
       for (; years < 200 && !s.gameOver; years++) {
+        if (years % 10 === 0) await setImmediate();
         drain(s, bot);
         if (s.gameOver) break;
         botTurn(s, bot);
@@ -52,7 +53,7 @@ describe('long simulation', () => {
 });
 
 describe('dynasty growth', () => {
-  it('capped mode keeps the dynasty smaller than uncapped', { timeout: 120000 }, () => {
+  it('capped mode keeps the dynasty smaller than uncapped', { timeout: 120000 }, async () => {
     const sizes: Record<string, number> = {};
     for (const growth of ['capped', 'uncapped'] as const) {
       const s = newGame(77, growth);
@@ -60,6 +61,7 @@ describe('dynasty growth', () => {
       for (const region of Object.values(s.regions)) setOwner(s, region, s.playerClanId);
       const bot: Seeded = { seed: 5 };
       for (let y = 0; y < 150 && !s.gameOver; y++) {
+        if (y % 10 === 0) await setImmediate();
         drain(s, bot);
         const r = ruler(s);
         if (!r.spouseId && s.year - r.born >= 18) {

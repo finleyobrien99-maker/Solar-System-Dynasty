@@ -1,3 +1,4 @@
+import { setImmediate } from 'node:timers/promises';
 import { describe, expect, it } from 'vitest';
 import { createCharacter } from './character';
 import { clanRegions, effStats, ruler } from './core';
@@ -29,9 +30,11 @@ describe('event DSL', () => {
     expect(EVENTS.filter((e) => !e.choices.every(specOf)).map((e) => e.id)).toEqual([]);
   });
 
-  it('every option does what its tooltip says, and only describing never changes anything', { timeout: 120000 }, () => {
+  it('every option does what its tooltip says, and only describing never changes anything', { timeout: 120000 }, async () => {
     let checked = 0;
     for (const def of dslEvents) {
+      // Let the worker receive reporting replies during this exhaustive, CPU-bound check.
+      await setImmediate();
       for (const rich of [true, false]) {
         for (let seed = 1; seed <= 12; seed++) {
           const s = court(seed % 4, rich);
